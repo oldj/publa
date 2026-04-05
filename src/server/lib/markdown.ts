@@ -30,11 +30,35 @@ async function getMarkdownRenderer(): Promise<MarkdownIt> {
 /** sanitize-html 白名单配置，保留博客常用标签 */
 const sanitizeOptions: sanitizeHtml.IOptions = {
   allowedTags: sanitizeHtml.defaults.allowedTags.concat([
-    'img', 'details', 'summary', 'del', 'ins',
-    'video', 'audio', 'source', 'iframe',
-    'math', 'mi', 'mo', 'mn', 'ms', 'mrow', 'msup', 'msub', 'mfrac',
-    'munder', 'mover', 'msqrt', 'mtable', 'mtr', 'mtd', 'mtext',
-    'annotation', 'semantics',
+    'img',
+    'details',
+    'summary',
+    'del',
+    'ins',
+    'video',
+    'audio',
+    'source',
+    'iframe',
+    'math',
+    'mi',
+    'mo',
+    'mn',
+    'ms',
+    'mrow',
+    'msup',
+    'msub',
+    'mfrac',
+    'munder',
+    'mover',
+    'msqrt',
+    'mtable',
+    'mtr',
+    'mtd',
+    'mtext',
+    'annotation',
+    'semantics',
+    'colgroup',
+    'col',
   ]),
   allowedAttributes: {
     ...sanitizeHtml.defaults.allowedAttributes,
@@ -44,8 +68,10 @@ const sanitizeOptions: sanitizeHtml.IOptions = {
     audio: ['src', 'controls'],
     source: ['src', 'type'],
     iframe: ['src', 'width', 'height', 'frameborder', 'allowfullscreen'],
-    td: ['align', 'valign', 'colspan', 'rowspan'],
-    th: ['align', 'valign', 'colspan', 'rowspan'],
+    table: ['style'],
+    col: ['style', 'width'],
+    td: ['align', 'valign', 'colspan', 'rowspan', 'style'],
+    th: ['align', 'valign', 'colspan', 'rowspan', 'style'],
     span: ['class', 'style'],
     div: ['class', 'style'],
     code: ['class'],
@@ -57,6 +83,8 @@ const sanitizeOptions: sanitizeHtml.IOptions = {
       color: [/.*/],
       'background-color': [/.*/],
       'text-align': [/.*/],
+      width: [/.*/],
+      'min-width': [/.*/],
     },
   },
   allowedSchemes: ['http', 'https', 'mailto'],
@@ -72,5 +100,8 @@ export async function renderMarkdown(content: string): Promise<string> {
 
 /** 从 HTML 中提取纯文本 */
 export function htmlToText(html: string): string {
-  return html.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim()
+  return html
+    .replace(/<[^>]+>/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
 }

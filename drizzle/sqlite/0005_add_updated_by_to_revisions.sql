@@ -1,0 +1,1 @@
+ALTER TABLE `content_revisions` ADD `updated_by` integer REFERENCES users(id);

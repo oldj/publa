@@ -1,7 +1,9 @@
 import { getCurrentUser } from '@/server/auth'
 import { renderMarkdown, htmlToText } from '@/server/lib/markdown'
 import { parseIdParam, safeParseJson } from '@/server/lib/request'
+import { getPostById } from '@/server/services/posts'
 import { saveDraft, getDraft, deleteDraft } from '@/server/services/revisions'
+import { parsePostDraftMetadata } from '@/shared/revision-metadata'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -17,7 +19,15 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   const { id: postId, error: idError } = parseIdParam(idStr)
   if (idError) return idError
   const draft = await getDraft('post', postId)
-  return NextResponse.json({ success: true, data: draft })
+  return NextResponse.json({
+    success: true,
+    data: draft
+      ? {
+          ...draft,
+          metadata: parsePostDraftMetadata(draft.metadata),
+        }
+      : null,
+  })
 }
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -32,6 +42,15 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   const { id: idStr } = await params
   const { id: postId, error: idError } = parseIdParam(idStr)
   if (idError) return idError
+
+  const post = await getPostById(postId)
+  if (!post) {
+    return NextResponse.json(
+      { success: false, code: 'NOT_FOUND', message: '文章不存在' },
+      { status: 404 },
+    )
+  }
+
   const { data: body, error } = await safeParseJson(request)
   if (error) return error
 
@@ -59,6 +78,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       contentRaw: contentRaw || '',
       contentHtml: contentHtml || '',
       contentText: contentText || '',
+      metadata: parsePostDraftMetadata(body.metadata),
     },
     user.id,
   )

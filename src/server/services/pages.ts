@@ -1,7 +1,9 @@
+import { parsePageDraftMetadata } from '@/shared/revision-metadata'
 import { db } from '@/server/db'
 import { insertOne, maybeFirst, updateOne } from '@/server/db/query'
 import { contents } from '@/server/db/schema'
-import { and, count, desc, eq, isNull, lte, ne } from 'drizzle-orm'
+import { and, count, desc, eq, isNull, lte, ne, sql } from 'drizzle-orm'
+import { listDraftsByTargetIds } from './revisions'
 
 /** 保留路径，页面不能使用 */
 const RESERVED_PATHS = ['admin', 'api', 'setup', 'rss.xml', 'sitemap.xml', 'uploads', 'posts']
@@ -74,11 +76,36 @@ export async function listPages(options: { page?: number; pageSize?: number } = 
     .select()
     .from(contents)
     .where(where)
-    .orderBy(desc(contents.createdAt))
+    .orderBy(
+      // 从未发布过的草稿置顶，已发布过的按发布时间倒序
+      sql`CASE WHEN ${contents.publishedAt} IS NULL THEN 0 ELSE 1 END`,
+      desc(contents.publishedAt),
+      desc(contents.createdAt),
+    )
     .limit(pageSize)
     .offset((page - 1) * pageSize)
 
-  return { items: rows, page, pageSize, pageCount: Math.ceil(total / pageSize), itemCount: total }
+  const drafts = await listDraftsByTargetIds(
+    'page',
+    rows.map((row) => row.id),
+  )
+  const draftMap = new Map(drafts.map((draft) => [draft.targetId, draft]))
+  const items = rows.map((row) => {
+    const draft = draftMap.get(row.id)
+    if (!draft) return row
+
+    const metadata = parsePageDraftMetadata(draft.metadata)
+
+    return {
+      ...row,
+      title: draft.title,
+      path: metadata.path || null,
+      template: metadata.template,
+      contentType: draft.contentType,
+    }
+  })
+
+  return { items, page, pageSize, pageCount: Math.ceil(total / pageSize), itemCount: total }
 }
 
 /** 将到期的定时发布页面自动转为已发布 */
@@ -127,6 +154,24 @@ export async function getPageById(id: number) {
   )
 }
 
+/** 创建空草稿页面（无需必填字段） */
+export async function createEmptyPage() {
+  return insertOne(
+    db
+      .insert(contents)
+      .values({
+        type: 'page',
+        title: '',
+        path: null,
+        contentRaw: '',
+        contentHtml: '',
+        template: 'default',
+        status: 'draft',
+      })
+      .returning(),
+  )
+}
+
 /** 创建页面 */
 export async function createPage(input: PageInput) {
   return insertOne(
@@ -152,7 +197,11 @@ export async function createPage(input: PageInput) {
 }
 
 /** 更新页面 */
-export async function updatePage(id: number, input: Partial<PageInput>) {
+export async function updatePage(
+  id: number,
+  input: Partial<PageInput>,
+  tx: Pick<typeof db, 'select' | 'insert' | 'update' | 'delete'> = db,
+) {
   const updateData: Record<string, any> = { updatedAt: new Date().toISOString() }
 
   if (input.title !== undefined) updateData.title = input.title
@@ -168,7 +217,7 @@ export async function updatePage(id: number, input: Partial<PageInput>) {
   if (input.publishedAt !== undefined) updateData.publishedAt = input.publishedAt
 
   return updateOne(
-    db
+    tx
       .update(contents)
       .set(updateData)
       .where(and(eq(contents.id, id), eq(contents.type, 'page')))
@@ -178,12 +227,13 @@ export async function updatePage(id: number, input: Partial<PageInput>) {
 
 /** 软删除页面 */
 export async function deletePage(id: number) {
-  await db
-    .update(contents)
-    .set({ deletedAt: new Date().toISOString() })
-    .where(and(eq(contents.id, id), eq(contents.type, 'page')))
-  // 清除关联的修订记录
   const { deleteRevisionsByTarget } = await import('./revisions')
-  await deleteRevisionsByTarget('page', id)
+  await db.transaction(async (tx) => {
+    await tx
+      .update(contents)
+      .set({ deletedAt: new Date().toISOString() })
+      .where(and(eq(contents.id, id), eq(contents.type, 'page')))
+    await deleteRevisionsByTarget('page', id, tx)
+  })
   return { success: true }
 }

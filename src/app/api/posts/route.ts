@@ -1,7 +1,15 @@
 import { getCurrentUser } from '@/server/auth'
+import { db } from '@/server/db'
 import { htmlToText, renderMarkdown } from '@/server/lib/markdown'
 import { isUniqueConstraintError, parseIntParam, safeParseJson } from '@/server/lib/request'
-import { createPost, isSlugAvailable, listPostsAdmin } from '@/server/services/posts'
+import {
+  createEmptyPost,
+  createPost,
+  isSlugAvailable,
+  listPostsAdmin,
+} from '@/server/services/posts'
+import { publishDraft, saveDraft } from '@/server/services/revisions'
+import { parsePostDraftMetadata } from '@/shared/revision-metadata'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(request: NextRequest) {
@@ -38,6 +46,12 @@ export async function POST(request: NextRequest) {
   const { data: body, error } = await safeParseJson(request)
   if (error) return error
 
+  // 创建空草稿（首次自动保存时调用）
+  if (body.createEmpty) {
+    const post = await createEmptyPost(user.id)
+    return NextResponse.json({ success: true, data: post })
+  }
+
   if (!body.title || !body.slug) {
     return NextResponse.json(
       { success: false, code: 'VALIDATION_ERROR', message: '标题和 slug 不能为空' },
@@ -69,6 +83,36 @@ export async function POST(request: NextRequest) {
 
   try {
     const post = await createPost({ ...body, authorId: user.id })
+
+    // 首次发布时冻结一份历史版本，与 PUT 链路对齐
+    if (body.status === 'published') {
+      await db.transaction(async (tx) => {
+        await saveDraft(
+          'post',
+          post.id,
+          {
+            title: body.title || '',
+            excerpt: body.excerpt || '',
+            contentType: body.contentType,
+            contentRaw: body.contentRaw || '',
+            contentHtml: body.contentHtml || '',
+            contentText: body.contentText || '',
+            metadata: parsePostDraftMetadata({
+              slug: body.slug,
+              categoryId: body.categoryId,
+              tagNames: body.tagNames,
+              seoTitle: body.seoTitle,
+              seoDescription: body.seoDescription,
+              publishedAt: post.publishedAt,
+            }),
+          },
+          user.id,
+          tx,
+        )
+        await publishDraft('post', post.id, user.id, tx)
+      })
+    }
+
     return NextResponse.json({ success: true, data: post })
   } catch (err) {
     if (isUniqueConstraintError(err)) {

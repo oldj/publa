@@ -1,30 +1,85 @@
+import type { DraftContentType } from '@/shared/revision-metadata'
 import { db } from '@/server/db'
 import { maybeFirst } from '@/server/db/query'
-import { contentRevisions } from '@/server/db/schema'
-import { eq, and, desc, inArray } from 'drizzle-orm'
+import { contentRevisions, contents } from '@/server/db/schema'
+import { and, desc, eq, inArray, notExists } from 'drizzle-orm'
 
 type TargetType = 'post' | 'page'
+/** 事务或数据库实例，供函数内部统一使用 */
+type DbOrTx = Pick<typeof db, 'select' | 'insert' | 'update' | 'delete'>
+type DraftMetadata = object
+type RawRevisionRow = typeof contentRevisions.$inferSelect
 
-interface RevisionContent {
+export interface RevisionContent<TMetadata extends DraftMetadata = DraftMetadata> {
   title: string
   excerpt: string
-  contentType?: 'richtext' | 'markdown' | 'html'
+  contentType?: DraftContentType
   contentRaw: string
   contentHtml: string
   contentText: string
+  metadata?: TMetadata
+}
+
+export interface RevisionRow<TMetadata extends DraftMetadata = DraftMetadata> extends Omit<
+  RawRevisionRow,
+  'contentType' | 'metaJson'
+> {
+  contentType: DraftContentType
+  metadata: TMetadata
+}
+
+function parseMetadata(metaJson: string): DraftMetadata {
+  try {
+    const parsed = JSON.parse(metaJson)
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return {}
+    }
+
+    return parsed as DraftMetadata
+  } catch {
+    return {}
+  }
+}
+
+function serializeMetadata(metadata?: DraftMetadata) {
+  return JSON.stringify(metadata ?? {})
+}
+
+function normalizeRevisionRow<TMetadata extends DraftMetadata = DraftMetadata>(
+  row: RawRevisionRow | null,
+): RevisionRow<TMetadata> | null {
+  if (!row) return null
+
+  const { metaJson, ...rest } = row
+
+  return {
+    ...rest,
+    contentType: row.contentType as DraftContentType,
+    metadata: parseMetadata(metaJson) as TMetadata,
+  }
 }
 
 /** 保存草稿（upsert） */
-export async function saveDraft(
+export async function saveDraft<TMetadata extends DraftMetadata = DraftMetadata>(
   targetType: TargetType,
   targetId: number,
-  content: RevisionContent,
+  content: RevisionContent<TMetadata>,
   userId: number,
+  tx: DbOrTx = db,
 ) {
   const now = new Date().toISOString()
+  const payload = {
+    title: content.title,
+    excerpt: content.excerpt,
+    contentType: content.contentType || 'richtext',
+    contentRaw: content.contentRaw,
+    contentHtml: content.contentHtml,
+    contentText: content.contentText,
+    metaJson: serializeMetadata(content.metadata),
+  }
 
   const existingRow = await maybeFirst(
-    db
+    tx
       .select({ id: contentRevisions.id })
       .from(contentRevisions)
       .where(
@@ -38,26 +93,27 @@ export async function saveDraft(
   )
 
   if (existingRow) {
-    await db
+    await tx
       .update(contentRevisions)
       .set({
-        ...content,
+        ...payload,
         updatedAt: now,
-        createdBy: userId,
+        updatedBy: userId,
       })
       .where(eq(contentRevisions.id, existingRow.id))
 
     return { updatedAt: now }
   }
 
-  await db.insert(contentRevisions).values({
+  await tx.insert(contentRevisions).values({
     targetType,
     targetId,
-    ...content,
+    ...payload,
     status: 'draft',
     createdAt: now,
     updatedAt: now,
     createdBy: userId,
+    updatedBy: userId,
   })
 
   return { updatedAt: now }
@@ -77,9 +133,13 @@ export async function deleteDraft(targetType: TargetType, targetId: number) {
 }
 
 /** 获取草稿 */
-export async function getDraft(targetType: TargetType, targetId: number) {
-  return maybeFirst(
-    db
+export async function getDraft<TMetadata extends DraftMetadata = DraftMetadata>(
+  targetType: TargetType,
+  targetId: number,
+  tx: DbOrTx = db,
+) {
+  const row = await maybeFirst(
+    tx
       .select()
       .from(contentRevisions)
       .where(
@@ -91,20 +151,51 @@ export async function getDraft(targetType: TargetType, targetId: number) {
       )
       .limit(1),
   )
+
+  return normalizeRevisionRow<TMetadata>(row)
+}
+
+/** 批量获取草稿，供后台列表叠加展示 */
+export async function listDraftsByTargetIds<TMetadata extends DraftMetadata = DraftMetadata>(
+  targetType: TargetType,
+  targetIds: number[],
+) {
+  if (targetIds.length === 0) return [] as RevisionRow<TMetadata>[]
+
+  const rows = await db
+    .select()
+    .from(contentRevisions)
+    .where(
+      and(
+        eq(contentRevisions.targetType, targetType),
+        inArray(contentRevisions.targetId, targetIds),
+        eq(contentRevisions.status, 'draft'),
+      ),
+    )
+
+  return rows
+    .map((row) => normalizeRevisionRow<TMetadata>(row))
+    .filter((row): row is RevisionRow<TMetadata> => row !== null)
 }
 
 /** 发布草稿：将草稿冻结为历史版本 */
-export async function publishDraft(targetType: TargetType, targetId: number) {
+export async function publishDraft<TMetadata extends DraftMetadata = DraftMetadata>(
+  targetType: TargetType,
+  targetId: number,
+  userId: number,
+  tx: DbOrTx = db,
+) {
   const now = new Date().toISOString()
 
-  const draft = await getDraft(targetType, targetId)
+  const draft = await getDraft<TMetadata>(targetType, targetId, tx)
   if (!draft) return null
 
-  await db
+  await tx
     .update(contentRevisions)
     .set({
       status: 'published',
       updatedAt: now,
+      updatedBy: userId,
     })
     .where(eq(contentRevisions.id, draft.id))
 
@@ -132,15 +223,21 @@ export async function listPublishedRevisions(targetType: TargetType, targetId: n
 }
 
 /** 获取单条修订（含内容） */
-export async function getRevisionById(id: number) {
-  return maybeFirst(db.select().from(contentRevisions).where(eq(contentRevisions.id, id)).limit(1))
+export async function getRevisionById<TMetadata extends DraftMetadata = DraftMetadata>(
+  id: number,
+  tx: DbOrTx = db,
+) {
+  const row = await maybeFirst(
+    tx.select().from(contentRevisions).where(eq(contentRevisions.id, id)).limit(1),
+  )
+
+  return normalizeRevisionRow<TMetadata>(row)
 }
 
 /** 批量删除已发布版本（限定 target 范围） */
 export async function deleteRevisions(targetType: TargetType, targetId: number, ids: number[]) {
   if (ids.length === 0) return 0
 
-  // 只删除指定 target 的已发布版本，不允许删除草稿
   const result = await db
     .delete(contentRevisions)
     .returning({ id: contentRevisions.id })
@@ -157,38 +254,64 @@ export async function deleteRevisions(targetType: TargetType, targetId: number, 
 }
 
 /** 恢复版本：用历史内容创建草稿并立即发布 */
-export async function restoreRevision(
+export async function restoreRevision<TMetadata extends DraftMetadata = DraftMetadata>(
   targetType: TargetType,
   targetId: number,
   revisionId: number,
   userId: number,
+  tx: DbOrTx = db,
 ) {
-  const source = await getRevisionById(revisionId)
+  const source = await getRevisionById<TMetadata>(revisionId, tx)
   if (!source || source.targetType !== targetType || source.targetId !== targetId) {
     return null
   }
 
-  const content: RevisionContent = {
+  const content: RevisionContent<TMetadata> = {
     title: source.title,
     excerpt: source.excerpt,
-    contentType: source.contentType as 'richtext' | 'markdown' | 'html',
+    contentType: source.contentType,
     contentRaw: source.contentRaw,
     contentHtml: source.contentHtml,
     contentText: source.contentText,
+    metadata: source.metadata,
   }
 
-  // 保存为草稿，再立即发布
-  await saveDraft(targetType, targetId, content, userId)
-  const published = await publishDraft(targetType, targetId)
-
+  await saveDraft(targetType, targetId, content, userId, tx)
+  const published = await publishDraft<TMetadata>(targetType, targetId, userId, tx)
   return { revision: published, content }
 }
 
 /** 删除某 target 的所有修订 */
-export async function deleteRevisionsByTarget(targetType: TargetType, targetId: number) {
-  await db
+export async function deleteRevisionsByTarget(
+  targetType: TargetType,
+  targetId: number,
+  tx: DbOrTx = db,
+) {
+  await tx
     .delete(contentRevisions)
     .where(
       and(eq(contentRevisions.targetType, targetType), eq(contentRevisions.targetId, targetId)),
     )
+}
+
+/** 清理孤儿 revision：对应的 content 不存在或已软删除 */
+export async function cleanOrphanRevisions() {
+  const result = await db
+    .delete(contentRevisions)
+    .returning({ id: contentRevisions.id })
+    .where(
+      notExists(
+        db
+          .select({ id: contents.id })
+          .from(contents)
+          .where(
+            and(
+              eq(contents.id, contentRevisions.targetId),
+              eq(contents.type, contentRevisions.targetType),
+            ),
+          ),
+      ),
+    )
+
+  return result.length
 }

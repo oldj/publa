@@ -1,12 +1,16 @@
 import { getCurrentUser } from '@/server/auth'
-import { renderMarkdown } from '@/server/lib/markdown'
+import { db } from '@/server/db'
+import { renderMarkdown, htmlToText } from '@/server/lib/markdown'
 import { isUniqueConstraintError, safeParseJson } from '@/server/lib/request'
 import {
+  createEmptyPage,
   createPage,
   isPagePathAvailable,
   listPages,
   validatePagePath,
 } from '@/server/services/pages'
+import { publishDraft, saveDraft } from '@/server/services/revisions'
+import { parsePageDraftMetadata } from '@/shared/revision-metadata'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(request: NextRequest) {
@@ -33,6 +37,13 @@ export async function POST(request: NextRequest) {
 
   const { data: body, error } = await safeParseJson(request)
   if (error) return error
+
+  // 创建空草稿（首次自动保存时调用）
+  if (body.createEmpty) {
+    const page = await createEmptyPage()
+    return NextResponse.json({ success: true, data: page })
+  }
+
   if (!body.title || !body.path) {
     return NextResponse.json(
       { success: false, code: 'VALIDATION_ERROR', message: '标题和路径不能为空' },
@@ -62,13 +73,43 @@ export async function POST(request: NextRequest) {
   if (body.contentRaw) {
     if (ct === 'markdown') {
       body.contentHtml = await renderMarkdown(body.contentRaw)
+      body.contentText = htmlToText(body.contentHtml)
     } else {
       body.contentHtml = body.contentHtml || body.contentRaw
+      body.contentText = body.contentText || htmlToText(body.contentHtml)
     }
   }
 
   try {
     const page = await createPage(body)
+
+    // 首次发布时冻结一份历史版本，与 PUT 链路对齐
+    if (body.status === 'published') {
+      await db.transaction(async (tx) => {
+        await saveDraft(
+          'page',
+          page.id,
+          {
+            title: body.title || '',
+            excerpt: '',
+            contentType: body.contentType,
+            contentRaw: body.contentRaw || '',
+            contentHtml: body.contentHtml || '',
+            contentText: body.contentText || '',
+            metadata: parsePageDraftMetadata({
+              path: body.path,
+              template: body.template,
+              seoTitle: body.seoTitle,
+              seoDescription: body.seoDescription,
+            }),
+          },
+          user.id,
+          tx,
+        )
+        await publishDraft('page', page.id, user.id, tx)
+      })
+    }
+
     return NextResponse.json({ success: true, data: page })
   } catch (err) {
     if (isUniqueConstraintError(err)) {

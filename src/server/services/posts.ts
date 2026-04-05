@@ -1,14 +1,16 @@
 import { db } from '@/server/db'
 import { insertOne, maybeFirst, updateOne } from '@/server/db/query'
 import {
+  categories,
+  comments,
+  contentRevisions,
   contents,
   contentTags,
   slugHistories,
-  categories,
   tags,
-  comments,
 } from '@/server/db/schema'
-import { eq, and, isNull, desc, asc, count, lte, sql, exists, ne, like } from 'drizzle-orm'
+import { and, asc, count, desc, eq, exists, isNull, like, lte, ne, or, sql } from 'drizzle-orm'
+import { listDraftsByTargetIds } from './revisions'
 
 export interface PostInput {
   title: string
@@ -48,7 +50,27 @@ export async function listPostsAdmin(options: PostListOptions = {}) {
   const conditions = [eq(contents.type, 'post'), isNull(contents.deletedAt)]
   if (status) conditions.push(eq(contents.status, status as any))
   if (categoryId) conditions.push(eq(contents.categoryId, categoryId))
-  if (search) conditions.push(like(contents.title, `%${search}%`))
+  if (search) {
+    // 同时匹配主表标题和草稿标题，保持列表显示与搜索结果一致
+    conditions.push(
+      or(
+        like(contents.title, `%${search}%`),
+        exists(
+          db
+            .select({ id: contentRevisions.id })
+            .from(contentRevisions)
+            .where(
+              and(
+                eq(contentRevisions.targetType, 'post'),
+                eq(contentRevisions.targetId, contents.id),
+                eq(contentRevisions.status, 'draft'),
+                like(contentRevisions.title, `%${search}%`),
+              ),
+            ),
+        ),
+      )!,
+    )
+  }
 
   const where = and(...conditions)
 
@@ -73,12 +95,33 @@ export async function listPostsAdmin(options: PostListOptions = {}) {
     .from(contents)
     .leftJoin(categories, eq(contents.categoryId, categories.id))
     .where(where)
-    .orderBy(desc(contents.pinned), desc(contents.publishedAt), desc(contents.createdAt))
+    .orderBy(
+      desc(contents.pinned),
+      // 从未发布过的草稿置顶，已发布过的按发布时间倒序
+      sql`CASE WHEN ${contents.publishedAt} IS NULL THEN 0 ELSE 1 END`,
+      desc(contents.publishedAt),
+      desc(contents.createdAt),
+    )
     .limit(pageSize)
     .offset((page - 1) * pageSize)
 
+  const drafts = await listDraftsByTargetIds(
+    'post',
+    rows.map((row) => row.id),
+  )
+  const draftMap = new Map(drafts.map((draft) => [draft.targetId, draft]))
+  const items = rows.map((row) => {
+    const draft = draftMap.get(row.id)
+    if (!draft) return row
+
+    return {
+      ...row,
+      title: draft.title,
+    }
+  })
+
   return {
-    items: rows,
+    items,
     page,
     pageSize,
     pageCount: Math.ceil(total / pageSize),
@@ -313,6 +356,25 @@ export async function getArchive() {
   return Object.entries(archive).map(([year, items]) => ({ year, items }))
 }
 
+/** 创建空草稿文章（无需必填字段） */
+export async function createEmptyPost(authorId: number) {
+  return insertOne(
+    db
+      .insert(contents)
+      .values({
+        type: 'post',
+        title: '',
+        slug: null,
+        authorId,
+        contentRaw: '',
+        contentHtml: '',
+        contentText: '',
+        status: 'draft',
+      })
+      .returning(),
+  )
+}
+
 /** 创建文章 */
 export async function createPost(input: PostInput) {
   const post = await insertOne(
@@ -355,9 +417,13 @@ export async function createPost(input: PostInput) {
 }
 
 /** 更新文章 */
-export async function updatePost(id: number, input: Partial<PostInput>) {
+export async function updatePost(
+  id: number,
+  input: Partial<PostInput>,
+  tx: Pick<typeof db, 'select' | 'insert' | 'update' | 'delete'> = db,
+) {
   const existing = await maybeFirst(
-    db
+    tx
       .select()
       .from(contents)
       .where(and(eq(contents.type, 'post'), eq(contents.id, id)))
@@ -367,7 +433,7 @@ export async function updatePost(id: number, input: Partial<PostInput>) {
 
   // 如果 slug 变更，保存旧 slug 到历史
   if (input.slug && input.slug !== existing.slug && existing.slug) {
-    await db.insert(slugHistories).values({
+    await tx.insert(slugHistories).values({
       contentId: id,
       slug: existing.slug,
     })
@@ -405,7 +471,7 @@ export async function updatePost(id: number, input: Partial<PostInput>) {
   if (input.pinned !== undefined) updateData.pinned = input.pinned
 
   const result = await updateOne(
-    db
+    tx
       .update(contents)
       .set(updateData)
       .where(and(eq(contents.type, 'post'), eq(contents.id, id)))
@@ -414,9 +480,9 @@ export async function updatePost(id: number, input: Partial<PostInput>) {
 
   // 更新标签关联
   if (input.tagIds !== undefined) {
-    await db.delete(contentTags).where(eq(contentTags.contentId, id))
+    await tx.delete(contentTags).where(eq(contentTags.contentId, id))
     if (input.tagIds.length > 0) {
-      await db.insert(contentTags).values(input.tagIds.map((tagId) => ({ contentId: id, tagId })))
+      await tx.insert(contentTags).values(input.tagIds.map((tagId) => ({ contentId: id, tagId })))
     }
   }
 
@@ -425,13 +491,14 @@ export async function updatePost(id: number, input: Partial<PostInput>) {
 
 /** 软删除文章 */
 export async function deletePost(id: number) {
-  await db
-    .update(contents)
-    .set({ deletedAt: new Date().toISOString() })
-    .where(and(eq(contents.type, 'post'), eq(contents.id, id)))
-  // 清除关联的修订记录
   const { deleteRevisionsByTarget } = await import('./revisions')
-  await deleteRevisionsByTarget('post', id)
+  await db.transaction(async (tx) => {
+    await tx
+      .update(contents)
+      .set({ deletedAt: new Date().toISOString() })
+      .where(and(eq(contents.type, 'post'), eq(contents.id, id)))
+    await deleteRevisionsByTarget('post', id, tx)
+  })
   return { success: true }
 }
 

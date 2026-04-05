@@ -194,12 +194,14 @@ export function defineSchema(kit: DialectKit) {
       contentRaw: text('content_raw').notNull().default(''),
       contentHtml: text('content_html').notNull().default(''),
       contentText: text('content_text').notNull().default(''),
+      metaJson: text('meta_json').notNull().default('{}'),
       status: text('status', { enum: revisionStatus }).notNull().default('draft'),
       createdAt: text('created_at').notNull().$defaultFn(isoNow),
       updatedAt: text('updated_at').notNull().$defaultFn(isoNow),
       createdBy: integer('created_by')
         .notNull()
         .references(() => users.id),
+      updatedBy: integer('updated_by').references(() => users.id),
     },
     (t: any) => [
       index('content_revisions_target_status_updated_at_idx').on(

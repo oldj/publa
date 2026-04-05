@@ -27,6 +27,8 @@ import dayjs from 'dayjs'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { shouldCreateDraftRecord } from '../../_lib/draft-persistence'
+import { buildPageDraftPayload, buildPageSaveBody } from './page-save-payload'
 import RevisionHistory from '../../posts/_components/RevisionHistory'
 
 const RESERVED_PATHS = ['admin', 'api', 'setup', 'rss.xml', 'sitemap.xml', 'uploads']
@@ -40,6 +42,18 @@ function validatePath(path: string): string | null {
   return null
 }
 
+interface PageDraftContent {
+  title: string
+  path: string
+  template: string
+  seoTitle: string
+  seoDescription: string
+  contentType: ContentType
+  contentRaw: string
+  contentHtml: string
+  updatedAt: string
+}
+
 export default function PageEditor({ pageId }: { pageId?: number }) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
@@ -47,6 +61,10 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
   const [autoSaveTime, setAutoSaveTime] = useState<string | null>(null)
   const [historyOpen, setHistoryOpen] = useState(false)
   const lastAutoSaveContent = useRef<string>('')
+  const lastAutoSaveMetaRef = useRef<string>('')
+  const creatingRef = useRef(false)
+  const pendingCreatedPageIdRef = useRef<number | null>(null)
+  const autoSavingRef = useRef(false)
   const [contentType, setContentType] = useState<ContentType>('richtext')
   const contentTypeRef = useRef<ContentType>('richtext')
   const [textContent, setTextContent] = useState('')
@@ -54,7 +72,6 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
   const richTextRef = useRef<RichTextEditorHandle>(null)
   // 编辑器就绪前暂存待加载的 HTML 内容
   const pendingEditorContent = useRef<string | null>(null)
-  const formRef = useRef<{ title: string }>({ title: '' })
   const [form, setForm] = useState({
     title: '',
     path: '',
@@ -63,6 +80,20 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
     seoTitle: '',
     seoDescription: '',
   })
+  const formRef = useRef(form)
+
+  // 生成元数据快照，用于自动保存变更检测
+  const getMetaSnapshot = useCallback(
+    (f: typeof form) =>
+      JSON.stringify({
+        title: f.title,
+        path: f.path,
+        template: f.template,
+        seoTitle: f.seoTitle,
+        seoDescription: f.seoDescription,
+      }),
+    [],
+  )
 
   // 图片上传
   const storageConfigured = useRef<boolean | null>(null)
@@ -97,18 +128,20 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
       .then((json) => {
         if (json.success) {
           const p = json.data
-          const draft = p.draftContent
+          const draft = p.draftContent as PageDraftContent | null
           const contentRaw = draft ? draft.contentRaw : p.contentRaw
           const contentHtml = draft ? draft.contentHtml : p.contentHtml
+          const initialPath = draft ? draft.path : p.path || ''
 
           setForm({
-            title: draft?.title || p.title,
-            path: p.path,
-            template: p.template,
+            title: draft ? draft.title : p.title,
+            path: initialPath,
+            template: draft ? draft.template : p.template,
             status: p.status,
-            seoTitle: p.seoTitle || '',
-            seoDescription: p.seoDescription || '',
+            seoTitle: draft ? draft.seoTitle : p.seoTitle || '',
+            seoDescription: draft ? draft.seoDescription : p.seoDescription || '',
           })
+          setPathError(initialPath ? validatePath(initialPath) : null)
 
           const ct = (draft?.contentType || p.contentType || 'richtext') as ContentType
           setContentType(ct)
@@ -127,6 +160,14 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
           setTextContent(contentRaw)
           textContentRef.current = contentRaw
           lastAutoSaveContent.current = contentRaw
+          lastAutoSaveMetaRef.current = getMetaSnapshot({
+            title: draft ? draft.title : p.title,
+            path: initialPath,
+            template: draft ? draft.template : p.template,
+            status: p.status,
+            seoTitle: draft ? draft.seoTitle : p.seoTitle || '',
+            seoDescription: draft ? draft.seoDescription : p.seoDescription || '',
+          })
           if (draft) {
             setAutoSaveTime(draft.updatedAt)
           }
@@ -136,8 +177,8 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
 
   // 同步 ref
   useEffect(() => {
-    formRef.current = { title: form.title }
-  }, [form.title])
+    formRef.current = form
+  }, [form])
   useEffect(() => {
     textContentRef.current = textContent
   }, [textContent])
@@ -145,105 +186,219 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
     contentTypeRef.current = contentType
   }, [contentType])
 
-  // 自动保存定时器（仅编辑模式）
-  useEffect(() => {
-    if (!pageId) return
+  const getCurrentContent = useCallback(() => {
+    const ct = contentTypeRef.current
+    const ed = richTextRef.current?.getEditor()
+    let contentRaw = ''
+    let contentHtml = ''
+    let contentText = ''
 
-    const timer = setInterval(() => {
-      const ct = contentTypeRef.current
-      const ed = richTextRef.current?.getEditor()
-      const currentContent = ct === 'richtext' ? ed?.getHTML() || '' : textContentRef.current
-      if (!currentContent || currentContent === lastAutoSaveContent.current) return
+    if (ct === 'richtext' && ed) {
+      contentHtml = ed.getHTML()
+      contentText = ed.getText()
+      contentRaw = contentHtml
+    } else if (ct === 'html') {
+      contentRaw = textContentRef.current
+      contentHtml = textContentRef.current
+    } else {
+      contentRaw = textContentRef.current
+      contentText = textContentRef.current
+    }
 
-      let contentRaw = currentContent
-      let contentHtml = ''
+    return {
+      contentType: ct,
+      contentRaw,
+      contentHtml,
+      contentText,
+    }
+  }, [])
 
-      if (ct === 'richtext' || ct === 'html') {
-        contentHtml = currentContent
-      }
-
-      fetch(`/api/pages/${pageId}/draft`, {
+  const saveDraftRevision = useCallback(
+    async (targetId: number, formState: typeof form, content = getCurrentContent()) => {
+      const res = await fetch(`/api/pages/${targetId}/draft`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: formRef.current.title,
-          contentRaw,
-          contentHtml,
-          contentType: ct,
-        }),
+        body: JSON.stringify(buildPageDraftPayload(formState, content)),
       })
-        .then((r) => r.json())
-        .then((json) => {
+
+      return {
+        json: await res.json(),
+        content,
+      }
+    },
+    [getCurrentContent],
+  )
+
+  const ensurePendingPageId = useCallback(async (silent = false) => {
+    if (pendingCreatedPageIdRef.current) return pendingCreatedPageIdRef.current
+
+    const res = await fetch('/api/pages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ createEmpty: true }),
+    })
+    const json = await res.json()
+    if (!json.success) {
+      if (!silent) {
+        notify({ color: 'red', message: json.message || '创建草稿失败' })
+      }
+      return null
+    }
+
+    pendingCreatedPageIdRef.current = json.data.id
+    return json.data.id as number
+  }, [])
+
+  // 创建空草稿并保存完整草稿快照后跳转到编辑页
+  const createAndRedirect = useCallback(
+    async ({ silent = false }: { silent?: boolean } = {}) => {
+      if (creatingRef.current) return
+      creatingRef.current = true
+      let redirected = false
+
+      try {
+        const newId = await ensurePendingPageId(silent)
+        if (!newId) {
+          return
+        }
+        const formState = formRef.current
+        const content = getCurrentContent()
+
+        // 保存完整草稿快照，允许 path 暂时非法或重复
+        const draftSave = await saveDraftRevision(newId, formState, content)
+        if (!draftSave.json.success) {
+          if (!silent) {
+            notify({ color: 'red', message: draftSave.json.message || '保存草稿失败' })
+          }
+          return
+        }
+
+        redirected = true
+        pendingCreatedPageIdRef.current = null
+        router.replace(`/admin/pages/${newId}`)
+      } catch {
+        if (!silent) {
+          notify({ color: 'red', message: '网络错误' })
+        }
+      }
+
+      if (!redirected) {
+        creatingRef.current = false
+      }
+    },
+    [ensurePendingPageId, getCurrentContent, router, saveDraftRevision],
+  )
+
+  // 自动保存定时器
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (autoSavingRef.current) return
+      const content = getCurrentContent()
+
+      // 新页面：首次有实际内容时创建记录并跳转
+      if (!pageId) {
+        if (
+          shouldCreateDraftRecord({
+            title: formRef.current.title,
+            contentType: content.contentType,
+            currentContent: content.contentRaw,
+            richTextText: content.contentText,
+          })
+        ) {
+          void createAndRedirect({ silent: true })
+        }
+        return
+      }
+
+      const currentMeta = getMetaSnapshot(formRef.current)
+      const contentChanged = content.contentRaw && content.contentRaw !== lastAutoSaveContent.current
+      const metaChanged = currentMeta !== lastAutoSaveMetaRef.current
+      if (!contentChanged && !metaChanged) return
+
+      autoSavingRef.current = true
+      saveDraftRevision(pageId, formRef.current, content)
+        .then(({ json }) => {
           if (json.success) {
-            lastAutoSaveContent.current = currentContent
+            lastAutoSaveContent.current = content.contentRaw
+            lastAutoSaveMetaRef.current = currentMeta
             setAutoSaveTime(json.data.updatedAt)
           }
         })
         .catch(() => {})
+        .finally(() => {
+          autoSavingRef.current = false
+        })
     }, 5000)
 
     return () => clearInterval(timer)
-  }, [pageId])
+  }, [pageId, createAndRedirect, getCurrentContent, getMetaSnapshot, saveDraftRevision])
 
   const handlePathChange = (value: string) => {
     setForm((prev) => ({ ...prev, path: value }))
     setPathError(validatePath(value))
   }
 
-  /** 提取当前编辑器内容 */
-  const getContent = () => {
-    let contentRaw = ''
-    let contentHtml = ''
-    const ed = richTextRef.current?.getEditor()
-
-    if (contentType === 'richtext' && ed) {
-      contentHtml = ed.getHTML()
-      contentRaw = contentHtml
-    } else if (contentType === 'html') {
-      contentRaw = textContent
-      contentHtml = textContent
-    } else {
-      contentRaw = textContent
-    }
-
-    return { contentRaw, contentHtml }
-  }
-
-  const handleSave = async (status?: string) => {
-    if (!form.title) {
-      notify({ color: 'red', message: '标题不能为空' })
+  // 手动保存草稿：仅保存完整草稿快照，不阻塞于 path 校验
+  const handleSaveDraft = async () => {
+    if (!pageId) {
+      await createAndRedirect()
       return
     }
-    const err = validatePath(form.path)
-    if (err) {
-      setPathError(err)
-      notify({ color: 'red', message: err })
-      return
-    }
-
-    const { contentRaw, contentHtml } = getContent()
 
     setLoading(true)
     try {
-      const url = pageId ? `/api/pages/${pageId}` : '/api/pages'
-      const method = pageId ? 'PUT' : 'POST'
+      const formState = formRef.current
+      const draftSave = await saveDraftRevision(pageId, formState)
+      if (draftSave.json.success) {
+        lastAutoSaveContent.current = draftSave.content.contentRaw
+        lastAutoSaveMetaRef.current = getMetaSnapshot(formState)
+        setAutoSaveTime(draftSave.json.data.updatedAt)
+        notify({ color: 'green', message: '草稿已保存' })
+      } else {
+        notify({ color: 'red', message: draftSave.json.message || '保存失败' })
+      }
+    } catch {
+      notify({ color: 'red', message: '网络错误' })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSave = async (status?: string) => {
+    // 仅发布时校验必填字段
+    if (status === 'published') {
+      if (!form.title) {
+        notify({ color: 'red', message: '标题不能为空' })
+        return
+      }
+      const err = validatePath(form.path)
+      if (err) {
+        setPathError(err)
+        notify({ color: 'red', message: err })
+        return
+      }
+    }
+
+    const content = getCurrentContent()
+
+    setLoading(true)
+    try {
+      const targetPageId = pageId ?? pendingCreatedPageIdRef.current
+      const url = targetPageId ? `/api/pages/${targetPageId}` : '/api/pages'
+      const method = targetPageId ? 'PUT' : 'POST'
 
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...form,
-          contentType,
-          contentRaw,
-          contentHtml,
-          status: status || form.status,
-        }),
+        body: JSON.stringify(buildPageSaveBody(form, content, status)),
       })
       const json = await res.json()
       if (json.success) {
         if (!pageId) {
+          const nextId = targetPageId ?? json.data.id
+          pendingCreatedPageIdRef.current = null
           notify({ color: 'green', message: '创建成功' })
-          router.push(`/admin/pages/${json.data.id}`)
+          router.push(`/admin/pages/${nextId}`)
         } else {
           const newStatus = status || form.status
           setForm((prev) => ({ ...prev, status: newStatus }))
@@ -251,7 +406,11 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
           if (status === 'published') msg = '发布成功'
           else if (status === 'draft' && form.status !== 'draft') msg = '已转为草稿'
           notify({ color: 'green', message: msg })
-          lastAutoSaveContent.current = contentRaw
+          lastAutoSaveContent.current = content.contentRaw
+          lastAutoSaveMetaRef.current = getMetaSnapshot({
+            ...form,
+            status: status || form.status,
+          })
           setAutoSaveTime(null)
         }
       } else {
@@ -348,7 +507,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
               <Button
                 variant="default"
                 leftSection={<IconDeviceFloppy size={16} />}
-                onClick={() => handleSave(isEdit ? undefined : 'draft')}
+                onClick={handleSaveDraft}
                 loading={loading}
               >
                 {isEdit ? '保存' : '保存草稿'}

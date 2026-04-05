@@ -1,0 +1,2 @@
+ALTER TABLE "content_revisions" ADD COLUMN "updated_by" integer;--> statement-breakpoint
+ALTER TABLE "content_revisions" ADD CONSTRAINT "content_revisions_updated_by_users_id_fk" FOREIGN KEY ("updated_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
