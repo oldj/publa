@@ -303,7 +303,10 @@ export default function EmailSettingsPage() {
       {provider === 'resend' && (
         <PasswordInput
           label="Resend API Key"
-          placeholder={configuredSecrets.has('emailResendApiKey') ? '已配置，留空保留原值' : 're_...'}
+          description="登录 Resend 控制台创建 API Key，具有发送权限即可"
+          placeholder={
+            configuredSecrets.has('emailResendApiKey') ? '已配置，留空保留原值' : 're_...'
+          }
           value={settings.emailResendApiKey || ''}
           onChange={(e) => setField('emailResendApiKey', e.currentTarget.value)}
         />
@@ -359,9 +362,10 @@ export default function EmailSettingsPage() {
               请先保存配置，测试邮件将使用已保存的配置发送。
             </Text>
           )}
-          <Group>
+          <Group align="flex-end">
             <TextInput
-              placeholder="收件人邮箱"
+              label="收件人邮箱"
+              placeholder="name@example.com"
               value={testTo}
               onChange={(e) => setTestTo(e.currentTarget.value)}
               style={{ flex: 1 }}
