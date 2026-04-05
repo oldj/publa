@@ -72,11 +72,21 @@ export default function PagesAdminPage() {
               return (
                 <Table.Tr key={p.id}>
                   <Table.Td>
-                    {p.title || (
-                      <Text span c="dimmed">
-                        (无标题)
-                      </Text>
-                    )}
+                    <Link
+                      href={`/admin/pages/${p.id}`}
+                      style={{
+                        color: 'inherit',
+                        textDecoration: 'none',
+                        fontWeight: 500,
+                        fontSize: 'var(--mantine-font-size-sm)',
+                      }}
+                    >
+                      {p.title || (
+                        <Text span c="dimmed" inherit>
+                          (无标题)
+                        </Text>
+                      )}
+                    </Link>
                   </Table.Td>
                   <Table.Td className={adminStyles.cellFit}>
                     {p.path ? (
