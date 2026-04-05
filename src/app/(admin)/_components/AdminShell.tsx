@@ -9,7 +9,6 @@ import {
   IconMail,
   IconMessage,
   IconNotes,
-  IconPhoto,
   IconSettings,
   IconWorld,
 } from '@tabler/icons-react'
@@ -34,6 +33,8 @@ function NavLinks({ user }: { user: AuthUser | null }) {
         { label: '文章', link: '/admin/posts' },
         { label: '分类', link: '/admin/categories' },
         { label: '标签', link: '/admin/tags' },
+        { label: '页面', link: '/admin/pages' },
+        { label: '附件', link: '/admin/attachments' },
       ],
     },
     {
@@ -51,12 +52,10 @@ function NavLinks({ user }: { user: AuthUser | null }) {
       label: '站点',
       icon: IconWorld,
       links: [
-        { label: '页面', link: '/admin/pages' },
         ...(isOwner || isAdmin ? [{ label: '菜单', link: '/admin/menus' }] : []),
         ...(isOwner || isAdmin ? [{ label: '跳转', link: '/admin/redirects' }] : []),
       ],
     },
-    { id: 'attachments', label: '附件', icon: IconPhoto, link: '/admin/attachments' },
     ...(isOwner || isAdmin
       ? [
           {
