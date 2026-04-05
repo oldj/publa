@@ -22,7 +22,7 @@ import {
   Textarea,
   Title,
 } from '@mantine/core'
-import { IconArrowLeft, IconDeviceFloppy, IconEye, IconSend } from '@tabler/icons-react'
+import { IconArrowLeft, IconDeviceFloppy, IconEye, IconSend, IconX } from '@tabler/icons-react'
 import dayjs from 'dayjs'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -58,6 +58,9 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [pathError, setPathError] = useState<string | null>(null)
+  const [dirty, setDirty] = useState(false)
+  const savedSnapshot = useRef<string>('')
+  const editorDirty = useRef(false)
   const [autoSaveTime, setAutoSaveTime] = useState<string | null>(null)
   const [historyOpen, setHistoryOpen] = useState(false)
   const lastAutoSaveContent = useRef<string>('')
@@ -82,9 +85,11 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
   })
   const formRef = useRef(form)
 
+  type FormState = typeof form
+
   // 生成元数据快照，用于自动保存变更检测
   const getMetaSnapshot = useCallback(
-    (f: typeof form) =>
+    (f: FormState) =>
       JSON.stringify({
         title: f.title,
         path: f.path,
@@ -94,6 +99,30 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
       }),
     [],
   )
+
+  // 生成完整快照，用于已修改状态判定
+  const makeSnapshot = useCallback(
+    (f: FormState, tc: string) => JSON.stringify({ ...f, textContent: tc }),
+    [],
+  )
+
+  const checkDirty = useCallback(
+    (f: FormState, tc: string) => {
+      if (!savedSnapshot.current) return false
+      return savedSnapshot.current !== makeSnapshot(f, tc)
+    },
+    [makeSnapshot],
+  )
+
+  const getEditor = useCallback(() => richTextRef.current?.getEditor() ?? null, [])
+
+  const setField = <K extends keyof FormState>(field: K, value: FormState[K]) => {
+    setForm((prev) => {
+      const next = { ...prev, [field]: value }
+      setDirty(checkDirty(next, textContent) || editorDirty.current)
+      return next
+    })
+  }
 
   // 图片上传
   const storageConfigured = useRef<boolean | null>(null)
@@ -171,9 +200,23 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
           if (draft) {
             setAutoSaveTime(draft.updatedAt)
           }
+
+          // 保存初始快照，用于已修改状态判定
+          const nextForm = {
+            title: draft ? draft.title : p.title,
+            path: initialPath,
+            template: draft ? draft.template : p.template,
+            status: p.status,
+            seoTitle: draft ? draft.seoTitle : p.seoTitle || '',
+            seoDescription: draft ? draft.seoDescription : p.seoDescription || '',
+          }
+          savedSnapshot.current = makeSnapshot(nextForm, contentRaw)
+          editorDirty.current = false
+          // 有未发布的草稿时显示「已修改」
+          setDirty(!!draft)
         }
       })
-  }, [pageId])
+  }, [pageId, makeSnapshot])
 
   // 同步 ref
   useEffect(() => {
@@ -311,7 +354,8 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
       }
 
       const currentMeta = getMetaSnapshot(formRef.current)
-      const contentChanged = content.contentRaw && content.contentRaw !== lastAutoSaveContent.current
+      const contentChanged =
+        content.contentRaw && content.contentRaw !== lastAutoSaveContent.current
       const metaChanged = currentMeta !== lastAutoSaveMetaRef.current
       if (!contentChanged && !metaChanged) return
 
@@ -334,7 +378,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
   }, [pageId, createAndRedirect, getCurrentContent, getMetaSnapshot, saveDraftRevision])
 
   const handlePathChange = (value: string) => {
-    setForm((prev) => ({ ...prev, path: value }))
+    setField('path', value)
     setPathError(validatePath(value))
   }
 
@@ -437,6 +481,9 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
             ...form,
             status: status || form.status,
           })
+          savedSnapshot.current = makeSnapshot({ ...form, status: newStatus }, content.contentRaw)
+          editorDirty.current = false
+          setDirty(false)
           setAutoSaveTime(null)
         }
       } else {
@@ -481,6 +528,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
 
     setContentType(newType)
     contentTypeRef.current = newType
+    setDirty(true)
   }
 
   const isEdit = !!pageId
@@ -502,6 +550,55 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
             <Badge color={form.status === 'published' ? 'green' : 'gray'} variant="light" size="lg">
               {form.status === 'published' ? '已发布' : '草稿'}
             </Badge>
+          )}
+          {dirty && (
+            <Group gap={4}>
+              <Badge color="orange" variant="light" size="lg">
+                已修改
+              </Badge>
+              {pageId && form.status === 'published' && (
+                <IconX
+                  size={16}
+                  color="var(--mantine-color-orange-6)"
+                  style={{ cursor: 'pointer' }}
+                  onClick={async () => {
+                    if (!(await myModal.confirm({ message: '是否要放弃所有未发布的修改？' })))
+                      return
+                    // 先删除草稿，再重新加载已发布内容
+                    await fetch(`/api/pages/${pageId}/draft`, { method: 'DELETE' })
+                    const res = await fetch(`/api/pages/${pageId}`)
+                    const json = await res.json()
+                    if (!json.success) return
+                    const pageData = json.data
+                    const restoredForm: FormState = {
+                      title: pageData.title,
+                      path: pageData.path || '',
+                      template: pageData.template || 'default',
+                      status: pageData.status,
+                      seoTitle: pageData.seoTitle || '',
+                      seoDescription: pageData.seoDescription || '',
+                    }
+                    const restoreCT = (pageData.contentType || 'richtext') as ContentType
+                    setForm(restoredForm)
+                    setPathError(restoredForm.path ? validatePath(restoredForm.path) : null)
+                    setContentType(restoreCT)
+                    contentTypeRef.current = restoreCT
+                    if (restoreCT === 'richtext') {
+                      const ed = getEditor()
+                      if (ed) ed.commands.setContent(pageData.contentHtml)
+                    }
+                    setTextContent(pageData.contentRaw)
+                    textContentRef.current = pageData.contentRaw
+                    lastAutoSaveContent.current = pageData.contentRaw
+                    lastAutoSaveMetaRef.current = getMetaSnapshot(restoredForm)
+                    savedSnapshot.current = makeSnapshot(restoredForm, pageData.contentRaw)
+                    editorDirty.current = false
+                    setDirty(false)
+                    setAutoSaveTime(null)
+                  }}
+                />
+              )}
+            </Group>
           )}
           {autoSaveTime && (
             <Text size="sm" c="dimmed">
@@ -565,7 +662,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
           label="标题"
           required
           value={form.title}
-          onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
+          onChange={(e) => setField('title', e.target.value)}
         />
         <TextInput
           label="路径"
@@ -584,7 +681,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
               { value: 'blank', label: '空白' },
             ]}
             value={form.template}
-            onChange={(v) => setForm((prev) => ({ ...prev, template: v || 'default' }))}
+            onChange={(v) => setField('template', v || 'default')}
           />
         </Group>
 
@@ -594,6 +691,11 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
           placeholder="开始撰写页面内容..."
           onImageUpload={uploadImage}
           checkStorageConfig={checkStorageConfig}
+          onUpdate={() => {
+            editorDirty.current = true
+            setDirty(true)
+            setAutoSaveTime(null)
+          }}
           onReady={(editor) => {
             if (pendingEditorContent.current) {
               editor.commands.setContent(pendingEditorContent.current)
@@ -614,6 +716,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
             onChange={(e) => {
               setTextContent(e.target.value)
               textContentRef.current = e.target.value
+              setDirty(checkDirty(form, e.target.value) || editorDirty.current)
             }}
             styles={{ input: { fontFamily: 'monospace', maxHeight: 600, overflowY: 'auto' } }}
           />
@@ -622,12 +725,12 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
         <TextInput
           label="SEO 标题"
           value={form.seoTitle}
-          onChange={(e) => setForm((prev) => ({ ...prev, seoTitle: e.target.value }))}
+          onChange={(e) => setField('seoTitle', e.target.value)}
         />
         <TextInput
           label="SEO 描述"
           value={form.seoDescription}
-          onChange={(e) => setForm((prev) => ({ ...prev, seoDescription: e.target.value }))}
+          onChange={(e) => setField('seoDescription', e.target.value)}
         />
       </Stack>
 
