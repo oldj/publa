@@ -1,0 +1,131 @@
+'use client'
+
+import { version } from '@/lib/version'
+import type { AuthUser } from '@/server/auth'
+import { AppShell, Burger, Code, Group, ScrollArea, Text } from '@mantine/core'
+import { useDisclosure } from '@mantine/hooks'
+import {
+  IconGauge,
+  IconMessage,
+  IconNotes,
+  IconPhoto,
+  IconSettings,
+  IconWorld,
+} from '@tabler/icons-react'
+import { AdminCountsProvider, useAdminCounts } from './AdminCountsContext'
+import classes from './AdminShell.module.scss'
+import { NavLinksGroup, type NavLinksGroupProps } from './NavLinksGroup'
+import { UserButton } from './UserButton'
+
+function NavLinks({ user }: { user: AuthUser | null }) {
+  const { counts } = useAdminCounts()
+  const isOwner = user?.role === 'owner'
+  const isAdmin = user?.role === 'admin'
+
+  const navData: NavLinksGroupProps[] = [
+    { id: 'dashboard', label: '仪表盘', icon: IconGauge, link: '/admin' },
+    {
+      id: 'content',
+      label: '内容',
+      icon: IconNotes,
+      initiallyOpened: true,
+      links: [
+        { label: '文章', link: '/admin/posts' },
+        { label: '分类', link: '/admin/categories' },
+        { label: '标签', link: '/admin/tags' },
+      ],
+    },
+    {
+      id: 'interactions',
+      label: '互动',
+      icon: IconMessage,
+      initiallyOpened: true,
+      links: [
+        { label: '评论', link: '/admin/comments', badge: counts?.pendingComments || 0 },
+        { label: '留言', link: '/admin/guestbook', badge: counts?.unreadGuestbook || 0 },
+      ],
+    },
+    {
+      id: 'site',
+      label: '站点',
+      icon: IconWorld,
+      links: [
+        { label: '页面', link: '/admin/pages' },
+        ...(isOwner || isAdmin ? [{ label: '菜单', link: '/admin/menus' }] : []),
+        ...(isOwner || isAdmin ? [{ label: '跳转', link: '/admin/redirects' }] : []),
+      ],
+    },
+    { id: 'attachments', label: '附件', icon: IconPhoto, link: '/admin/attachments' },
+    {
+      id: 'system',
+      label: '系统',
+      icon: IconSettings,
+      links: [
+        { label: '用户', link: '/admin/users' },
+        ...(isOwner || isAdmin ? [{ label: '设置', link: '/admin/settings' }] : []),
+        ...(isOwner || isAdmin ? [{ label: '导入导出', link: '/admin/import-export' }] : []),
+      ],
+    },
+  ].filter((item) => !item.links || item.links.length > 0)
+
+  return (
+    <>
+      {navData.map((item) => (
+        <NavLinksGroup {...item} key={item.id} />
+      ))}
+    </>
+  )
+}
+
+export function AdminShell({
+  children,
+  user,
+}: {
+  children: React.ReactNode
+  user: AuthUser | null
+}) {
+  const [opened, { toggle }] = useDisclosure()
+
+  return (
+    <AdminCountsProvider user={user}>
+      <AppShell
+        navbar={{
+          width: 260,
+          breakpoint: 'sm',
+          collapsed: { mobile: !opened },
+        }}
+        padding="md"
+      >
+        <AppShell.Navbar p="md" className={classes.navbar}>
+          <div className={classes.header}>
+            <Group justify="space-between">
+              <Text fw={700} size="lg">
+                Publa
+              </Text>
+              <Code fw={700}>{version}</Code>
+            </Group>
+          </div>
+
+          <ScrollArea className={classes.links}>
+            <div className={classes.linksInner}>
+              <NavLinks user={user} />
+            </div>
+          </ScrollArea>
+
+          <div className={classes.footer}>
+            <UserButton user={user} />
+          </div>
+        </AppShell.Navbar>
+
+        <AppShell.Header hiddenFrom="sm">
+          <Group h="100%" px="md">
+            <Burger opened={opened} onClick={toggle} size="sm" />
+            <Text fw={700}>Publa</Text>
+          </Group>
+        </AppShell.Header>
+
+        <AppShell.Main pb={60}>{children}</AppShell.Main>
+      </AppShell>
+    </AdminCountsProvider>
+  )
+}

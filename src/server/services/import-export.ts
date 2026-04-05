@@ -1,0 +1,444 @@
+import { hashPassword } from '@/server/auth'
+import { db } from '@/server/db'
+import { maybeFirst } from '@/server/db/query'
+import {
+  attachments,
+  categories,
+  comments,
+  contents,
+  contentRevisions,
+  contentTags,
+  guestbookMessages,
+  menus,
+  redirectRules,
+  settings,
+  slugHistories,
+  tags,
+  users,
+} from '@/server/db/schema'
+import { syncPrimaryKeySequences } from '@/server/db/sequences'
+import { htmlToText } from '@/server/lib/markdown'
+import { validateRedirectRuleInput } from '@/server/services/redirect-rules'
+import crypto from 'crypto'
+import { asc, eq } from 'drizzle-orm'
+
+const META_VERSION = '2.0'
+
+// 存储配置中的敏感字段，导出时排除，导入时忽略
+const STORAGE_SECRET_KEYS = new Set([
+  'storageS3AccessKey',
+  'storageS3SecretKey',
+  'storageOssAccessKeyId',
+  'storageOssAccessKeySecret',
+  'storageCosSecretId',
+  'storageCosSecretKey',
+  'storageR2AccessKey',
+  'storageR2SecretKey',
+])
+
+/** 导出内容数据（全量导出，包含软删除记录） */
+export async function exportContentData() {
+  return {
+    meta: { type: 'content', version: META_VERSION, exportedAt: new Date().toISOString() },
+    categories: await db.select().from(categories),
+    tags: await db.select().from(tags),
+    contents: await db.select().from(contents),
+    contentTags: await db.select().from(contentTags),
+    contentRevisions: await db.select().from(contentRevisions),
+    slugHistories: await db.select().from(slugHistories),
+    comments: await db.select().from(comments),
+    guestbookMessages: await db.select().from(guestbookMessages),
+    attachments: await db.select().from(attachments),
+  }
+}
+
+/** 导出设置数据 */
+export async function exportSettingsData() {
+  // 用户数据不导出 passwordHash
+  const userRows = await db
+    .select({
+      id: users.id,
+      username: users.username,
+      email: users.email,
+      role: users.role,
+      avatarUrl: users.avatarUrl,
+      createdAt: users.createdAt,
+      updatedAt: users.updatedAt,
+    })
+    .from(users)
+
+  // 设置数据中排除存储敏感信息
+  const allSettings = await db.select().from(settings)
+  const filteredSettings = allSettings.filter((s) => !STORAGE_SECRET_KEYS.has(s.key))
+
+  return {
+    meta: { type: 'settings', version: META_VERSION, exportedAt: new Date().toISOString() },
+    users: userRows,
+    settings: filteredSettings,
+    menus: await db.select().from(menus),
+    redirectRules: await db
+      .select()
+      .from(redirectRules)
+      .orderBy(asc(redirectRules.sortOrder), asc(redirectRules.id)),
+  }
+}
+
+/** 校验导入数据基础格式 */
+export function validateImportData(data: any): { valid: boolean; type?: string; message?: string } {
+  if (!data?.meta?.type || !data?.meta?.version) {
+    return { valid: false, message: '缺少 meta 信息' }
+  }
+  if (data.meta.version !== META_VERSION) {
+    return { valid: false, message: `不支持的版本: ${data.meta.version}` }
+  }
+
+  if (data.meta.type === 'content') {
+    for (const key of ['categories', 'tags', 'contents']) {
+      if (!Array.isArray(data[key])) {
+        return { valid: false, message: `缺少必要字段: ${key}` }
+      }
+    }
+    return { valid: true, type: 'content' }
+  }
+
+  if (data.meta.type === 'settings') {
+    for (const key of ['settings']) {
+      if (!Array.isArray(data[key])) {
+        return { valid: false, message: `缺少必要字段: ${key}` }
+      }
+    }
+    return { valid: true, type: 'settings' }
+  }
+
+  return { valid: false, message: `未知的数据类型: ${data.meta.type}` }
+}
+
+/** 解析内容纯文本：优先使用已有值，其次从 HTML 或 Raw 推导 */
+function resolveContentText(item: any): string {
+  if (typeof item.contentText === 'string' && item.contentText !== '') {
+    return item.contentText
+  }
+
+  if (typeof item.contentHtml === 'string' && item.contentHtml !== '') {
+    return htmlToText(item.contentHtml)
+  }
+
+  if (typeof item.contentRaw === 'string' && item.contentRaw !== '') {
+    return item.contentRaw
+  }
+
+  return ''
+}
+
+/** 查询当前有效的用户 ID 集合 */
+async function getValidUserIds() {
+  const userRows = await db.select({ id: users.id }).from(users)
+  return new Set(userRows.map((item) => item.id))
+}
+
+/** 校验可空的用户引用字段，无效时置 null */
+function nullifyInvalidUserRef(value: any, validUserIds: Set<number>): number | null {
+  return validUserIds.has(value) ? value : null
+}
+
+/** 规范化导入的内容数据（文章+页面） */
+function normalizeImportedContents(items: any[], validUserIds: Set<number>, currentUserId: number) {
+  return items.map((item) => ({
+    ...item,
+    authorId: validUserIds.has(item.authorId) ? item.authorId : currentUserId,
+    contentText: resolveContentText(item),
+  }))
+}
+
+/** 规范化导入的历史记录 */
+function normalizeImportedRevisions(
+  items: any[],
+  validUserIds: Set<number>,
+  currentUserId: number,
+) {
+  return items.map((item) => ({
+    ...item,
+    createdBy: validUserIds.has(item.createdBy) ? item.createdBy : currentUserId,
+  }))
+}
+
+/** 规范化导入的附件，清洗无效用户引用 */
+function normalizeImportedAttachments(items: any[], validUserIds: Set<number>) {
+  return items.map((item) => ({
+    ...item,
+    uploadedBy: nullifyInvalidUserRef(item.uploadedBy, validUserIds),
+  }))
+}
+
+/** 规范化导入的评论，清洗无效用户引用 */
+function normalizeImportedComments(items: any[], validUserIds: Set<number>) {
+  return topologicalSort(items).map((item) => ({
+    ...item,
+    userId: nullifyInvalidUserRef(item.userId, validUserIds),
+    moderatedBy: nullifyInvalidUserRef(item.moderatedBy, validUserIds),
+  }))
+}
+
+function compareImportItemId(a: any, b: any): number {
+  const aId = Number.isInteger(a?.id) ? a.id : Number.MAX_SAFE_INTEGER
+  const bId = Number.isInteger(b?.id) ? b.id : Number.MAX_SAFE_INTEGER
+  return aId - bId
+}
+
+/** 拓扑排序自引用记录，确保父记录先于子记录导入 */
+function topologicalSort(items: any[], parentField = 'parentId') {
+  const pending = [...items].sort(compareImportItemId)
+  const insertedIds = new Set<number>()
+  const normalized: any[] = []
+
+  while (pending.length > 0) {
+    let progressed = false
+
+    for (let i = 0; i < pending.length; ) {
+      const item = pending[i]
+      if (item[parentField] == null || insertedIds.has(item[parentField])) {
+        normalized.push(item)
+        if (Number.isInteger(item.id)) insertedIds.add(item.id)
+        pending.splice(i, 1)
+        progressed = true
+        continue
+      }
+      i += 1
+    }
+
+    if (!progressed) {
+      normalized.push(...pending.sort(compareImportItemId))
+      break
+    }
+  }
+
+  return normalized
+}
+
+/** 导入内容数据（覆盖模式） */
+export async function importContentData(data: any, currentUserId: number) {
+  const validUserIds = await getValidUserIds()
+
+  const normalizedContents =
+    Array.isArray(data.contents) && data.contents.length > 0
+      ? normalizeImportedContents(data.contents, validUserIds, currentUserId)
+      : []
+
+  const normalizedComments = Array.isArray(data.comments)
+    ? normalizeImportedComments(data.comments, validUserIds)
+    : []
+
+  const normalizedRevisions =
+    Array.isArray(data.contentRevisions) && data.contentRevisions.length > 0
+      ? normalizeImportedRevisions(data.contentRevisions, validUserIds, currentUserId)
+      : []
+
+  const normalizedAttachments = Array.isArray(data.attachments)
+    ? normalizeImportedAttachments(data.attachments, validUserIds)
+    : []
+
+  const results: string[] = []
+
+  await db.transaction(async (tx) => {
+    // 按外键依赖顺序删除
+    await tx.delete(contentTags)
+    await tx.delete(comments)
+    await tx.delete(contentRevisions)
+    await tx.delete(slugHistories)
+    await tx.delete(contents)
+    await tx.delete(categories)
+    await tx.delete(tags)
+    await tx.delete(guestbookMessages)
+    await tx.delete(attachments)
+
+    if (Array.isArray(data.categories) && data.categories.length > 0) {
+      for (const item of data.categories) {
+        await tx.insert(categories).values(item)
+      }
+      results.push(`分类: ${data.categories.length} 条`)
+    }
+
+    if (Array.isArray(data.tags) && data.tags.length > 0) {
+      for (const item of data.tags) {
+        await tx.insert(tags).values(item)
+      }
+      results.push(`标签: ${data.tags.length} 条`)
+    }
+
+    if (normalizedAttachments.length > 0) {
+      for (const item of normalizedAttachments) {
+        await tx.insert(attachments).values(item)
+      }
+      results.push(`附件: ${normalizedAttachments.length} 条`)
+    }
+
+    if (normalizedContents.length > 0) {
+      for (const item of normalizedContents) {
+        await tx.insert(contents).values(item)
+      }
+      results.push(`内容: ${data.contents.length} 条`)
+    }
+
+    if (Array.isArray(data.contentTags) && data.contentTags.length > 0) {
+      for (const item of data.contentTags) {
+        await tx.insert(contentTags).values(item)
+      }
+      results.push(`内容标签: ${data.contentTags.length} 条`)
+    }
+
+    if (Array.isArray(data.slugHistories) && data.slugHistories.length > 0) {
+      for (const item of data.slugHistories) {
+        await tx.insert(slugHistories).values(item)
+      }
+      results.push(`Slug 历史: ${data.slugHistories.length} 条`)
+    }
+
+    if (normalizedRevisions.length > 0) {
+      for (const item of normalizedRevisions) {
+        await tx.insert(contentRevisions).values(item)
+      }
+      results.push(`历史记录: ${normalizedRevisions.length} 条`)
+    }
+
+    if (normalizedComments.length > 0) {
+      for (const item of normalizedComments) {
+        await tx.insert(comments).values(item)
+      }
+      results.push(`评论: ${normalizedComments.length} 条`)
+    }
+
+    if (Array.isArray(data.guestbookMessages) && data.guestbookMessages.length > 0) {
+      for (const item of data.guestbookMessages) {
+        await tx.insert(guestbookMessages).values(item)
+      }
+      results.push(`留言: ${data.guestbookMessages.length} 条`)
+    }
+
+    await syncPrimaryKeySequences(tx)
+  })
+
+  return results
+}
+
+/** 导入设置数据（覆盖模式） */
+export async function importSettingsData(data: any, currentUserId: number) {
+  const results: string[] = []
+
+  // 先在事务外读取需要保留的敏感设置
+  let existingSecrets: Record<string, string> = {}
+  if (Array.isArray(data.settings)) {
+    const existing = await db.select().from(settings)
+    for (const s of existing) {
+      if (STORAGE_SECRET_KEYS.has(s.key)) existingSecrets[s.key] = s.value
+    }
+  }
+
+  const normalizedRedirectRules = Array.isArray(data.redirectRules)
+    ? [...data.redirectRules]
+        .sort((a, b) => {
+          const aOrder = Number.isInteger(a?.sortOrder) ? a.sortOrder : 0
+          const bOrder = Number.isInteger(b?.sortOrder) ? b.sortOrder : 0
+          return aOrder - bOrder
+        })
+        .map((item) => ({
+          id: Number.isInteger(item?.id) && item.id > 0 ? item.id : undefined,
+          ...validateRedirectRuleInput({
+            pathRegex: item?.pathRegex,
+            redirectTo: item?.redirectTo,
+            redirectType: item?.redirectType,
+            memo: item?.memo,
+          }),
+        }))
+    : null
+
+  // 菜单拓扑排序处理 parentId 自引用
+  const normalizedMenus = Array.isArray(data.menus) ? topologicalSort(data.menus) : null
+
+  await db.transaction(async (tx) => {
+    if (Array.isArray(data.settings)) {
+      await tx.delete(settings)
+
+      // 导入非敏感设置
+      for (const item of data.settings) {
+        if (item.key && item.value !== undefined && !STORAGE_SECRET_KEYS.has(item.key)) {
+          await tx.insert(settings).values(item)
+        }
+      }
+
+      // 恢复敏感设置
+      for (const [key, value] of Object.entries(existingSecrets)) {
+        await tx.insert(settings).values({ key, value })
+      }
+
+      results.push(`设置: ${data.settings.length} 条`)
+    }
+
+    // 清空并重新导入菜单
+    if (normalizedMenus) {
+      await tx.delete(menus)
+      for (const item of normalizedMenus) {
+        await tx.insert(menus).values(item)
+      }
+      results.push(`菜单: ${data.menus.length} 条`)
+    }
+
+    if (normalizedRedirectRules) {
+      await tx.delete(redirectRules)
+
+      for (const [index, item] of normalizedRedirectRules.entries()) {
+        await tx.insert(redirectRules).values({
+          id: item.id,
+          sortOrder: index + 1,
+          pathRegex: item.pathRegex,
+          redirectTo: item.redirectTo,
+          redirectType: item.redirectType,
+          memo: item.memo ?? null,
+        })
+      }
+
+      results.push(`跳转规则: ${normalizedRedirectRules.length} 条`)
+    }
+
+    await syncPrimaryKeySequences(tx)
+  })
+
+  // 用户导入在事务外执行（包含 hashPassword 等耗时操作，且是 upsert 不存在先删后插风险）
+  if (Array.isArray(data.users) && data.users.length > 0) {
+    let created = 0,
+      updated = 0
+    for (const item of data.users) {
+      if (!item.username) continue
+      const existing = await maybeFirst(
+        db.select().from(users).where(eq(users.username, item.username)).limit(1),
+      )
+      if (existing) {
+        // 更新除密码外的字段；当前操作用户不修改角色，防止自己失去权限
+        const updateFields: Record<string, any> = {
+          email: item.email ?? existing.email,
+          avatarUrl: item.avatarUrl ?? existing.avatarUrl,
+          updatedAt: new Date().toISOString(),
+        }
+        if (existing.id !== currentUserId) {
+          updateFields.role = item.role ?? existing.role
+        }
+        await db.update(users).set(updateFields).where(eq(users.id, existing.id))
+        updated++
+      } else {
+        // 新建用户，生成随机密码
+        const randomPassword = crypto.randomBytes(16).toString('base64url')
+        const passwordHash = await hashPassword(randomPassword)
+        await db.insert(users).values({
+          username: item.username,
+          email: item.email || null,
+          passwordHash,
+          role: item.role || 'editor',
+          avatarUrl: item.avatarUrl || null,
+        })
+        created++
+      }
+    }
+    results.push(`用户: 新建 ${created} 个, 更新 ${updated} 个`)
+  }
+
+  return results
+}

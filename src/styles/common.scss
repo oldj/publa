@@ -1,0 +1,27 @@
+@use "fns";
+@use "vars";
+
+//@use "./bg.scss";
+
+h1.page_title {
+  margin-bottom: 1em;
+  //line-height: 2em;
+  //margin: 0;
+  //padding: 0;
+  //font-weight: 500;
+}
+
+button {
+  &.btn_primary {
+    height: 42px;
+    padding: 0 1.5em;
+    min-width: 120px;
+    font-size: 16px;
+  }
+}
+
+@media screen and (max-width: vars.$mobile-width) {
+  .normal_page {
+    padding: 20px;
+  }
+}

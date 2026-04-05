@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1775224493532,
+      "tag": "0000_deep_hex",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1775277733004,
+      "tag": "0001_red_sage",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1775300027462,
+      "tag": "0002_faithful_multiple_man",
+      "breakpoints": true
+    }
+  ]
+}

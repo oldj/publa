@@ -1,0 +1,11 @@
+@use "@/styles/common";
+@use "@/styles/fns";
+@use "@/styles/vars";
+
+.root {
+  @include fns.normal_page;
+}
+
+.form {
+  margin: 40px 0 120px 0;
+}

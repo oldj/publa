@@ -1,0 +1,99 @@
+/* 编辑器中的图片 */
+.ProseMirror img {
+  max-width: 100%;
+}
+
+/* 图片对齐：通过 data-align 属性控制 */
+.ProseMirror img[data-align="center"] {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.ProseMirror img[data-align="right"] {
+  display: block;
+  margin-left: auto;
+}
+
+/* ResizableNodeView 容器也需要对齐 */
+.ProseMirror [data-resize-container]:has(img[data-align="center"]) {
+  justify-content: center;
+}
+
+.ProseMirror [data-resize-container]:has(img[data-align="right"]) {
+  justify-content: flex-end;
+}
+
+/* 编辑器内容区最大高度限制 */
+.mantine-RichTextEditor-content {
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+/* 编辑器工具栏在图片容器之上 */
+.mantine-RichTextEditor-toolbar {
+  z-index: 10;
+  position: sticky;
+}
+
+/* 图片容器不应遮住编辑器工具栏 */
+.ProseMirror [data-resize-container] {
+  position: static !important;
+  z-index: auto !important;
+}
+
+.ProseMirror [data-resize-wrapper] {
+  position: relative;
+}
+
+/* 选中图片的样式 */
+.ProseMirror .image-selected {
+  outline: 2px solid var(--mantine-color-blue-5);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* 拖拽调整尺寸的手柄 */
+.ProseMirror [data-resize-handle] {
+  width: 10px;
+  height: 10px;
+  background: var(--mantine-color-blue-5);
+  border: 1px solid white;
+  border-radius: 2px;
+  z-index: 5;
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+
+/* hover 或选中时显示手柄 */
+.ProseMirror [data-resize-wrapper]:hover [data-resize-handle],
+.ProseMirror .image-selected [data-resize-handle] {
+  opacity: 1;
+}
+
+/* 手柄光标 */
+.ProseMirror [data-resize-handle="top-left"],
+.ProseMirror [data-resize-handle="bottom-right"] {
+  cursor: nwse-resize;
+}
+
+.ProseMirror [data-resize-handle="top-right"],
+.ProseMirror [data-resize-handle="bottom-left"] {
+  cursor: nesw-resize;
+}
+
+/* 图片浮动工具栏 */
+.image-bubble-menu {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: var(--mantine-color-white);
+  border: 1px solid var(--mantine-color-gray-3);
+  border-radius: var(--mantine-radius-sm);
+  box-shadow: var(--mantine-shadow-sm);
+  white-space: nowrap;
+
+  /* 防止溢出容器 */
+  max-width: calc(100vw - 40px);
+}

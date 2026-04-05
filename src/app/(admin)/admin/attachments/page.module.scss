@@ -1,0 +1,26 @@
+.dropzone {
+  min-height: 100px;
+  border: 2px dashed var(--mantine-color-gray-4);
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+
+  &:hover {
+    background-color: var(--mantine-color-gray-1);
+  }
+
+  &[data-accept] {
+    background-color: var(--mantine-color-blue-0);
+    border-color: var(--mantine-color-blue-4);
+  }
+
+  &[data-reject] {
+    background-color: var(--mantine-color-red-0);
+    border-color: var(--mantine-color-red-4);
+  }
+}

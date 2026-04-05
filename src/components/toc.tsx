@@ -1,0 +1,76 @@
+/**
+ */
+
+import { IconMenuDeep } from '@tabler/icons-react'
+import clsx from 'clsx'
+import React, { useEffect, useState } from 'react'
+import { IHeader } from 'src/lib/getHeadersFromHTML'
+import { isAnyPartOfElementInViewport } from '../lib/element'
+import styles from './toc.module.scss'
+
+interface IProps {
+  headers: IHeader[]
+  className?: string
+}
+
+const TOC = React.forwardRef<HTMLDivElement, IProps>((props, ref) => {
+  const { headers, className } = props
+  const [currentNumber, setCurrentNumber] = useState<string | null>(null)
+
+  useEffect(() => {
+    const onScroll = () => {
+      //
+      for (const h of headers) {
+        const { number } = h
+        const el = document.querySelector(`[data-toc-id="${number}"]`)
+        if (el && isAnyPartOfElementInViewport(el)) {
+          setCurrentNumber(number)
+          break
+        }
+      }
+    }
+
+    window.addEventListener('scroll', onScroll)
+
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+    }
+  }, [])
+
+  if (headers.length === 0) {
+    return null
+  }
+
+  return (
+    <div className={clsx(styles.root, className)} ref={ref}>
+      <div className={styles.wrapper}>
+        <div className={styles.header}>
+          <IconMenuDeep size={16} />
+          <span>目录</span>
+        </div>
+        {headers.map((header, index) => {
+          const { level, number, title } = header
+
+          return (
+            <div
+              key={index}
+              className={clsx(
+                styles.item,
+                styles[`toc-h${level}`],
+                number === currentNumber && styles.current,
+              )}
+              data-current={number === currentNumber}
+            >
+              <a href={`#${number || index + 1}-${title}`}>
+                {/* {number && <span className={styles.number}>{number}&nbsp;</span>} */}
+                <span className={styles.title}>{title}</span>
+              </a>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+})
+
+export default TOC

@@ -1,0 +1,99 @@
+@use "@/styles/fns";
+@use "@/styles/vars";
+
+.root {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  height: 200px;
+  padding: 60px 0 0 0;
+}
+
+.header {
+  overflow: hidden;
+}
+
+.site_title {
+  font-size: 32px;
+  line-height: 50px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.slogan {
+  font-size: 16px;
+  color: vars.$font-color-weak;
+  padding: 16px 0;
+}
+
+.links {
+  @include fns.link;
+  font-size: 16px;
+  margin-top: 14px;
+  margin-right: -8px;
+  display: flex;
+  align-items: flex-start;
+
+  a {
+    padding: 0.5rem 1rem;
+    transition: all 0.3s ease-in-out;
+
+    &:hover {
+      background-color: vars.$bg-gray-50;
+      color: vars.$link-color-hover;
+    }
+
+    &.current {
+      font-weight: 700;
+      color: #0284c7;
+      text-decoration: underline;
+      text-underline-offset: 6px;
+      text-decoration-thickness: 3px;
+    }
+  }
+}
+
+// Mantine Menu 的触发器，与普通链接样式一致
+.menuTrigger {
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease-in-out;
+
+  &:hover {
+    background-color: vars.$bg-gray-50;
+    color: vars.$link-color-hover;
+  }
+
+  &.current {
+    font-weight: 700;
+    color: #0284c7;
+    text-decoration: underline;
+    text-underline-offset: 6px;
+    text-decoration-thickness: 3px;
+  }
+}
+
+// 子菜单中的 active 项
+.dropdownItemActive {
+  font-weight: 700;
+  color: #0284c7;
+}
+
+@media screen and (max-width: vars.$mobile-width) {
+  .root {
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 260px;
+    padding: 60px 0 40px 0;
+  }
+
+  .header {
+    text-align: center;
+  }
+
+  .links {
+    font-size: 18px;
+    margin: 20px 0 0 0;
+  }
+}

@@ -1,0 +1,18 @@
+.idea
+*.iml
+.DS_Store
+
+node_modules
+*.js.map
+tsconfig.tsbuildinfo
+
+.next
+next-env.d.ts
+.env
+deploy.settings.json
+
+scripts/.env
+_pages
+
+# 数据库
+data/

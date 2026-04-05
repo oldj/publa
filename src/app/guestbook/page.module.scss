@@ -1,0 +1,55 @@
+.root {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 20px 0;
+}
+
+.page_title {
+  font-size: 24px;
+  margin-bottom: 10px;
+}
+
+.form {
+  margin: 20px 0 40px;
+}
+
+.section_title {
+  font-size: 18px;
+  margin-bottom: 16px;
+}
+
+.messages {
+  margin-top: 30px;
+}
+
+.message {
+  padding: 12px 0;
+  border-bottom: 1px solid #eee;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.message_header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.author {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.time {
+  font-size: 12px;
+  color: #999;
+}
+
+.message_content {
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}

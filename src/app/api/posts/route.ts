@@ -1,0 +1,82 @@
+import { getCurrentUser } from '@/server/auth'
+import { htmlToText, renderMarkdown } from '@/server/lib/markdown'
+import { isUniqueConstraintError, parseIntParam, safeParseJson } from '@/server/lib/request'
+import { createPost, isSlugAvailable, listPostsAdmin } from '@/server/services/posts'
+import { NextRequest, NextResponse } from 'next/server'
+
+export async function GET(request: NextRequest) {
+  const user = await getCurrentUser()
+  if (!user) {
+    return NextResponse.json(
+      { success: false, code: 'UNAUTHORIZED', message: 'Unauthorized' },
+      { status: 401 },
+    )
+  }
+
+  const { searchParams } = new URL(request.url)
+  const page = parseIntParam(searchParams.get('page'), 1, 1)
+  const pageSize = parseIntParam(searchParams.get('pageSize'), 20, 1, 100)
+  const status = searchParams.get('status') || undefined
+  const categoryId = searchParams.get('categoryId')
+    ? parseIntParam(searchParams.get('categoryId'), 0, 1)
+    : undefined
+  const search = searchParams.get('search') || undefined
+
+  const result = await listPostsAdmin({ page, pageSize, status, categoryId, search })
+  return NextResponse.json({ success: true, data: result })
+}
+
+export async function POST(request: NextRequest) {
+  const user = await getCurrentUser()
+  if (!user) {
+    return NextResponse.json(
+      { success: false, code: 'UNAUTHORIZED', message: 'Unauthorized' },
+      { status: 401 },
+    )
+  }
+
+  const { data: body, error } = await safeParseJson(request)
+  if (error) return error
+
+  if (!body.title || !body.slug) {
+    return NextResponse.json(
+      { success: false, code: 'VALIDATION_ERROR', message: '标题和 slug 不能为空' },
+      { status: 400 },
+    )
+  }
+
+  const slugOk = await isSlugAvailable(body.slug)
+  if (!slugOk) {
+    return NextResponse.json(
+      { success: false, code: 'DUPLICATE_SLUG', message: 'slug 已存在' },
+      { status: 400 },
+    )
+  }
+
+  // 推导并持久化 contentType
+  const ct = body.contentType || (body.isMarkdown ? 'markdown' : 'richtext')
+  body.contentType = ct
+
+  // 根据内容类型处理
+  if (ct === 'markdown' && body.contentRaw) {
+    body.contentHtml = await renderMarkdown(body.contentRaw)
+    body.contentText = htmlToText(body.contentHtml)
+  } else if (body.contentRaw) {
+    // richtext 和 html: contentRaw 已经是 HTML
+    body.contentHtml = body.contentHtml || body.contentRaw
+    body.contentText = body.contentText || htmlToText(body.contentHtml)
+  }
+
+  try {
+    const post = await createPost({ ...body, authorId: user.id })
+    return NextResponse.json({ success: true, data: post })
+  } catch (err) {
+    if (isUniqueConstraintError(err)) {
+      return NextResponse.json(
+        { success: false, code: 'DUPLICATE_SLUG', message: 'slug 已存在' },
+        { status: 400 },
+      )
+    }
+    throw err
+  }
+}

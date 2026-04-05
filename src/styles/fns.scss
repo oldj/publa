@@ -1,0 +1,90 @@
+@use "vars";
+@use "libs/form";
+
+@mixin content_width {
+  max-width: 800px;
+}
+
+@mixin code {
+  font-family: Monaco, Courier, "Courier New", monospace;
+  letter-spacing: 0;
+}
+
+@mixin normal_page {
+  @include content_width;
+  padding: 20px 0 40px 0;
+}
+
+@mixin weak {
+  color: vars.$font-color-weak;
+  @include link_with_under_line(vars.$font-color-weak);
+}
+
+@mixin link {
+  a {
+    //box-shadow: 0 1px 0 0 #fff, 0 2px 0 0 $link-color;
+
+    &:hover {
+      color: vars.$link-color-hover;
+      //box-shadow: 0 1px 0 0 #fff, 0 3px 0 0 $link-color-hover;
+      //text-decoration: underline;
+      //text-underline-style: wave;
+    }
+  }
+}
+
+@mixin link_with_under_line($color: vars.$link-color) {
+  @include link;
+
+  a {
+    color: $color;
+    //box-shadow: 0 1px 0 0 #fff, 0 2px 0 0 $color;
+    text-decoration: underline;
+    text-underline-offset: 6px;
+
+    &:focus-visible {
+      //text-underline-color: transparent;
+      text-decoration: none;
+      color: vars.$link-color-hover;
+    }
+  }
+}
+
+@mixin my_list($indent: 1em) {
+  ul, ol {
+    padding-left: $indent;
+  }
+
+  ol {
+    padding-left: $indent + 1em;
+  }
+
+  li {
+    &::marker {
+      @include code;
+      //content: "-";
+      color: vars.$font-color-weak;
+      //font-family: monospace;
+    }
+  }
+
+  ul li {
+    padding-inline-start: 1ch;
+    list-style-type: '-';
+  }
+
+  ol li {
+    list-style-type: decimal;
+  }
+}
+
+@mixin gray($v: 100%) {
+  -webkit-filter: grayscale($v);
+  -moz-filter: grayscale($v);
+  //-ms-filter: grayscale($v);
+  -o-filter: grayscale($v);
+
+  filter: grayscale($v);
+
+  //filter: gray;
+}

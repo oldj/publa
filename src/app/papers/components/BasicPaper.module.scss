@@ -1,0 +1,26 @@
+.root {
+  font-size: 12px;
+  background-color: #fff;
+  //   outline: 1px solid #000;
+  box-sizing: border-box;
+  margin: 0 auto;
+
+  h2 {
+    font-size: 1.2em;
+    font-weight: bold;
+    margin: 0 0 5px 0;
+    padding: 0;
+    text-align: center;
+  }
+
+  :global(.katex-display) {
+    margin: 0;
+  }
+}
+
+.content {
+  background-color: #fff;
+  width: 100%;
+  height: 100%;
+  //   outline: 1px solid #ccc;
+}
