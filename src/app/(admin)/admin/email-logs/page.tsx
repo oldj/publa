@@ -3,6 +3,7 @@
 import myModal from '@/components/myModals'
 import { notify } from '@/lib/notify'
 import {
+  ActionIcon,
   Alert,
   Badge,
   Group,
@@ -12,13 +13,13 @@ import {
   Text,
   Title,
   Tooltip,
-  ActionIcon,
 } from '@mantine/core'
 import { IconInfoCircle, IconTrash } from '@tabler/icons-react'
 import dayjs from 'dayjs'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 import { useCurrentUser } from '../../_components/AdminCountsContext'
+import adminStyles from '../../_components/AdminShell.module.scss'
 
 interface EmailLog {
   id: number
@@ -110,67 +111,69 @@ export default function EmailLogsPage() {
         </Text>
       ) : (
         <>
-          <Table striped highlightOnHover>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>事件</Table.Th>
-                <Table.Th>收件人</Table.Th>
-                <Table.Th>主题</Table.Th>
-                <Table.Th>状态</Table.Th>
-                <Table.Th>时间</Table.Th>
-                <Table.Th w={60} />
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {logs.map((log) => (
-                <Table.Tr key={log.id}>
-                  <Table.Td>
-                    <Badge variant="light" size="sm">
-                      {EVENT_LABELS[log.eventType] || log.eventType}
-                    </Badge>
-                  </Table.Td>
-                  <Table.Td>
-                    <Text size="sm" lineClamp={1}>
-                      {log.recipients.join(', ')}
-                    </Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Text size="sm" lineClamp={1}>
-                      {log.subject}
-                    </Text>
-                  </Table.Td>
-                  <Table.Td>
-                    {log.status === 'success' ? (
-                      <Badge color="green" variant="light" size="sm">
-                        成功
-                      </Badge>
-                    ) : (
-                      <Tooltip label={log.errorMessage || '发送失败'} multiline maw={300}>
-                        <Badge color="red" variant="light" size="sm" style={{ cursor: 'help' }}>
-                          失败
-                        </Badge>
-                      </Tooltip>
-                    )}
-                  </Table.Td>
-                  <Table.Td>
-                    <Text size="sm" c="dimmed">
-                      {dayjs(log.createdAt).format('YYYY-MM-DD HH:mm')}
-                    </Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <ActionIcon
-                      variant="subtle"
-                      color="red"
-                      size="sm"
-                      onClick={() => handleDelete(log.id)}
-                    >
-                      <IconTrash size={14} />
-                    </ActionIcon>
-                  </Table.Td>
+          <Table.ScrollContainer minWidth={500} className={adminStyles.tableContainer}>
+            <Table highlightOnHover>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>事件</Table.Th>
+                  <Table.Th>收件人</Table.Th>
+                  <Table.Th>主题</Table.Th>
+                  <Table.Th>状态</Table.Th>
+                  <Table.Th>时间</Table.Th>
+                  <Table.Th w={60} />
                 </Table.Tr>
-              ))}
-            </Table.Tbody>
-          </Table>
+              </Table.Thead>
+              <Table.Tbody>
+                {logs.map((log) => (
+                  <Table.Tr key={log.id}>
+                    <Table.Td>
+                      <Badge variant="light" size="sm">
+                        {EVENT_LABELS[log.eventType] || log.eventType}
+                      </Badge>
+                    </Table.Td>
+                    <Table.Td>
+                      <Text size="sm" lineClamp={1}>
+                        {log.recipients.join(', ')}
+                      </Text>
+                    </Table.Td>
+                    <Table.Td>
+                      <Text size="sm" lineClamp={1}>
+                        {log.subject}
+                      </Text>
+                    </Table.Td>
+                    <Table.Td>
+                      {log.status === 'success' ? (
+                        <Badge color="green" variant="light" size="sm">
+                          成功
+                        </Badge>
+                      ) : (
+                        <Tooltip label={log.errorMessage || '发送失败'} multiline maw={300}>
+                          <Badge color="red" variant="light" size="sm" style={{ cursor: 'help' }}>
+                            失败
+                          </Badge>
+                        </Tooltip>
+                      )}
+                    </Table.Td>
+                    <Table.Td>
+                      <Text size="sm" c="dimmed">
+                        {dayjs(log.createdAt).format('YYYY-MM-DD HH:mm')}
+                      </Text>
+                    </Table.Td>
+                    <Table.Td>
+                      <ActionIcon
+                        variant="subtle"
+                        color="red"
+                        size="sm"
+                        onClick={() => handleDelete(log.id)}
+                      >
+                        <IconTrash size={14} />
+                      </ActionIcon>
+                    </Table.Td>
+                  </Table.Tr>
+                ))}
+              </Table.Tbody>
+            </Table>
+          </Table.ScrollContainer>
 
           {totalPages > 1 && (
             <Group justify="center">
