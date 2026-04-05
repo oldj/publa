@@ -3,7 +3,6 @@
 @use "vars";
 //@use "animate.css/animate.min.css'";
 
-
 * {
   box-sizing: border-box;
 }
@@ -267,6 +266,7 @@ area {
   margin-bottom: 1.5em;
   font-size: 14px;
   min-width: 100%;
+  table-layout: fixed;
 
   thead {
     font-weight: bold;

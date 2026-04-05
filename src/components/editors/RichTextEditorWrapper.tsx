@@ -17,12 +17,21 @@ import {
   IconMathFunction,
   IconMaximizeOff,
   IconPhoto,
+  IconColumnInsertLeft,
+  IconColumnInsertRight,
+  IconColumnRemove,
+  IconRowInsertBottom,
+  IconRowInsertTop,
+  IconRowRemove,
   IconRuler,
+  IconTable,
+  IconTableOff,
 } from '@tabler/icons-react'
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
 import TiptapImage from '@tiptap/extension-image'
 import Mathematics from '@tiptap/extension-mathematics'
 import Placeholder from '@tiptap/extension-placeholder'
+import { TableKit } from '@tiptap/extension-table'
 import type { Editor } from '@tiptap/react'
 import { NodeViewContent, NodeViewWrapper, ReactNodeViewRenderer, useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
@@ -100,8 +109,9 @@ export default function RichTextEditorWrapper({
   editorRef,
   hidden,
 }: RichTextEditorWrapperProps) {
-  // 图片浮动工具栏
+  // 浮动工具栏
   const [imageToolbar, setImageToolbar] = useState<{ top: number; left: number } | null>(null)
+  const [tableToolbar, setTableToolbar] = useState<{ top: number } | null>(null)
   const editorContainerRef = useRef<HTMLDivElement>(null)
   const selectedImgRef = useRef<HTMLImageElement | null>(null)
   const [customSizeOpen, setCustomSizeOpen] = useState(false)
@@ -167,6 +177,13 @@ export default function RichTextEditorWrapper({
       Mathematics.configure({
         inlineOptions: { onClick: openMathEditor },
         blockOptions: { onClick: openMathEditor },
+      }),
+      TableKit.configure({
+        table: {
+          resizable: true,
+          lastColumnResizable: true,
+          allowTableNodeSelection: true,
+        },
       }),
       Placeholder.configure({ placeholder }),
     ],
@@ -289,15 +306,61 @@ export default function RichTextEditorWrapper({
       })
     }
 
+    const updateTableToolbar = () => {
+      const container = editorContainerRef.current
+      if (!editor.isActive('table') || !container) {
+        setTableToolbar(null)
+        return
+      }
+
+      // 从选区向上查找 table DOM 元素
+      const { $from } = editor.state.selection
+      let depth = $from.depth
+      let tablePos = -1
+      while (depth > 0) {
+        if ($from.node(depth).type.name === 'table') {
+          tablePos = $from.before(depth)
+          break
+        }
+        depth--
+      }
+      if (tablePos < 0) {
+        setTableToolbar(null)
+        return
+      }
+
+      const tableDom = editor.view.nodeDOM(tablePos) as HTMLElement | null
+      if (!tableDom) {
+        setTableToolbar(null)
+        return
+      }
+
+      const containerRect = container.getBoundingClientRect()
+      const tableRect = tableDom.getBoundingClientRect()
+
+      const toolbarHeight = 36
+      const spaceAbove = tableRect.top - containerRect.top
+      const top =
+        spaceAbove >= toolbarHeight + 8
+          ? tableRect.top - containerRect.top - toolbarHeight - 4
+          : tableRect.bottom - containerRect.top + 4
+
+      setTableToolbar({ top })
+    }
+
     editor.on('selectionUpdate', updateImageToolbar)
     editor.on('selectionUpdate', clearImageSelection)
+    editor.on('selectionUpdate', updateTableToolbar)
     editor.on('transaction', updateImageToolbar)
     editor.on('transaction', syncImageAlign)
+    editor.on('transaction', updateTableToolbar)
     return () => {
       editor.off('selectionUpdate', updateImageToolbar)
       editor.off('selectionUpdate', clearImageSelection)
+      editor.off('selectionUpdate', updateTableToolbar)
       editor.off('transaction', updateImageToolbar)
       editor.off('transaction', syncImageAlign)
+      editor.off('transaction', updateTableToolbar)
     }
   }, [editor])
 
@@ -333,6 +396,21 @@ export default function RichTextEditorWrapper({
               <RichTextEditor.BulletList />
               <RichTextEditor.OrderedList />
               <RichTextEditor.CodeBlock />
+            </RichTextEditor.ControlsGroup>
+
+            <RichTextEditor.ControlsGroup>
+              <RichTextEditor.Control
+                onClick={() => {
+                  editor
+                    ?.chain()
+                    .focus()
+                    .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
+                    .run()
+                }}
+                title="插入表格"
+              >
+                <IconTable size={16} />
+              </RichTextEditor.Control>
             </RichTextEditor.ControlsGroup>
 
             <RichTextEditor.ControlsGroup>
@@ -673,6 +751,101 @@ export default function RichTextEditorWrapper({
                   </Button>
                 </Tooltip>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* 表格浮动工具栏 */}
+        {tableToolbar && editor && (
+          <div
+            style={{
+              position: 'absolute',
+              top: tableToolbar.top,
+              left: 0,
+              right: 0,
+              display: 'flex',
+              justifyContent: 'center',
+              zIndex: 20,
+              pointerEvents: 'none',
+            }}
+          >
+            <div className="image-bubble-menu" style={{ pointerEvents: 'auto' }}>
+              <Tooltip label="前方插入列" position="top" withArrow>
+                <Button
+                  size="compact-xs"
+                  variant="subtle"
+                  color="gray"
+                  onClick={() => editor.chain().focus().addColumnBefore().run()}
+                >
+                  <IconColumnInsertLeft size={16} />
+                </Button>
+              </Tooltip>
+              <Tooltip label="后方插入列" position="top" withArrow>
+                <Button
+                  size="compact-xs"
+                  variant="subtle"
+                  color="gray"
+                  onClick={() => editor.chain().focus().addColumnAfter().run()}
+                >
+                  <IconColumnInsertRight size={16} />
+                </Button>
+              </Tooltip>
+              <Tooltip label="删除列" position="top" withArrow>
+                <Button
+                  size="compact-xs"
+                  variant="subtle"
+                  color="red"
+                  onClick={() => editor.chain().focus().deleteColumn().run()}
+                >
+                  <IconColumnRemove size={16} />
+                </Button>
+              </Tooltip>
+
+              <div style={{ width: 1, height: 16, background: 'var(--mantine-color-gray-3)' }} />
+
+              <Tooltip label="上方插入行" position="top" withArrow>
+                <Button
+                  size="compact-xs"
+                  variant="subtle"
+                  color="gray"
+                  onClick={() => editor.chain().focus().addRowBefore().run()}
+                >
+                  <IconRowInsertTop size={16} />
+                </Button>
+              </Tooltip>
+              <Tooltip label="下方插入行" position="top" withArrow>
+                <Button
+                  size="compact-xs"
+                  variant="subtle"
+                  color="gray"
+                  onClick={() => editor.chain().focus().addRowAfter().run()}
+                >
+                  <IconRowInsertBottom size={16} />
+                </Button>
+              </Tooltip>
+              <Tooltip label="删除行" position="top" withArrow>
+                <Button
+                  size="compact-xs"
+                  variant="subtle"
+                  color="red"
+                  onClick={() => editor.chain().focus().deleteRow().run()}
+                >
+                  <IconRowRemove size={16} />
+                </Button>
+              </Tooltip>
+
+              <div style={{ width: 1, height: 16, background: 'var(--mantine-color-gray-3)' }} />
+
+              <Tooltip label="删除表格" position="top" withArrow>
+                <Button
+                  size="compact-xs"
+                  variant="subtle"
+                  color="red"
+                  onClick={() => editor.chain().focus().deleteTable().run()}
+                >
+                  <IconTableOff size={16} />
+                </Button>
+              </Tooltip>
             </div>
           </div>
         )}
