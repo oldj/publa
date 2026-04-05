@@ -132,7 +132,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
           user.id,
           tx,
         )
-        await publishDraft('post', postId, tx)
+        await publishDraft('post', postId, user.id, tx)
 
         return result
       })

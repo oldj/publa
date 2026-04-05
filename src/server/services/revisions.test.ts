@@ -12,7 +12,10 @@ const {
   restoreRevision,
   deleteDraft,
   deleteRevisionsByTarget,
+  cleanOrphanRevisions,
 } = await import('./revisions')
+const { createEmptyPost } = await import('./posts')
+const { createEmptyPage } = await import('./pages')
 
 beforeEach(async () => {
   await setupTestDb()
@@ -157,7 +160,7 @@ describe('publishDraft', () => {
       1,
     )
 
-    const published = await publishDraft('post', 1)
+    const published = await publishDraft('post', 1, 1)
     expect(published).not.toBeNull()
     expect(published!.status).toBe('published')
 
@@ -166,8 +169,34 @@ describe('publishDraft', () => {
     expect(draft).toBeNull()
   })
 
+  it('发布时应写入 updatedBy', async () => {
+    const authorId = 1
+    const publisherId = 2
+    await saveDraft(
+      'post',
+      1,
+      {
+        title: '',
+        excerpt: '',
+        contentRaw: 'content',
+        contentHtml: '<p>content</p>',
+        contentText: 'content',
+      },
+      authorId,
+    )
+
+    await publishDraft('post', 1, publisherId)
+
+    const revisions = await listPublishedRevisions('post', 1)
+    expect(revisions).toHaveLength(1)
+    const revision = await getRevisionById(revisions[0].id)
+    expect(revision).not.toBeNull()
+    expect(revision!.createdBy).toBe(authorId)
+    expect(revision!.updatedBy).toBe(publisherId)
+  })
+
   it('无草稿时返回 null', async () => {
-    const result = await publishDraft('post', 999)
+    const result = await publishDraft('post', 999, 1)
     expect(result).toBeNull()
   })
 
@@ -178,7 +207,7 @@ describe('publishDraft', () => {
       { title: '', excerpt: '', contentRaw: 'v1', contentHtml: '', contentText: '' },
       1,
     )
-    await publishDraft('post', 1)
+    await publishDraft('post', 1, 1)
 
     await saveDraft(
       'post',
@@ -186,7 +215,7 @@ describe('publishDraft', () => {
       { title: '', excerpt: '', contentRaw: 'v2', contentHtml: '', contentText: '' },
       1,
     )
-    await publishDraft('post', 1)
+    await publishDraft('post', 1, 1)
 
     const revisions = await listPublishedRevisions('post', 1)
     expect(revisions).toHaveLength(2)
@@ -212,7 +241,7 @@ describe('publishDraft', () => {
       1,
     )
 
-    const published = await publishDraft('page', 1)
+    const published = await publishDraft('page', 1, 1)
     expect(published).not.toBeNull()
     expect(published!.metadata).toMatchObject({
       path: 'invalid/path/',
@@ -231,7 +260,7 @@ describe('listPublishedRevisions', () => {
       { title: '', excerpt: '', contentRaw: 'v1', contentHtml: '', contentText: '' },
       1,
     )
-    await publishDraft('post', 1)
+    await publishDraft('post', 1, 1)
 
     await saveDraft(
       'post',
@@ -239,7 +268,7 @@ describe('listPublishedRevisions', () => {
       { title: '', excerpt: '', contentRaw: 'v2', contentHtml: '', contentText: '' },
       1,
     )
-    await publishDraft('post', 1)
+    await publishDraft('post', 1, 1)
 
     const revisions = await listPublishedRevisions('post', 1)
     expect(revisions).toHaveLength(2)
@@ -265,7 +294,7 @@ describe('listPublishedRevisions', () => {
       { title: '', excerpt: '', contentRaw: 'a', contentHtml: '', contentText: '' },
       1,
     )
-    await publishDraft('post', 1)
+    await publishDraft('post', 1, 1)
 
     await saveDraft(
       'page',
@@ -273,7 +302,7 @@ describe('listPublishedRevisions', () => {
       { title: '', excerpt: '', contentRaw: 'p', contentHtml: '', contentText: '' },
       1,
     )
-    await publishDraft('page', 1)
+    await publishDraft('page', 1, 1)
 
     expect(await listPublishedRevisions('post', 1)).toHaveLength(1)
     expect(await listPublishedRevisions('page', 1)).toHaveLength(1)
@@ -294,7 +323,7 @@ describe('getRevisionById', () => {
       },
       1,
     )
-    await publishDraft('post', 1)
+    await publishDraft('post', 1, 1)
 
     const revisions = await listPublishedRevisions('post', 1)
     const revision = await getRevisionById(revisions[0].id)
@@ -320,7 +349,7 @@ describe('getRevisionById', () => {
       },
       1,
     )
-    await publishDraft('page', 1)
+    await publishDraft('page', 1, 1)
 
     const revisions = await listPublishedRevisions('page', 1)
     const revision = await getRevisionById(revisions[0].id)
@@ -345,14 +374,14 @@ describe('deleteRevisions', () => {
       { title: '', excerpt: '', contentRaw: 'v1', contentHtml: '', contentText: '' },
       1,
     )
-    await publishDraft('post', 1)
+    await publishDraft('post', 1, 1)
     await saveDraft(
       'post',
       1,
       { title: '', excerpt: '', contentRaw: 'v2', contentHtml: '', contentText: '' },
       1,
     )
-    await publishDraft('post', 1)
+    await publishDraft('post', 1, 1)
 
     const revisions = await listPublishedRevisions('post', 1)
     expect(revisions).toHaveLength(2)
@@ -383,7 +412,7 @@ describe('deleteRevisions', () => {
       { title: '', excerpt: '', contentRaw: 'a', contentHtml: '', contentText: '' },
       1,
     )
-    await publishDraft('post', 1)
+    await publishDraft('post', 1, 1)
 
     const revisions = await listPublishedRevisions('post', 1)
     await deleteRevisions('page', 1, [revisions[0].id])
@@ -404,14 +433,14 @@ describe('restoreRevision', () => {
       { title: '', excerpt: '', contentRaw: 'v1', contentHtml: '<p>v1</p>', contentText: 'v1' },
       1,
     )
-    await publishDraft('post', 1)
+    await publishDraft('post', 1, 1)
     await saveDraft(
       'post',
       1,
       { title: '', excerpt: '', contentRaw: 'v2', contentHtml: '<p>v2</p>', contentText: 'v2' },
       1,
     )
-    await publishDraft('post', 1)
+    await publishDraft('post', 1, 1)
 
     const revisions = await listPublishedRevisions('post', 1)
     const oldVersion = revisions.reduce((a, b) => (a.id < b.id ? a : b))
@@ -433,7 +462,7 @@ describe('restoreRevision', () => {
       { title: '', excerpt: '', contentRaw: 'a', contentHtml: '', contentText: '' },
       1,
     )
-    await publishDraft('post', 1)
+    await publishDraft('post', 1, 1)
 
     const revisions = await listPublishedRevisions('post', 1)
     const result = await restoreRevision('page', 1, revisions[0].id, 1)
@@ -459,7 +488,7 @@ describe('restoreRevision', () => {
       },
       1,
     )
-    await publishDraft('page', 1)
+    await publishDraft('page', 1, 1)
 
     const revisions = await listPublishedRevisions('page', 1)
     const result = await restoreRevision('page', 1, revisions[0].id, 1)
@@ -486,7 +515,7 @@ describe('deleteRevisionsByTarget', () => {
       { title: '', excerpt: '', contentRaw: 'v1', contentHtml: '', contentText: '' },
       1,
     )
-    await publishDraft('post', 1)
+    await publishDraft('post', 1, 1)
     await saveDraft(
       'post',
       1,
@@ -545,7 +574,7 @@ describe('deleteDraft', () => {
       { title: '', excerpt: '', contentRaw: 'v1', contentHtml: '', contentText: '' },
       1,
     )
-    await publishDraft('post', 1)
+    await publishDraft('post', 1, 1)
 
     // 再创建一个草稿
     await saveDraft(
@@ -586,5 +615,114 @@ describe('deleteDraft', () => {
 
     expect(await getDraft('post', 1)).toBeNull()
     expect(await getDraft('page', 1)).not.toBeNull()
+  })
+})
+
+describe('cleanOrphanRevisions', () => {
+  it('删除无对应 content 的孤儿 revision', async () => {
+    // targetId=99999 在 contents 表中不存在
+    await saveDraft(
+      'post',
+      99999,
+      { title: '孤儿', excerpt: '', contentRaw: 'orphan', contentHtml: '', contentText: '' },
+      1,
+    )
+    expect(await getDraft('post', 99999)).not.toBeNull()
+
+    const deleted = await cleanOrphanRevisions()
+    expect(deleted).toBe(1)
+    expect(await getDraft('post', 99999)).toBeNull()
+  })
+
+  it('不删除有对应 content 的 revision', async () => {
+    const post = await createEmptyPost(1)
+    await saveDraft(
+      'post',
+      post.id,
+      { title: '正常草稿', excerpt: '', contentRaw: 'ok', contentHtml: '', contentText: '' },
+      1,
+    )
+    await publishDraft('post', post.id, 1)
+    // 再创建一个新草稿
+    await saveDraft(
+      'post',
+      post.id,
+      { title: '新草稿', excerpt: '', contentRaw: 'v2', contentHtml: '', contentText: '' },
+      1,
+    )
+
+    const deleted = await cleanOrphanRevisions()
+    expect(deleted).toBe(0)
+
+    // 草稿和历史版本都应保留
+    expect(await getDraft('post', post.id)).not.toBeNull()
+    expect(await listPublishedRevisions('post', post.id)).toHaveLength(1)
+  })
+
+  it('不删除软删除 content 的 revision', async () => {
+    const post = await createEmptyPost(1)
+    await saveDraft(
+      'post',
+      post.id,
+      { title: '', excerpt: '', contentRaw: 'content', contentHtml: '', contentText: '' },
+      1,
+    )
+    await publishDraft('post', post.id, 1)
+
+    // 软删除 content（deletePost 内部也会清 revision，这里手动模拟仅软删除的场景）
+    const { db } = await import('@/server/db')
+    const { contents } = await import('@/server/db/schema')
+    const { eq } = await import('drizzle-orm')
+    await db
+      .update(contents)
+      .set({ deletedAt: new Date().toISOString() })
+      .where(eq(contents.id, post.id))
+
+    const deleted = await cleanOrphanRevisions()
+    expect(deleted).toBe(0)
+    expect(await listPublishedRevisions('post', post.id)).toHaveLength(1)
+  })
+
+  it('混合场景：只删除孤儿，保留正常 revision', async () => {
+    const post = await createEmptyPost(1)
+    const page = await createEmptyPage()
+
+    // 正常 revision
+    await saveDraft(
+      'post',
+      post.id,
+      { title: '', excerpt: '', contentRaw: 'post', contentHtml: '', contentText: '' },
+      1,
+    )
+    await saveDraft(
+      'page',
+      page.id,
+      { title: '', excerpt: '', contentRaw: 'page', contentHtml: '', contentText: '' },
+      1,
+    )
+
+    // 孤儿 revision
+    await saveDraft(
+      'post',
+      88888,
+      { title: '', excerpt: '', contentRaw: 'orphan1', contentHtml: '', contentText: '' },
+      1,
+    )
+    await saveDraft(
+      'page',
+      77777,
+      { title: '', excerpt: '', contentRaw: 'orphan2', contentHtml: '', contentText: '' },
+      1,
+    )
+
+    const deleted = await cleanOrphanRevisions()
+    expect(deleted).toBe(2)
+
+    // 正常 revision 不受影响
+    expect(await getDraft('post', post.id)).not.toBeNull()
+    expect(await getDraft('page', page.id)).not.toBeNull()
+    // 孤儿已清除
+    expect(await getDraft('post', 88888)).toBeNull()
+    expect(await getDraft('page', 77777)).toBeNull()
   })
 })

@@ -170,7 +170,7 @@ describe('发布后草稿冻结为历史，新草稿可继续保存', () => {
       },
       1,
     )
-    await publishDraft('post', post.id)
+    await publishDraft('post', post.id, 1)
 
     // 发布后，草稿应已被冻结
     expect(await getDraft('post', post.id)).toBeNull()
@@ -325,7 +325,7 @@ describe('转为草稿（下线）', () => {
       { title: '已发布', excerpt: '', contentRaw: '正文', contentHtml: '<p>正文</p>', contentText: '正文' },
       1,
     )
-    await publishDraft('post', post.id)
+    await publishDraft('post', post.id, 1)
 
     // 转为草稿
     await updatePost(post.id, { status: 'draft' })

@@ -436,7 +436,7 @@ describePostgres('postgres contract', () => {
       },
       ownerId,
     )
-    await revisionsService.publishDraft('post', 42)
+    await revisionsService.publishDraft('post', 42, ownerId)
 
     await revisionsService.saveDraft(
       'post',
@@ -450,7 +450,7 @@ describePostgres('postgres contract', () => {
       },
       ownerId,
     )
-    await revisionsService.publishDraft('post', 42)
+    await revisionsService.publishDraft('post', 42, ownerId)
 
     const published = await revisionsService.listPublishedRevisions('post', 42)
     expect(published).toHaveLength(2)

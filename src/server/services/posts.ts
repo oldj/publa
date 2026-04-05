@@ -1,15 +1,15 @@
 import { db } from '@/server/db'
 import { insertOne, maybeFirst, updateOne } from '@/server/db/query'
 import {
-  contents,
+  categories,
+  comments,
   contentRevisions,
+  contents,
   contentTags,
   slugHistories,
-  categories,
   tags,
-  comments,
 } from '@/server/db/schema'
-import { eq, and, isNull, desc, asc, count, lte, sql, exists, ne, like, or } from 'drizzle-orm'
+import { and, asc, count, desc, eq, exists, isNull, like, lte, ne, or, sql } from 'drizzle-orm'
 import { listDraftsByTargetIds } from './revisions'
 
 export interface PostInput {
@@ -95,7 +95,13 @@ export async function listPostsAdmin(options: PostListOptions = {}) {
     .from(contents)
     .leftJoin(categories, eq(contents.categoryId, categories.id))
     .where(where)
-    .orderBy(desc(contents.pinned), desc(contents.publishedAt), desc(contents.createdAt))
+    .orderBy(
+      desc(contents.pinned),
+      // 从未发布过的草稿置顶，已发布过的按发布时间倒序
+      sql`CASE WHEN ${contents.publishedAt} IS NULL THEN 0 ELSE 1 END`,
+      desc(contents.publishedAt),
+      desc(contents.createdAt),
+    )
     .limit(pageSize)
     .offset((page - 1) * pageSize)
 
@@ -485,13 +491,14 @@ export async function updatePost(
 
 /** 软删除文章 */
 export async function deletePost(id: number) {
-  await db
-    .update(contents)
-    .set({ deletedAt: new Date().toISOString() })
-    .where(and(eq(contents.type, 'post'), eq(contents.id, id)))
-  // 清除关联的修订记录
   const { deleteRevisionsByTarget } = await import('./revisions')
-  await deleteRevisionsByTarget('post', id)
+  await db.transaction(async (tx) => {
+    await tx
+      .update(contents)
+      .set({ deletedAt: new Date().toISOString() })
+      .where(and(eq(contents.type, 'post'), eq(contents.id, id)))
+    await deleteRevisionsByTarget('post', id, tx)
+  })
   return { success: true }
 }
 

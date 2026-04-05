@@ -97,9 +97,10 @@ export async function updateTag(id: number, input: Partial<TagInput>) {
 
 /** 删除标签 */
 export async function deleteTag(id: number) {
-  // 先删除关联
-  await db.delete(contentTags).where(eq(contentTags.tagId, id))
-  await db.delete(tags).where(eq(tags.id, id))
+  await db.transaction(async (tx) => {
+    await tx.delete(contentTags).where(eq(contentTags.tagId, id))
+    await tx.delete(tags).where(eq(tags.id, id))
+  })
   return { success: true }
 }
 

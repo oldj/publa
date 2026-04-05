@@ -1,6 +1,6 @@
 import { getCurrentUser } from '@/server/auth'
 import { db } from '@/server/db'
-import { renderMarkdown } from '@/server/lib/markdown'
+import { renderMarkdown, htmlToText } from '@/server/lib/markdown'
 import { isUniqueConstraintError, parseIdParam, safeParseJson } from '@/server/lib/request'
 import {
   deletePage,
@@ -108,8 +108,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   if (body.contentRaw !== undefined) {
     if (ct === 'markdown') {
       body.contentHtml = await renderMarkdown(body.contentRaw)
+      body.contentText = htmlToText(body.contentHtml)
     } else {
       body.contentHtml = body.contentHtml || body.contentRaw
+      body.contentText = body.contentText || htmlToText(body.contentHtml)
     }
   }
 
@@ -140,7 +142,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
           user.id,
           tx,
         )
-        await publishDraft('page', pageId, tx)
+        await publishDraft('page', pageId, user.id, tx)
 
         return result
       })

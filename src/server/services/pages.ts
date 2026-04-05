@@ -2,7 +2,7 @@ import { parsePageDraftMetadata } from '@/shared/revision-metadata'
 import { db } from '@/server/db'
 import { insertOne, maybeFirst, updateOne } from '@/server/db/query'
 import { contents } from '@/server/db/schema'
-import { and, count, desc, eq, isNull, lte, ne } from 'drizzle-orm'
+import { and, count, desc, eq, isNull, lte, ne, sql } from 'drizzle-orm'
 import { listDraftsByTargetIds } from './revisions'
 
 /** 保留路径，页面不能使用 */
@@ -76,7 +76,12 @@ export async function listPages(options: { page?: number; pageSize?: number } = 
     .select()
     .from(contents)
     .where(where)
-    .orderBy(desc(contents.createdAt))
+    .orderBy(
+      // 从未发布过的草稿置顶，已发布过的按发布时间倒序
+      sql`CASE WHEN ${contents.publishedAt} IS NULL THEN 0 ELSE 1 END`,
+      desc(contents.publishedAt),
+      desc(contents.createdAt),
+    )
     .limit(pageSize)
     .offset((page - 1) * pageSize)
 
@@ -222,12 +227,13 @@ export async function updatePage(
 
 /** 软删除页面 */
 export async function deletePage(id: number) {
-  await db
-    .update(contents)
-    .set({ deletedAt: new Date().toISOString() })
-    .where(and(eq(contents.id, id), eq(contents.type, 'page')))
-  // 清除关联的修订记录
   const { deleteRevisionsByTarget } = await import('./revisions')
-  await deleteRevisionsByTarget('page', id)
+  await db.transaction(async (tx) => {
+    await tx
+      .update(contents)
+      .set({ deletedAt: new Date().toISOString() })
+      .where(and(eq(contents.id, id), eq(contents.type, 'page')))
+    await deleteRevisionsByTarget('page', id, tx)
+  })
   return { success: true }
 }

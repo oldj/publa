@@ -1,8 +1,8 @@
 import type { DraftContentType } from '@/shared/revision-metadata'
 import { db } from '@/server/db'
 import { maybeFirst } from '@/server/db/query'
-import { contentRevisions } from '@/server/db/schema'
-import { and, desc, eq, inArray } from 'drizzle-orm'
+import { contentRevisions, contents } from '@/server/db/schema'
+import { and, desc, eq, inArray, notExists } from 'drizzle-orm'
 
 type TargetType = 'post' | 'page'
 /** 事务或数据库实例，供函数内部统一使用 */
@@ -182,6 +182,7 @@ export async function listDraftsByTargetIds<TMetadata extends DraftMetadata = Dr
 export async function publishDraft<TMetadata extends DraftMetadata = DraftMetadata>(
   targetType: TargetType,
   targetId: number,
+  userId: number,
   tx: DbOrTx = db,
 ) {
   const now = new Date().toISOString()
@@ -194,6 +195,7 @@ export async function publishDraft<TMetadata extends DraftMetadata = DraftMetada
     .set({
       status: 'published',
       updatedAt: now,
+      updatedBy: userId,
     })
     .where(eq(contentRevisions.id, draft.id))
 
@@ -221,9 +223,12 @@ export async function listPublishedRevisions(targetType: TargetType, targetId: n
 }
 
 /** 获取单条修订（含内容） */
-export async function getRevisionById<TMetadata extends DraftMetadata = DraftMetadata>(id: number) {
+export async function getRevisionById<TMetadata extends DraftMetadata = DraftMetadata>(
+  id: number,
+  tx: DbOrTx = db,
+) {
   const row = await maybeFirst(
-    db.select().from(contentRevisions).where(eq(contentRevisions.id, id)).limit(1),
+    tx.select().from(contentRevisions).where(eq(contentRevisions.id, id)).limit(1),
   )
 
   return normalizeRevisionRow<TMetadata>(row)
@@ -256,7 +261,7 @@ export async function restoreRevision<TMetadata extends DraftMetadata = DraftMet
   userId: number,
   tx: DbOrTx = db,
 ) {
-  const source = await getRevisionById<TMetadata>(revisionId)
+  const source = await getRevisionById<TMetadata>(revisionId, tx)
   if (!source || source.targetType !== targetType || source.targetId !== targetId) {
     return null
   }
@@ -272,15 +277,41 @@ export async function restoreRevision<TMetadata extends DraftMetadata = DraftMet
   }
 
   await saveDraft(targetType, targetId, content, userId, tx)
-  const published = await publishDraft<TMetadata>(targetType, targetId, tx)
+  const published = await publishDraft<TMetadata>(targetType, targetId, userId, tx)
   return { revision: published, content }
 }
 
 /** 删除某 target 的所有修订 */
-export async function deleteRevisionsByTarget(targetType: TargetType, targetId: number) {
-  await db
+export async function deleteRevisionsByTarget(
+  targetType: TargetType,
+  targetId: number,
+  tx: DbOrTx = db,
+) {
+  await tx
     .delete(contentRevisions)
     .where(
       and(eq(contentRevisions.targetType, targetType), eq(contentRevisions.targetId, targetId)),
     )
+}
+
+/** 清理孤儿 revision：对应的 content 不存在或已软删除 */
+export async function cleanOrphanRevisions() {
+  const result = await db
+    .delete(contentRevisions)
+    .returning({ id: contentRevisions.id })
+    .where(
+      notExists(
+        db
+          .select({ id: contents.id })
+          .from(contents)
+          .where(
+            and(
+              eq(contents.id, contentRevisions.targetId),
+              eq(contents.type, contentRevisions.targetType),
+            ),
+          ),
+      ),
+    )
+
+  return result.length
 }

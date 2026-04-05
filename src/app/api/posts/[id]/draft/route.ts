@@ -1,6 +1,7 @@
 import { getCurrentUser } from '@/server/auth'
 import { renderMarkdown, htmlToText } from '@/server/lib/markdown'
 import { parseIdParam, safeParseJson } from '@/server/lib/request'
+import { getPostById } from '@/server/services/posts'
 import { saveDraft, getDraft, deleteDraft } from '@/server/services/revisions'
 import { parsePostDraftMetadata } from '@/shared/revision-metadata'
 import { NextRequest, NextResponse } from 'next/server'
@@ -41,6 +42,15 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   const { id: idStr } = await params
   const { id: postId, error: idError } = parseIdParam(idStr)
   if (idError) return idError
+
+  const post = await getPostById(postId)
+  if (!post) {
+    return NextResponse.json(
+      { success: false, code: 'NOT_FOUND', message: '文章不存在' },
+      { status: 404 },
+    )
+  }
+
   const { data: body, error } = await safeParseJson(request)
   if (error) return error
 
