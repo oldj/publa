@@ -3,7 +3,8 @@ import myModal from '@/components/myModals'
 import adminStyles from '../../_components/AdminShell.module.scss'
 
 import { notify } from '@/lib/notify'
-import { ActionIcon, Badge, Button, Group, Table, Text, Title } from '@mantine/core'
+import { NowrapBadge } from '@/components/NowrapBadge'
+import { ActionIcon, Button, Group, Table, Text, Title } from '@mantine/core'
 import { IconEye, IconPencil, IconPlus, IconTrash } from '@tabler/icons-react'
 import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
@@ -58,11 +59,11 @@ export default function PagesAdminPage() {
         <Table highlightOnHover>
           <Table.Thead>
             <Table.Tr>
-              <Table.Th>标题</Table.Th>
-              <Table.Th>路径</Table.Th>
-              <Table.Th>类型</Table.Th>
-              <Table.Th>状态</Table.Th>
-              <Table.Th>操作</Table.Th>
+              <Table.Th className={adminStyles.cellFill}>标题</Table.Th>
+              <Table.Th className={adminStyles.cellFit}>路径</Table.Th>
+              <Table.Th className={adminStyles.cellFit}>类型</Table.Th>
+              <Table.Th className={adminStyles.cellFit}>状态</Table.Th>
+              <Table.Th className={adminStyles.cellFit}>操作</Table.Th>
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
@@ -77,7 +78,7 @@ export default function PagesAdminPage() {
                       </Text>
                     )}
                   </Table.Td>
-                  <Table.Td>
+                  <Table.Td className={adminStyles.cellFit}>
                     {p.path ? (
                       <Text size="sm" c="dimmed">
                         /{p.path}
@@ -88,25 +89,23 @@ export default function PagesAdminPage() {
                       </Text>
                     )}
                   </Table.Td>
-                  <Table.Td>
-                    <Badge variant="light" size="sm">
+                  <Table.Td className={adminStyles.cellFit}>
+                    <NowrapBadge variant="light" size="sm">
                       {p.contentType}
-                    </Badge>
+                    </NowrapBadge>
                   </Table.Td>
-                  <Table.Td>
-                    <Badge color={st.color} variant="light">
+                  <Table.Td className={adminStyles.cellFit}>
+                    <NowrapBadge color={st.color} variant="light">
                       {st.label}
-                    </Badge>
+                    </NowrapBadge>
                   </Table.Td>
-                  <Table.Td>
-                    <Group gap="xs">
+                  <Table.Td className={adminStyles.cellFit}>
+                    <Group gap="xs" wrap="nowrap">
                       <ActionIcon
                         variant="subtle"
                         component={Link}
                         href={
-                          p.status === 'published' && p.path
-                            ? `/${p.path}`
-                            : `/--preview-${p.id}`
+                          p.status === 'published' && p.path ? `/${p.path}` : `/--preview-${p.id}`
                         }
                         target="_blank"
                         rel="noopener noreferrer"
