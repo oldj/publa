@@ -14,7 +14,9 @@ import { notify } from '@/lib/notify'
 import {
   Badge,
   Button,
+  Grid,
   Group,
+  Paper,
   Select,
   Stack,
   Text,
@@ -28,8 +30,8 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { shouldCreateDraftRecord } from '../../_lib/draft-persistence'
-import { buildPageDraftPayload, buildPageSaveBody } from './page-save-payload'
 import RevisionHistory from '../../posts/_components/RevisionHistory'
+import { buildPageDraftPayload, buildPageSaveBody } from './page-save-payload'
 
 const RESERVED_PATHS = ['admin', 'api', 'setup', 'rss.xml', 'sitemap.xml', 'uploads']
 
@@ -608,11 +610,6 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
         </Group>
         <Group>
           {isEdit && (
-            <Button variant="subtle" onClick={() => setHistoryOpen(true)}>
-              历史版本
-            </Button>
-          )}
-          {isEdit && (
             <Button
               variant="subtle"
               leftSection={<IconEye size={16} />}
@@ -657,82 +654,116 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
         </Group>
       </Group>
 
-      <Stack>
-        <TextInput
-          label="标题"
-          required
-          value={form.title}
-          onChange={(e) => setField('title', e.target.value)}
-        />
-        <TextInput
-          label="路径"
-          required
-          placeholder={isEdit ? undefined : 'about'}
-          value={form.path}
-          onChange={(e) => handlePathChange(e.target.value)}
-          error={pathError}
-        />
-        <Group>
-          <ContentTypeSelector value={contentType} onChange={handleContentTypeChange} />
-          <Select
-            label="模板"
-            data={[
-              { value: 'default', label: '默认（含头尾）' },
-              { value: 'blank', label: '空白' },
-            ]}
-            value={form.template}
-            onChange={(v) => setField('template', v || 'default')}
-          />
-        </Group>
+      <Grid>
+        {/* 主编辑区 */}
+        <Grid.Col span={{ base: 12, md: 8 }}>
+          <Stack>
+            <TextInput
+              label="标题"
+              required
+              value={form.title}
+              onChange={(e) => setField('title', e.target.value)}
+            />
+            <TextInput
+              label="路径"
+              required
+              placeholder={isEdit ? undefined : 'about'}
+              value={form.path}
+              onChange={(e) => handlePathChange(e.target.value)}
+              error={pathError}
+            />
 
-        {/* 富文本编辑器 */}
-        <RichTextEditorWrapper
-          editorRef={richTextRef}
-          placeholder="开始撰写页面内容..."
-          onImageUpload={uploadImage}
-          checkStorageConfig={checkStorageConfig}
-          onUpdate={() => {
-            editorDirty.current = true
-            setDirty(true)
-            setAutoSaveTime(null)
-          }}
-          onReady={(editor) => {
-            if (pendingEditorContent.current) {
-              editor.commands.setContent(pendingEditorContent.current)
-              pendingEditorContent.current = null
-            }
-          }}
-          hidden={contentType !== 'richtext'}
-        />
+            <ContentTypeSelector value={contentType} onChange={handleContentTypeChange} />
 
-        {/* Markdown / HTML 文本编辑器 */}
-        {contentType !== 'richtext' && (
-          <Textarea
-            label={contentType === 'markdown' ? 'Markdown 内容' : 'HTML 内容'}
-            placeholder={contentType === 'markdown' ? '在此输入 Markdown...' : '在此输入 HTML...'}
-            autosize
-            minRows={15}
-            value={textContent}
-            onChange={(e) => {
-              setTextContent(e.target.value)
-              textContentRef.current = e.target.value
-              setDirty(checkDirty(form, e.target.value) || editorDirty.current)
-            }}
-            styles={{ input: { fontFamily: 'monospace', maxHeight: 600, overflowY: 'auto' } }}
-          />
-        )}
+            {/* 富文本编辑器 */}
+            <RichTextEditorWrapper
+              editorRef={richTextRef}
+              placeholder="开始撰写页面内容..."
+              onImageUpload={uploadImage}
+              checkStorageConfig={checkStorageConfig}
+              onUpdate={() => {
+                editorDirty.current = true
+                setDirty(true)
+                setAutoSaveTime(null)
+              }}
+              onReady={(editor) => {
+                if (pendingEditorContent.current) {
+                  editor.commands.setContent(pendingEditorContent.current)
+                  pendingEditorContent.current = null
+                }
+              }}
+              hidden={contentType !== 'richtext'}
+            />
 
-        <TextInput
-          label="SEO 标题"
-          value={form.seoTitle}
-          onChange={(e) => setField('seoTitle', e.target.value)}
-        />
-        <TextInput
-          label="SEO 描述"
-          value={form.seoDescription}
-          onChange={(e) => setField('seoDescription', e.target.value)}
-        />
-      </Stack>
+            {/* Markdown / HTML 文本编辑器 */}
+            {contentType !== 'richtext' && (
+              <Textarea
+                label={contentType === 'markdown' ? 'Markdown 内容' : 'HTML 内容'}
+                placeholder={
+                  contentType === 'markdown' ? '在此输入 Markdown...' : '在此输入 HTML...'
+                }
+                autosize
+                minRows={15}
+                value={textContent}
+                onChange={(e) => {
+                  setTextContent(e.target.value)
+                  textContentRef.current = e.target.value
+                  setDirty(checkDirty(form, e.target.value) || editorDirty.current)
+                }}
+                styles={{ input: { fontFamily: 'monospace', maxHeight: 600, overflowY: 'auto' } }}
+              />
+            )}
+          </Stack>
+        </Grid.Col>
+
+        {/* 侧边栏设置 */}
+        <Grid.Col span={{ base: 12, md: 4 }}>
+          <Stack>
+            <Paper withBorder p="md">
+              <Text fw={500} mb="sm">
+                页面设置
+              </Text>
+              <Stack gap="sm">
+                <Select
+                  label="模板"
+                  data={[
+                    { value: 'default', label: '默认（含头尾）' },
+                    { value: 'blank', label: '空白' },
+                  ]}
+                  value={form.template}
+                  onChange={(v) => setField('template', v || 'default')}
+                />
+                {isEdit && (
+                  <Button variant="subtle" fullWidth onClick={() => setHistoryOpen(true)}>
+                    查看历史版本
+                  </Button>
+                )}
+              </Stack>
+            </Paper>
+
+            <Paper withBorder p="md">
+              <Text fw={500} mb="sm">
+                SEO
+              </Text>
+              <TextInput
+                label="SEO 标题"
+                placeholder="可选"
+                value={form.seoTitle}
+                onChange={(e) => setField('seoTitle', e.target.value)}
+              />
+              <Textarea
+                label="SEO 描述"
+                placeholder="可选"
+                mt="sm"
+                autosize
+                minRows={2}
+                value={form.seoDescription}
+                onChange={(e) => setField('seoDescription', e.target.value)}
+              />
+            </Paper>
+          </Stack>
+        </Grid.Col>
+      </Grid>
 
       {/* 历史版本 */}
       {pageId && (
