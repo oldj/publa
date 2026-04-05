@@ -1,7 +1,12 @@
 import { getCurrentUser } from '@/server/auth'
 import { htmlToText, renderMarkdown } from '@/server/lib/markdown'
 import { isUniqueConstraintError, parseIntParam, safeParseJson } from '@/server/lib/request'
-import { createPost, isSlugAvailable, listPostsAdmin } from '@/server/services/posts'
+import {
+  createEmptyPost,
+  createPost,
+  isSlugAvailable,
+  listPostsAdmin,
+} from '@/server/services/posts'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(request: NextRequest) {
@@ -37,6 +42,12 @@ export async function POST(request: NextRequest) {
 
   const { data: body, error } = await safeParseJson(request)
   if (error) return error
+
+  // 创建空草稿（首次自动保存时调用）
+  if (body.createEmpty) {
+    const post = await createEmptyPost(user.id)
+    return NextResponse.json({ success: true, data: post })
+  }
 
   if (!body.title || !body.slug) {
     return NextResponse.json(

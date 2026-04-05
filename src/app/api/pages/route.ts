@@ -2,6 +2,7 @@ import { getCurrentUser } from '@/server/auth'
 import { renderMarkdown } from '@/server/lib/markdown'
 import { isUniqueConstraintError, safeParseJson } from '@/server/lib/request'
 import {
+  createEmptyPage,
   createPage,
   isPagePathAvailable,
   listPages,
@@ -33,6 +34,13 @@ export async function POST(request: NextRequest) {
 
   const { data: body, error } = await safeParseJson(request)
   if (error) return error
+
+  // 创建空草稿（首次自动保存时调用）
+  if (body.createEmpty) {
+    const page = await createEmptyPage()
+    return NextResponse.json({ success: true, data: page })
+  }
+
   if (!body.title || !body.path) {
     return NextResponse.json(
       { success: false, code: 'VALIDATION_ERROR', message: '标题和路径不能为空' },

@@ -162,7 +162,11 @@ export default function PostsPage() {
                           fontSize: 'var(--mantine-font-size-sm)',
                         }}
                       >
-                        {post.title}
+                        {post.title || (
+                          <Text span c="dimmed" inherit>
+                            (无标题)
+                          </Text>
+                        )}
                       </Link>
                     </Group>
                   </Table.Td>
@@ -186,16 +190,18 @@ export default function PostsPage() {
                   </Table.Td>
                   <Table.Td>
                     <Group gap="xs">
-                      <ActionIcon
-                        variant="subtle"
-                        component={Link}
-                        href={getPreviewUrl(post)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        aria-label={`查看文章《${post.title}》`}
-                      >
-                        <IconEye size={16} />
-                      </ActionIcon>
+                      {post.slug && (
+                        <ActionIcon
+                          variant="subtle"
+                          component={Link}
+                          href={getPreviewUrl(post)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label={`查看文章《${post.title}》`}
+                        >
+                          <IconEye size={16} />
+                        </ActionIcon>
+                      )}
                       <ActionIcon
                         variant="subtle"
                         component={Link}

@@ -24,7 +24,8 @@ describe('saveDraft', () => {
       'post',
       1,
       {
-        title: '', excerpt: '',
+        title: '',
+        excerpt: '',
         contentRaw: '# Hello',
         contentHtml: '<h1>Hello</h1>',
         contentText: 'Hello',
@@ -41,12 +42,46 @@ describe('saveDraft', () => {
     expect(draft!.createdBy).toBe(1)
   })
 
+  it('应保存完整草稿 metadata', async () => {
+    await saveDraft(
+      'post',
+      1,
+      {
+        title: '草稿标题',
+        excerpt: '摘要',
+        contentType: 'markdown',
+        contentRaw: '# Hello',
+        contentHtml: '<h1>Hello</h1>',
+        contentText: 'Hello',
+        metadata: {
+          slug: 'duplicate-slug',
+          categoryId: 3,
+          tagNames: ['前端', '测试'],
+          seoTitle: 'SEO 标题',
+          seoDescription: 'SEO 描述',
+        },
+      },
+      1,
+    )
+
+    const draft = await getDraft('post', 1)
+    expect(draft).not.toBeNull()
+    expect(draft!.metadata).toMatchObject({
+      slug: 'duplicate-slug',
+      categoryId: 3,
+      tagNames: ['前端', '测试'],
+      seoTitle: 'SEO 标题',
+      seoDescription: 'SEO 描述',
+    })
+  })
+
   it('更新已有草稿（upsert）', async () => {
     await saveDraft(
       'post',
       1,
       {
-        title: '', excerpt: '',
+        title: '',
+        excerpt: '',
         contentRaw: 'v1',
         contentHtml: '<p>v1</p>',
         contentText: 'v1',
@@ -58,7 +93,8 @@ describe('saveDraft', () => {
       'post',
       1,
       {
-        title: '', excerpt: '',
+        title: '',
+        excerpt: '',
         contentRaw: 'v2',
         contentHtml: '<p>v2</p>',
         contentText: 'v2',
@@ -68,14 +104,30 @@ describe('saveDraft', () => {
 
     const draft = await getDraft('post', 1)
     expect(draft!.contentRaw).toBe('v2')
-    // 更新时 createdBy 应同步为最新操作者
-    expect(draft!.createdBy).toBe(2)
+    // 更新时 createdBy 保持不变，updatedBy 更新为最新操作者
+    expect(draft!.createdBy).toBe(1)
+    expect(draft!.updatedBy).toBe(2)
   })
 
   it('不同 target 的草稿互不干扰', async () => {
-    await saveDraft('post', 1, { title: '', excerpt: '', contentRaw: 'post-1', contentHtml: '', contentText: '' }, 1)
-    await saveDraft('page', 1, { title: '', excerpt: '', contentRaw: 'page-1', contentHtml: '', contentText: '' }, 1)
-    await saveDraft('post', 2, { title: '', excerpt: '', contentRaw: 'post-2', contentHtml: '', contentText: '' }, 1)
+    await saveDraft(
+      'post',
+      1,
+      { title: '', excerpt: '', contentRaw: 'post-1', contentHtml: '', contentText: '' },
+      1,
+    )
+    await saveDraft(
+      'page',
+      1,
+      { title: '', excerpt: '', contentRaw: 'page-1', contentHtml: '', contentText: '' },
+      1,
+    )
+    await saveDraft(
+      'post',
+      2,
+      { title: '', excerpt: '', contentRaw: 'post-2', contentHtml: '', contentText: '' },
+      1,
+    )
 
     expect((await getDraft('post', 1))!.contentRaw).toBe('post-1')
     expect((await getDraft('page', 1))!.contentRaw).toBe('page-1')
@@ -95,7 +147,13 @@ describe('publishDraft', () => {
     await saveDraft(
       'post',
       1,
-      { title: '', excerpt: '', contentRaw: 'draft content', contentHtml: '<p>draft</p>', contentText: 'draft' },
+      {
+        title: '',
+        excerpt: '',
+        contentRaw: 'draft content',
+        contentHtml: '<p>draft</p>',
+        contentText: 'draft',
+      },
       1,
     )
 
@@ -114,23 +172,73 @@ describe('publishDraft', () => {
   })
 
   it('多次发布创建多个历史版本', async () => {
-    await saveDraft('post', 1, { title: '', excerpt: '', contentRaw: 'v1', contentHtml: '', contentText: '' }, 1)
+    await saveDraft(
+      'post',
+      1,
+      { title: '', excerpt: '', contentRaw: 'v1', contentHtml: '', contentText: '' },
+      1,
+    )
     await publishDraft('post', 1)
 
-    await saveDraft('post', 1, { title: '', excerpt: '', contentRaw: 'v2', contentHtml: '', contentText: '' }, 1)
+    await saveDraft(
+      'post',
+      1,
+      { title: '', excerpt: '', contentRaw: 'v2', contentHtml: '', contentText: '' },
+      1,
+    )
     await publishDraft('post', 1)
 
     const revisions = await listPublishedRevisions('post', 1)
     expect(revisions).toHaveLength(2)
   })
+
+  it('发布后应保留草稿 metadata 到历史版本', async () => {
+    await saveDraft(
+      'page',
+      1,
+      {
+        title: '页面草稿',
+        excerpt: '',
+        contentRaw: '<p>draft</p>',
+        contentHtml: '<p>draft</p>',
+        contentText: 'draft',
+        metadata: {
+          path: 'invalid/path/',
+          template: 'blank',
+          seoTitle: '页面 SEO',
+          seoDescription: '页面描述',
+        },
+      },
+      1,
+    )
+
+    const published = await publishDraft('page', 1)
+    expect(published).not.toBeNull()
+    expect(published!.metadata).toMatchObject({
+      path: 'invalid/path/',
+      template: 'blank',
+      seoTitle: '页面 SEO',
+      seoDescription: '页面描述',
+    })
+  })
 })
 
 describe('listPublishedRevisions', () => {
   it('按时间倒序列出历史版本', async () => {
-    await saveDraft('post', 1, { title: '', excerpt: '', contentRaw: 'v1', contentHtml: '', contentText: '' }, 1)
+    await saveDraft(
+      'post',
+      1,
+      { title: '', excerpt: '', contentRaw: 'v1', contentHtml: '', contentText: '' },
+      1,
+    )
     await publishDraft('post', 1)
 
-    await saveDraft('post', 1, { title: '', excerpt: '', contentRaw: 'v2', contentHtml: '', contentText: '' }, 1)
+    await saveDraft(
+      'post',
+      1,
+      { title: '', excerpt: '', contentRaw: 'v2', contentHtml: '', contentText: '' },
+      1,
+    )
     await publishDraft('post', 1)
 
     const revisions = await listPublishedRevisions('post', 1)
@@ -139,17 +247,32 @@ describe('listPublishedRevisions', () => {
   })
 
   it('不包含草稿', async () => {
-    await saveDraft('post', 1, { title: '', excerpt: '', contentRaw: 'draft', contentHtml: '', contentText: '' }, 1)
+    await saveDraft(
+      'post',
+      1,
+      { title: '', excerpt: '', contentRaw: 'draft', contentHtml: '', contentText: '' },
+      1,
+    )
 
     const revisions = await listPublishedRevisions('post', 1)
     expect(revisions).toHaveLength(0)
   })
 
   it('不同 target 的版本互不干扰', async () => {
-    await saveDraft('post', 1, { title: '', excerpt: '', contentRaw: 'a', contentHtml: '', contentText: '' }, 1)
+    await saveDraft(
+      'post',
+      1,
+      { title: '', excerpt: '', contentRaw: 'a', contentHtml: '', contentText: '' },
+      1,
+    )
     await publishDraft('post', 1)
 
-    await saveDraft('page', 1, { title: '', excerpt: '', contentRaw: 'p', contentHtml: '', contentText: '' }, 1)
+    await saveDraft(
+      'page',
+      1,
+      { title: '', excerpt: '', contentRaw: 'p', contentHtml: '', contentText: '' },
+      1,
+    )
     await publishDraft('page', 1)
 
     expect(await listPublishedRevisions('post', 1)).toHaveLength(1)
@@ -162,7 +285,13 @@ describe('getRevisionById', () => {
     await saveDraft(
       'post',
       1,
-      { title: '', excerpt: '', contentRaw: 'test content', contentHtml: '<p>test</p>', contentText: 'test' },
+      {
+        title: '',
+        excerpt: '',
+        contentRaw: 'test content',
+        contentHtml: '<p>test</p>',
+        contentText: 'test',
+      },
       1,
     )
     await publishDraft('post', 1)
@@ -174,6 +303,34 @@ describe('getRevisionById', () => {
     expect(revision!.contentHtml).toBe('<p>test</p>')
   })
 
+  it('获取单条修订时应解析 metadata', async () => {
+    await saveDraft(
+      'page',
+      1,
+      {
+        title: '页面标题',
+        excerpt: '',
+        contentRaw: '<p>test</p>',
+        contentHtml: '<p>test</p>',
+        contentText: 'test',
+        metadata: {
+          path: 'about',
+          template: 'blank',
+        },
+      },
+      1,
+    )
+    await publishDraft('page', 1)
+
+    const revisions = await listPublishedRevisions('page', 1)
+    const revision = await getRevisionById(revisions[0].id)
+    expect(revision).not.toBeNull()
+    expect(revision!.metadata).toMatchObject({
+      path: 'about',
+      template: 'blank',
+    })
+  })
+
   it('不存在的 ID 返回 null', async () => {
     const result = await getRevisionById(99999)
     expect(result).toBeNull()
@@ -182,9 +339,19 @@ describe('getRevisionById', () => {
 
 describe('deleteRevisions', () => {
   it('批量删除已发布版本', async () => {
-    await saveDraft('post', 1, { title: '', excerpt: '', contentRaw: 'v1', contentHtml: '', contentText: '' }, 1)
+    await saveDraft(
+      'post',
+      1,
+      { title: '', excerpt: '', contentRaw: 'v1', contentHtml: '', contentText: '' },
+      1,
+    )
     await publishDraft('post', 1)
-    await saveDraft('post', 1, { title: '', excerpt: '', contentRaw: 'v2', contentHtml: '', contentText: '' }, 1)
+    await saveDraft(
+      'post',
+      1,
+      { title: '', excerpt: '', contentRaw: 'v2', contentHtml: '', contentText: '' },
+      1,
+    )
     await publishDraft('post', 1)
 
     const revisions = await listPublishedRevisions('post', 1)
@@ -196,7 +363,12 @@ describe('deleteRevisions', () => {
   })
 
   it('不能删除草稿', async () => {
-    await saveDraft('post', 1, { title: '', excerpt: '', contentRaw: 'draft', contentHtml: '', contentText: '' }, 1)
+    await saveDraft(
+      'post',
+      1,
+      { title: '', excerpt: '', contentRaw: 'draft', contentHtml: '', contentText: '' },
+      1,
+    )
     const draft = await getDraft('post', 1)
 
     await deleteRevisions('post', 1, [draft!.id])
@@ -205,7 +377,12 @@ describe('deleteRevisions', () => {
   })
 
   it('不能跨 target 删除', async () => {
-    await saveDraft('post', 1, { title: '', excerpt: '', contentRaw: 'a', contentHtml: '', contentText: '' }, 1)
+    await saveDraft(
+      'post',
+      1,
+      { title: '', excerpt: '', contentRaw: 'a', contentHtml: '', contentText: '' },
+      1,
+    )
     await publishDraft('post', 1)
 
     const revisions = await listPublishedRevisions('post', 1)
@@ -250,12 +427,49 @@ describe('restoreRevision', () => {
   })
 
   it('不能恢复不属于当前 target 的版本', async () => {
-    await saveDraft('post', 1, { title: '', excerpt: '', contentRaw: 'a', contentHtml: '', contentText: '' }, 1)
+    await saveDraft(
+      'post',
+      1,
+      { title: '', excerpt: '', contentRaw: 'a', contentHtml: '', contentText: '' },
+      1,
+    )
     await publishDraft('post', 1)
 
     const revisions = await listPublishedRevisions('post', 1)
     const result = await restoreRevision('page', 1, revisions[0].id, 1)
     expect(result).toBeNull()
+  })
+
+  it('恢复版本时应带回 metadata', async () => {
+    await saveDraft(
+      'page',
+      1,
+      {
+        title: '版本一',
+        excerpt: '',
+        contentRaw: '<p>v1</p>',
+        contentHtml: '<p>v1</p>',
+        contentText: 'v1',
+        metadata: {
+          path: 'about-v1',
+          template: 'blank',
+          seoTitle: 'SEO V1',
+          seoDescription: 'Desc V1',
+        },
+      },
+      1,
+    )
+    await publishDraft('page', 1)
+
+    const revisions = await listPublishedRevisions('page', 1)
+    const result = await restoreRevision('page', 1, revisions[0].id, 1)
+    expect(result).not.toBeNull()
+    expect(result!.content.metadata).toMatchObject({
+      path: 'about-v1',
+      template: 'blank',
+      seoTitle: 'SEO V1',
+      seoDescription: 'Desc V1',
+    })
   })
 
   it('不存在的版本返回 null', async () => {
@@ -266,11 +480,26 @@ describe('restoreRevision', () => {
 
 describe('deleteRevisionsByTarget', () => {
   it('删除某 target 的所有修订（含草稿和历史版本）', async () => {
-    await saveDraft('post', 1, { title: '', excerpt: '', contentRaw: 'v1', contentHtml: '', contentText: '' }, 1)
+    await saveDraft(
+      'post',
+      1,
+      { title: '', excerpt: '', contentRaw: 'v1', contentHtml: '', contentText: '' },
+      1,
+    )
     await publishDraft('post', 1)
-    await saveDraft('post', 1, { title: '', excerpt: '', contentRaw: 'draft', contentHtml: '', contentText: '' }, 1)
+    await saveDraft(
+      'post',
+      1,
+      { title: '', excerpt: '', contentRaw: 'draft', contentHtml: '', contentText: '' },
+      1,
+    )
 
-    await saveDraft('post', 2, { title: '', excerpt: '', contentRaw: 'other', contentHtml: '', contentText: '' }, 1)
+    await saveDraft(
+      'post',
+      2,
+      { title: '', excerpt: '', contentRaw: 'other', contentHtml: '', contentText: '' },
+      1,
+    )
 
     await deleteRevisionsByTarget('post', 1)
 
@@ -283,7 +512,18 @@ describe('deleteRevisionsByTarget', () => {
 describe('deleteDraft', () => {
   it('删除草稿后恢复为已发布内容', async () => {
     // 模拟：先保存草稿，然后删除草稿（撤销修改）
-    await saveDraft('post', 1, { title: '新标题', excerpt: '', contentRaw: '未发布的修改', contentHtml: '<p>未发布的修改</p>', contentText: '未发布的修改' }, 1)
+    await saveDraft(
+      'post',
+      1,
+      {
+        title: '新标题',
+        excerpt: '',
+        contentRaw: '未发布的修改',
+        contentHtml: '<p>未发布的修改</p>',
+        contentText: '未发布的修改',
+      },
+      1,
+    )
 
     // 草稿应存在
     const draft = await getDraft('post', 1)
@@ -299,11 +539,21 @@ describe('deleteDraft', () => {
 
   it('删除草稿不影响已发布的历史版本', async () => {
     // 创建一个历史版本
-    await saveDraft('post', 1, { title: '', excerpt: '', contentRaw: 'v1', contentHtml: '', contentText: '' }, 1)
+    await saveDraft(
+      'post',
+      1,
+      { title: '', excerpt: '', contentRaw: 'v1', contentHtml: '', contentText: '' },
+      1,
+    )
     await publishDraft('post', 1)
 
     // 再创建一个草稿
-    await saveDraft('post', 1, { title: '', excerpt: '', contentRaw: 'draft', contentHtml: '', contentText: '' }, 1)
+    await saveDraft(
+      'post',
+      1,
+      { title: '', excerpt: '', contentRaw: 'draft', contentHtml: '', contentText: '' },
+      1,
+    )
 
     // 删除草稿
     await deleteDraft('post', 1)
@@ -319,8 +569,18 @@ describe('deleteDraft', () => {
   })
 
   it('不同 target 的草稿互不影响', async () => {
-    await saveDraft('post', 1, { title: '', excerpt: '', contentRaw: 'post-draft', contentHtml: '', contentText: '' }, 1)
-    await saveDraft('page', 1, { title: '', excerpt: '', contentRaw: 'page-draft', contentHtml: '', contentText: '' }, 1)
+    await saveDraft(
+      'post',
+      1,
+      { title: '', excerpt: '', contentRaw: 'post-draft', contentHtml: '', contentText: '' },
+      1,
+    )
+    await saveDraft(
+      'page',
+      1,
+      { title: '', excerpt: '', contentRaw: 'page-draft', contentHtml: '', contentText: '' },
+      1,
+    )
 
     await deleteDraft('post', 1)
 

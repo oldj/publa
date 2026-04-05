@@ -1,0 +1,1 @@
+ALTER TABLE `content_revisions` ADD `meta_json` text DEFAULT '{}' NOT NULL;

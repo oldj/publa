@@ -22,6 +22,20 @@
       "when": 1775369036192,
       "tag": "0002_faulty_zombie",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1775389429101,
+      "tag": "0003_superb_azazel",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1775392903129,
+      "tag": "0004_add_updated_by_to_revisions",
+      "breakpoints": true
     }
   ]
 }

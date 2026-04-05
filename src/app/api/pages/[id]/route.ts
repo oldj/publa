@@ -1,4 +1,5 @@
 import { getCurrentUser } from '@/server/auth'
+import { db } from '@/server/db'
 import { renderMarkdown } from '@/server/lib/markdown'
 import { isUniqueConstraintError, parseIdParam, safeParseJson } from '@/server/lib/request'
 import {
@@ -8,7 +9,8 @@ import {
   updatePage,
   validatePagePath,
 } from '@/server/services/pages'
-import { getDraft, publishDraft } from '@/server/services/revisions'
+import { getDraft, publishDraft, saveDraft } from '@/server/services/revisions'
+import { parsePageDraftMetadata } from '@/shared/revision-metadata'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -39,6 +41,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       ...page,
       draftContent: draft
         ? {
+            ...parsePageDraftMetadata(draft.metadata),
             title: draft.title,
             contentType: draft.contentType,
             contentRaw: draft.contentRaw,
@@ -65,14 +68,24 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   const { data: body, error } = await safeParseJson(request)
   if (error) return error
 
-  // 校验路径
-  if (body.path !== undefined) {
-    if (!body.path) {
+  // 发布时校验必填字段
+  if (body.status === 'published') {
+    if (!body.title) {
       return NextResponse.json(
-        { success: false, code: 'VALIDATION_ERROR', message: '路径不能为空' },
+        { success: false, code: 'VALIDATION_ERROR', message: '发布时标题不能为空' },
         { status: 400 },
       )
     }
+    if (!body.path) {
+      return NextResponse.json(
+        { success: false, code: 'VALIDATION_ERROR', message: '发布时路径不能为空' },
+        { status: 400 },
+      )
+    }
+  }
+
+  // 校验路径（如果提供了路径）
+  if (body.path) {
     const pathCheck = validatePagePath(body.path)
     if (!pathCheck.valid) {
       return NextResponse.json(
@@ -89,13 +102,6 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
   }
 
-  if (!body.title) {
-    return NextResponse.json(
-      { success: false, code: 'VALIDATION_ERROR', message: '标题不能为空' },
-      { status: 400 },
-    )
-  }
-
   // 根据内容类型处理
   const ct = body.contentType || 'richtext'
   body.contentType = ct
@@ -108,17 +114,53 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   }
 
   try {
+    if (body.status === 'published') {
+      // 发布时将主表更新和版本冻结包进事务
+      const page = await db.transaction(async (tx) => {
+        const result = await updatePage(pageId, body, tx)
+        if (!result) return null
+
+        await saveDraft(
+          'page',
+          pageId,
+          {
+            title: body.title || result.title || '',
+            excerpt: '',
+            contentType: body.contentType,
+            contentRaw: body.contentRaw || '',
+            contentHtml: body.contentHtml || '',
+            contentText: body.contentText || '',
+            metadata: parsePageDraftMetadata({
+              path: body.path,
+              template: body.template,
+              seoTitle: body.seoTitle,
+              seoDescription: body.seoDescription,
+            }),
+          },
+          user.id,
+          tx,
+        )
+        await publishDraft('page', pageId, tx)
+
+        return result
+      })
+
+      if (!page) {
+        return NextResponse.json(
+          { success: false, code: 'NOT_FOUND', message: '页面不存在' },
+          { status: 404 },
+        )
+      }
+      return NextResponse.json({ success: true, data: page })
+    }
+
+    // 非发布操作，直接更新主表
     const page = await updatePage(pageId, body)
     if (!page) {
       return NextResponse.json(
         { success: false, code: 'NOT_FOUND', message: '页面不存在' },
         { status: 404 },
       )
-    }
-
-    // 发布时将草稿冻结为历史版本
-    if (body.status === 'published') {
-      await publishDraft('page', pageId)
     }
 
     return NextResponse.json({ success: true, data: page })

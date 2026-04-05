@@ -70,11 +70,23 @@ export default function PagesAdminPage() {
               const st = statusMap[p.status] || { label: p.status, color: 'gray' }
               return (
                 <Table.Tr key={p.id}>
-                  <Table.Td>{p.title}</Table.Td>
                   <Table.Td>
-                    <Text size="sm" c="dimmed">
-                      /{p.path}
-                    </Text>
+                    {p.title || (
+                      <Text span c="dimmed">
+                        (无标题)
+                      </Text>
+                    )}
+                  </Table.Td>
+                  <Table.Td>
+                    {p.path ? (
+                      <Text size="sm" c="dimmed">
+                        /{p.path}
+                      </Text>
+                    ) : (
+                      <Text size="sm" c="dimmed">
+                        —
+                      </Text>
+                    )}
                   </Table.Td>
                   <Table.Td>
                     <Badge variant="light" size="sm">
