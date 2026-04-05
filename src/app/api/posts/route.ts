@@ -7,6 +7,7 @@ import {
   createPost,
   isSlugAvailable,
   listPostsAdmin,
+  validateSlug,
 } from '@/server/services/posts'
 import { publishDraft, saveDraft } from '@/server/services/revisions'
 import { parsePostDraftMetadata } from '@/shared/revision-metadata'
@@ -55,6 +56,14 @@ export async function POST(request: NextRequest) {
   if (!body.title || !body.slug) {
     return NextResponse.json(
       { success: false, code: 'VALIDATION_ERROR', message: '标题和 slug 不能为空' },
+      { status: 400 },
+    )
+  }
+
+  const slugCheck = validateSlug(body.slug)
+  if (!slugCheck.valid) {
+    return NextResponse.json(
+      { success: false, code: 'VALIDATION_ERROR', message: slugCheck.message },
       { status: 400 },
     )
   }

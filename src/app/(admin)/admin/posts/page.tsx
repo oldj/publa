@@ -3,6 +3,7 @@ import myModal from '@/components/myModals'
 import adminStyles from '../../_components/AdminShell.module.scss'
 
 import { notify } from '@/lib/notify'
+import { NowrapBadge } from '@/components/NowrapBadge'
 import {
   ActionIcon,
   Badge,
@@ -85,11 +86,11 @@ export default function PostsPage() {
   }
 
   const getPreviewUrl = (post: PostItem) => {
-    if (post.status === 'published') {
+    if (post.status === 'published' && post.slug) {
       return `/posts/${post.slug}`
     }
 
-    return `/posts/${post.slug}?preview=1`
+    return `/posts/--preview-${post.id}`
   }
 
   return (
@@ -133,12 +134,12 @@ export default function PostsPage() {
         <Table highlightOnHover>
           <Table.Thead>
             <Table.Tr>
-              <Table.Th>标题</Table.Th>
-              <Table.Th>分类</Table.Th>
-              <Table.Th>状态</Table.Th>
-              <Table.Th>浏览</Table.Th>
-              <Table.Th>发布时间</Table.Th>
-              <Table.Th>操作</Table.Th>
+              <Table.Th className={adminStyles.cellFill}>标题</Table.Th>
+              <Table.Th className={adminStyles.cellFit}>分类</Table.Th>
+              <Table.Th className={adminStyles.cellFit}>状态</Table.Th>
+              <Table.Th className={adminStyles.cellFit}>浏览</Table.Th>
+              <Table.Th className={adminStyles.cellFit}>发布时间</Table.Th>
+              <Table.Th className={adminStyles.cellFit}>操作</Table.Th>
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
@@ -170,38 +171,36 @@ export default function PostsPage() {
                       </Link>
                     </Group>
                   </Table.Td>
-                  <Table.Td>
+                  <Table.Td className={adminStyles.cellFit}>
                     <Text size="sm" c="dimmed">
                       {post.categoryName || '-'}
                     </Text>
                   </Table.Td>
-                  <Table.Td>
-                    <Badge color={st.color} variant="light">
+                  <Table.Td className={adminStyles.cellFit}>
+                    <NowrapBadge color={st.color} variant="light">
                       {st.label}
-                    </Badge>
+                    </NowrapBadge>
                   </Table.Td>
-                  <Table.Td>
+                  <Table.Td className={adminStyles.cellFit}>
                     <Text size="sm">{post.viewCount}</Text>
                   </Table.Td>
-                  <Table.Td>
+                  <Table.Td className={adminStyles.cellFit}>
                     <Text size="sm" c="dimmed">
                       {post.publishedAt ? dayjs(post.publishedAt).format('YYYY-MM-DD HH:mm') : '-'}
                     </Text>
                   </Table.Td>
-                  <Table.Td>
-                    <Group gap="xs">
-                      {post.slug && (
-                        <ActionIcon
-                          variant="subtle"
-                          component={Link}
-                          href={getPreviewUrl(post)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          aria-label={`查看文章《${post.title}》`}
-                        >
-                          <IconEye size={16} />
-                        </ActionIcon>
-                      )}
+                  <Table.Td className={adminStyles.cellFit}>
+                    <Group gap="xs" wrap="nowrap">
+                      <ActionIcon
+                        variant="subtle"
+                        component={Link}
+                        href={getPreviewUrl(post)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={`查看文章《${post.title}》`}
+                      >
+                        <IconEye size={16} />
+                      </ActionIcon>
                       <ActionIcon
                         variant="subtle"
                         component={Link}

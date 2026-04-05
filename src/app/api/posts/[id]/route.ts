@@ -2,7 +2,7 @@ import { getCurrentUser } from '@/server/auth'
 import { db } from '@/server/db'
 import { htmlToText, renderMarkdown } from '@/server/lib/markdown'
 import { isUniqueConstraintError, parseIdParam, safeParseJson } from '@/server/lib/request'
-import { deletePost, getPostById, isSlugAvailable, updatePost } from '@/server/services/posts'
+import { deletePost, getPostById, isSlugAvailable, updatePost, validateSlug } from '@/server/services/posts'
 import { getDraft, publishDraft, saveDraft } from '@/server/services/revisions'
 import { parsePostDraftMetadata } from '@/shared/revision-metadata'
 import { NextRequest, NextResponse } from 'next/server'
@@ -81,6 +81,14 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   }
 
   if (body.slug) {
+    const slugCheck = validateSlug(body.slug)
+    if (!slugCheck.valid) {
+      return NextResponse.json(
+        { success: false, code: 'VALIDATION_ERROR', message: slugCheck.message },
+        { status: 400 },
+      )
+    }
+
     const slugOk = await isSlugAvailable(body.slug, postId)
     if (!slugOk) {
       return NextResponse.json(

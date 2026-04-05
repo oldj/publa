@@ -1,4 +1,5 @@
 import Post from '@/app/posts/[...slug]/components/Post'
+import PreviewNotice from '@/components/PreviewNotice'
 import BasicLayout from '@/layouts/basic'
 import getHeadersFromHTML, { IHeader } from '@/lib/getHeadersFromHTML'
 import { getCurrentUser } from '@/server/auth'
@@ -7,6 +8,7 @@ import { maybeFirst } from '@/server/db/query'
 import { contents, slugHistories } from '@/server/db/schema'
 import { redirectOrNotFound } from '@/server/lib/frontend-404'
 import { getFrontendPostBySlug } from '@/server/services/posts-frontend'
+import { parsePreviewId, getPreviewPost } from '@/server/services/preview'
 import { and, eq, isNull } from 'drizzle-orm'
 import { notFound, redirect } from 'next/navigation'
 import { IAccount, IPost } from 'typings'
@@ -53,6 +55,17 @@ async function getData({
   incrementViewCount,
 }: GetDataOptions): Promise<IPostData> {
   const slugKey = getSlugKey(slug)
+
+  // 处理 --preview-{id} 模式的预览请求
+  const previewId = parsePreviewId(slugKey)
+  if (previewId !== null) {
+    if (!viewer) notFound()
+    const post = await getPreviewPost(previewId)
+    if (!post) notFound()
+    const { html, headers } = getHeadersFromHTML(post.html || '')
+    return { post, html, headers }
+  }
+
   const post = await getFrontendPostBySlug(slugKey, {
     preview,
     viewer,
@@ -98,7 +111,11 @@ export const generateMetadata = async ({
 }) => {
   const { slug } = await params
   const { preview: previewParam } = await searchParams
-  const preview = isPreviewRequest(previewParam)
+
+  const slugKey = getSlugKey(slug)
+  const previewId = parsePreviewId(slugKey)
+  // --preview-{id} 模式或 ?preview=1 参数都视为预览
+  const preview = previewId !== null || isPreviewRequest(previewParam)
   const viewer = preview ? await getCurrentUser() : null
 
   if (preview && !viewer) {
@@ -131,7 +148,9 @@ export default async function Page({
     searchParams,
     getCurrentUser(),
   ])
-  const preview = isPreviewRequest(previewParam)
+  const slugKey = getSlugKey(slug)
+  const previewId = parsePreviewId(slugKey)
+  const preview = previewId !== null || isPreviewRequest(previewParam)
 
   if (preview && !currentUser) {
     notFound()
@@ -149,6 +168,7 @@ export default async function Page({
 
   return (
     <BasicLayout>
+      {preview && <PreviewNotice />}
       <Post account={account} post={data.post} html={data.html} headers={data.headers} />
     </BasicLayout>
   )

@@ -14,7 +14,9 @@ import { notify } from '@/lib/notify'
 import {
   Badge,
   Button,
+  Grid,
   Group,
+  Paper,
   Select,
   Stack,
   Text,
@@ -22,14 +24,14 @@ import {
   Textarea,
   Title,
 } from '@mantine/core'
-import { IconArrowLeft, IconDeviceFloppy, IconSend } from '@tabler/icons-react'
+import { IconArrowLeft, IconDeviceFloppy, IconEye, IconSend, IconX } from '@tabler/icons-react'
 import dayjs from 'dayjs'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { shouldCreateDraftRecord } from '../../_lib/draft-persistence'
-import { buildPageDraftPayload, buildPageSaveBody } from './page-save-payload'
 import RevisionHistory from '../../posts/_components/RevisionHistory'
+import { buildPageDraftPayload, buildPageSaveBody } from './page-save-payload'
 
 const RESERVED_PATHS = ['admin', 'api', 'setup', 'rss.xml', 'sitemap.xml', 'uploads']
 
@@ -58,6 +60,9 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [pathError, setPathError] = useState<string | null>(null)
+  const [dirty, setDirty] = useState(false)
+  const savedSnapshot = useRef<string>('')
+  const editorDirty = useRef(false)
   const [autoSaveTime, setAutoSaveTime] = useState<string | null>(null)
   const [historyOpen, setHistoryOpen] = useState(false)
   const lastAutoSaveContent = useRef<string>('')
@@ -82,9 +87,11 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
   })
   const formRef = useRef(form)
 
+  type FormState = typeof form
+
   // 生成元数据快照，用于自动保存变更检测
   const getMetaSnapshot = useCallback(
-    (f: typeof form) =>
+    (f: FormState) =>
       JSON.stringify({
         title: f.title,
         path: f.path,
@@ -94,6 +101,30 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
       }),
     [],
   )
+
+  // 生成完整快照，用于已修改状态判定
+  const makeSnapshot = useCallback(
+    (f: FormState, tc: string) => JSON.stringify({ ...f, textContent: tc }),
+    [],
+  )
+
+  const checkDirty = useCallback(
+    (f: FormState, tc: string) => {
+      if (!savedSnapshot.current) return false
+      return savedSnapshot.current !== makeSnapshot(f, tc)
+    },
+    [makeSnapshot],
+  )
+
+  const getEditor = useCallback(() => richTextRef.current?.getEditor() ?? null, [])
+
+  const setField = <K extends keyof FormState>(field: K, value: FormState[K]) => {
+    setForm((prev) => {
+      const next = { ...prev, [field]: value }
+      setDirty(checkDirty(next, textContent) || editorDirty.current)
+      return next
+    })
+  }
 
   // 图片上传
   const storageConfigured = useRef<boolean | null>(null)
@@ -171,9 +202,23 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
           if (draft) {
             setAutoSaveTime(draft.updatedAt)
           }
+
+          // 保存初始快照，用于已修改状态判定
+          const nextForm = {
+            title: draft ? draft.title : p.title,
+            path: initialPath,
+            template: draft ? draft.template : p.template,
+            status: p.status,
+            seoTitle: draft ? draft.seoTitle : p.seoTitle || '',
+            seoDescription: draft ? draft.seoDescription : p.seoDescription || '',
+          }
+          savedSnapshot.current = makeSnapshot(nextForm, contentRaw)
+          editorDirty.current = false
+          // 有未发布的草稿时显示「已修改」
+          setDirty(!!draft)
         }
       })
-  }, [pageId])
+  }, [pageId, makeSnapshot])
 
   // 同步 ref
   useEffect(() => {
@@ -311,7 +356,8 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
       }
 
       const currentMeta = getMetaSnapshot(formRef.current)
-      const contentChanged = content.contentRaw && content.contentRaw !== lastAutoSaveContent.current
+      const contentChanged =
+        content.contentRaw && content.contentRaw !== lastAutoSaveContent.current
       const metaChanged = currentMeta !== lastAutoSaveMetaRef.current
       if (!contentChanged && !metaChanged) return
 
@@ -334,8 +380,34 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
   }, [pageId, createAndRedirect, getCurrentContent, getMetaSnapshot, saveDraftRevision])
 
   const handlePathChange = (value: string) => {
-    setForm((prev) => ({ ...prev, path: value }))
+    setField('path', value)
     setPathError(validatePath(value))
+  }
+
+  // 预览：先保存草稿，再在新窗口打开预览
+  const handlePreview = async () => {
+    if (!pageId) {
+      await createAndRedirect()
+      return
+    }
+
+    setLoading(true)
+    try {
+      const formState = formRef.current
+      const draftSave = await saveDraftRevision(pageId, formState)
+      if (draftSave.json.success) {
+        lastAutoSaveContent.current = draftSave.content.contentRaw
+        lastAutoSaveMetaRef.current = getMetaSnapshot(formState)
+        setAutoSaveTime(draftSave.json.data.updatedAt)
+        window.open(`/--preview-${pageId}`, '_blank')
+      } else {
+        notify({ color: 'red', message: draftSave.json.message || '保存失败' })
+      }
+    } catch {
+      notify({ color: 'red', message: '网络错误' })
+    } finally {
+      setLoading(false)
+    }
   }
 
   // 手动保存草稿：仅保存完整草稿快照，不阻塞于 path 校验
@@ -411,6 +483,9 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
             ...form,
             status: status || form.status,
           })
+          savedSnapshot.current = makeSnapshot({ ...form, status: newStatus }, content.contentRaw)
+          editorDirty.current = false
+          setDirty(false)
           setAutoSaveTime(null)
         }
       } else {
@@ -455,6 +530,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
 
     setContentType(newType)
     contentTypeRef.current = newType
+    setDirty(true)
   }
 
   const isEdit = !!pageId
@@ -477,6 +553,55 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
               {form.status === 'published' ? '已发布' : '草稿'}
             </Badge>
           )}
+          {dirty && (
+            <Group gap={4}>
+              <Badge color="orange" variant="light" size="lg">
+                已修改
+              </Badge>
+              {pageId && form.status === 'published' && (
+                <IconX
+                  size={16}
+                  color="var(--mantine-color-orange-6)"
+                  style={{ cursor: 'pointer' }}
+                  onClick={async () => {
+                    if (!(await myModal.confirm({ message: '是否要放弃所有未发布的修改？' })))
+                      return
+                    // 先删除草稿，再重新加载已发布内容
+                    await fetch(`/api/pages/${pageId}/draft`, { method: 'DELETE' })
+                    const res = await fetch(`/api/pages/${pageId}`)
+                    const json = await res.json()
+                    if (!json.success) return
+                    const pageData = json.data
+                    const restoredForm: FormState = {
+                      title: pageData.title,
+                      path: pageData.path || '',
+                      template: pageData.template || 'default',
+                      status: pageData.status,
+                      seoTitle: pageData.seoTitle || '',
+                      seoDescription: pageData.seoDescription || '',
+                    }
+                    const restoreCT = (pageData.contentType || 'richtext') as ContentType
+                    setForm(restoredForm)
+                    setPathError(restoredForm.path ? validatePath(restoredForm.path) : null)
+                    setContentType(restoreCT)
+                    contentTypeRef.current = restoreCT
+                    if (restoreCT === 'richtext') {
+                      const ed = getEditor()
+                      if (ed) ed.commands.setContent(pageData.contentHtml)
+                    }
+                    setTextContent(pageData.contentRaw)
+                    textContentRef.current = pageData.contentRaw
+                    lastAutoSaveContent.current = pageData.contentRaw
+                    lastAutoSaveMetaRef.current = getMetaSnapshot(restoredForm)
+                    savedSnapshot.current = makeSnapshot(restoredForm, pageData.contentRaw)
+                    editorDirty.current = false
+                    setDirty(false)
+                    setAutoSaveTime(null)
+                  }}
+                />
+              )}
+            </Group>
+          )}
           {autoSaveTime && (
             <Text size="sm" c="dimmed">
               自动保存：{dayjs(autoSaveTime).format('YYYY-MM-DD HH:mm:ss')}
@@ -485,8 +610,13 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
         </Group>
         <Group>
           {isEdit && (
-            <Button variant="subtle" onClick={() => setHistoryOpen(true)}>
-              历史版本
+            <Button
+              variant="subtle"
+              leftSection={<IconEye size={16} />}
+              onClick={handlePreview}
+              loading={loading}
+            >
+              预览
             </Button>
           )}
           {isEdit && form.status === 'published' ? (
@@ -524,76 +654,116 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
         </Group>
       </Group>
 
-      <Stack>
-        <TextInput
-          label="标题"
-          required
-          value={form.title}
-          onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
-        />
-        <TextInput
-          label="路径"
-          required
-          placeholder={isEdit ? undefined : 'about'}
-          value={form.path}
-          onChange={(e) => handlePathChange(e.target.value)}
-          error={pathError}
-        />
-        <Group>
-          <ContentTypeSelector value={contentType} onChange={handleContentTypeChange} />
-          <Select
-            label="模板"
-            data={[
-              { value: 'default', label: '默认（含头尾）' },
-              { value: 'blank', label: '空白' },
-            ]}
-            value={form.template}
-            onChange={(v) => setForm((prev) => ({ ...prev, template: v || 'default' }))}
-          />
-        </Group>
+      <Grid>
+        {/* 主编辑区 */}
+        <Grid.Col span={{ base: 12, md: 8 }}>
+          <Stack>
+            <TextInput
+              label="标题"
+              required
+              value={form.title}
+              onChange={(e) => setField('title', e.target.value)}
+            />
+            <TextInput
+              label="路径"
+              required
+              placeholder={isEdit ? undefined : 'about'}
+              value={form.path}
+              onChange={(e) => handlePathChange(e.target.value)}
+              error={pathError}
+            />
 
-        {/* 富文本编辑器 */}
-        <RichTextEditorWrapper
-          editorRef={richTextRef}
-          placeholder="开始撰写页面内容..."
-          onImageUpload={uploadImage}
-          checkStorageConfig={checkStorageConfig}
-          onReady={(editor) => {
-            if (pendingEditorContent.current) {
-              editor.commands.setContent(pendingEditorContent.current)
-              pendingEditorContent.current = null
-            }
-          }}
-          hidden={contentType !== 'richtext'}
-        />
+            <ContentTypeSelector value={contentType} onChange={handleContentTypeChange} />
 
-        {/* Markdown / HTML 文本编辑器 */}
-        {contentType !== 'richtext' && (
-          <Textarea
-            label={contentType === 'markdown' ? 'Markdown 内容' : 'HTML 内容'}
-            placeholder={contentType === 'markdown' ? '在此输入 Markdown...' : '在此输入 HTML...'}
-            autosize
-            minRows={15}
-            value={textContent}
-            onChange={(e) => {
-              setTextContent(e.target.value)
-              textContentRef.current = e.target.value
-            }}
-            styles={{ input: { fontFamily: 'monospace', maxHeight: 600, overflowY: 'auto' } }}
-          />
-        )}
+            {/* 富文本编辑器 */}
+            <RichTextEditorWrapper
+              editorRef={richTextRef}
+              placeholder="开始撰写页面内容..."
+              onImageUpload={uploadImage}
+              checkStorageConfig={checkStorageConfig}
+              onUpdate={() => {
+                editorDirty.current = true
+                setDirty(true)
+                setAutoSaveTime(null)
+              }}
+              onReady={(editor) => {
+                if (pendingEditorContent.current) {
+                  editor.commands.setContent(pendingEditorContent.current)
+                  pendingEditorContent.current = null
+                }
+              }}
+              hidden={contentType !== 'richtext'}
+            />
 
-        <TextInput
-          label="SEO 标题"
-          value={form.seoTitle}
-          onChange={(e) => setForm((prev) => ({ ...prev, seoTitle: e.target.value }))}
-        />
-        <TextInput
-          label="SEO 描述"
-          value={form.seoDescription}
-          onChange={(e) => setForm((prev) => ({ ...prev, seoDescription: e.target.value }))}
-        />
-      </Stack>
+            {/* Markdown / HTML 文本编辑器 */}
+            {contentType !== 'richtext' && (
+              <Textarea
+                label={contentType === 'markdown' ? 'Markdown 内容' : 'HTML 内容'}
+                placeholder={
+                  contentType === 'markdown' ? '在此输入 Markdown...' : '在此输入 HTML...'
+                }
+                autosize
+                minRows={15}
+                value={textContent}
+                onChange={(e) => {
+                  setTextContent(e.target.value)
+                  textContentRef.current = e.target.value
+                  setDirty(checkDirty(form, e.target.value) || editorDirty.current)
+                }}
+                styles={{ input: { fontFamily: 'monospace', maxHeight: 600, overflowY: 'auto' } }}
+              />
+            )}
+          </Stack>
+        </Grid.Col>
+
+        {/* 侧边栏设置 */}
+        <Grid.Col span={{ base: 12, md: 4 }}>
+          <Stack>
+            <Paper withBorder p="md">
+              <Text fw={500} mb="sm">
+                页面设置
+              </Text>
+              <Stack gap="sm">
+                <Select
+                  label="模板"
+                  data={[
+                    { value: 'default', label: '默认（含头尾）' },
+                    { value: 'blank', label: '空白' },
+                  ]}
+                  value={form.template}
+                  onChange={(v) => setField('template', v || 'default')}
+                />
+                {isEdit && (
+                  <Button variant="subtle" fullWidth onClick={() => setHistoryOpen(true)}>
+                    查看历史版本
+                  </Button>
+                )}
+              </Stack>
+            </Paper>
+
+            <Paper withBorder p="md">
+              <Text fw={500} mb="sm">
+                SEO
+              </Text>
+              <TextInput
+                label="SEO 标题"
+                placeholder="可选"
+                value={form.seoTitle}
+                onChange={(e) => setField('seoTitle', e.target.value)}
+              />
+              <Textarea
+                label="SEO 描述"
+                placeholder="可选"
+                mt="sm"
+                autosize
+                minRows={2}
+                value={form.seoDescription}
+                onChange={(e) => setField('seoDescription', e.target.value)}
+              />
+            </Paper>
+          </Stack>
+        </Grid.Col>
+      </Grid>
 
       {/* 历史版本 */}
       {pageId && (

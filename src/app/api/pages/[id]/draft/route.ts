@@ -2,7 +2,7 @@ import { getCurrentUser } from '@/server/auth'
 import { renderMarkdown, htmlToText } from '@/server/lib/markdown'
 import { parseIdParam, safeParseJson } from '@/server/lib/request'
 import { getPageById } from '@/server/services/pages'
-import { saveDraft, getDraft } from '@/server/services/revisions'
+import { saveDraft, getDraft, deleteDraft } from '@/server/services/revisions'
 import { parsePageDraftMetadata } from '@/shared/revision-metadata'
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -82,4 +82,23 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   )
 
   return NextResponse.json({ success: true, data: result })
+}
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const user = await getCurrentUser()
+  if (!user) {
+    return NextResponse.json(
+      { success: false, code: 'UNAUTHORIZED', message: 'Unauthorized' },
+      { status: 401 },
+    )
+  }
+
+  const { id: idStr } = await params
+  const { id: pageId, error: idError } = parseIdParam(idStr)
+  if (idError) return idError
+  await deleteDraft('page', pageId)
+  return NextResponse.json({ success: true })
 }

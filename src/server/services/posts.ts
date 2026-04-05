@@ -518,6 +518,14 @@ export async function publishScheduledPosts() {
     )
 }
 
+/** 校验 slug 格式 */
+export function validateSlug(slug: string): { valid: boolean; message?: string } {
+  if (!slug) return { valid: false, message: 'Slug 不能为空' }
+  if (slug.startsWith('-')) return { valid: false, message: 'Slug 不能以 - 开头' }
+  if (slug.endsWith('-')) return { valid: false, message: 'Slug 不能以 - 结尾' }
+  return { valid: true }
+}
+
 /** 检查 slug 是否可用 */
 export async function isSlugAvailable(slug: string, excludeId?: number) {
   const conditions = [

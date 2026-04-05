@@ -36,3 +36,13 @@
   border-radius: var(--mantine-radius-sm);
   padding: var(--mantine-spacing-xs);
 }
+
+// 表格列宽工具类
+.cellFill {
+  width: 100%;
+}
+
+.cellFit {
+  width: 1px;
+  white-space: nowrap;
+}
