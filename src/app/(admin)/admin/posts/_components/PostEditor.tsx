@@ -34,6 +34,7 @@ import {
   IconAlertTriangle,
   IconArrowLeft,
   IconDeviceFloppy,
+  IconEye,
   IconSend,
   IconX,
 } from '@tabler/icons-react'
@@ -524,6 +525,32 @@ export default function PostEditor({ postId }: { postId?: number }) {
     return () => clearInterval(timer)
   }, [postId, createAndRedirect, getCurrentContent, getMetaSnapshot, saveDraftRevision])
 
+  // 预览：先保存草稿，再在新窗口打开预览
+  const handlePreview = async () => {
+    if (!postId) {
+      await createAndRedirect()
+      return
+    }
+
+    setLoading(true)
+    try {
+      const formState = formRef.current
+      const draftSave = await saveDraftRevision(postId, formState)
+      if (draftSave.json.success) {
+        lastAutoSaveContent.current = draftSave.content.contentRaw
+        lastAutoSaveMetaRef.current = getMetaSnapshot(formState)
+        setAutoSaveTime(draftSave.json.data.updatedAt)
+        window.open(`/posts/--preview-${postId}`, '_blank')
+      } else {
+        notify({ color: 'red', message: draftSave.json.message || '保存失败' })
+      }
+    } catch {
+      notify({ color: 'red', message: '网络错误' })
+    } finally {
+      setLoading(false)
+    }
+  }
+
   // 手动保存草稿：仅保存完整草稿快照，不阻塞于 slug 校验
   const handleSaveDraft = async () => {
     if (!postId) {
@@ -660,6 +687,16 @@ export default function PostEditor({ postId }: { postId?: number }) {
           backdropFilter: 'blur(8px)',
         }}
       >
+        {postId && (
+          <Button
+            variant="subtle"
+            leftSection={<IconEye size={16} />}
+            onClick={handlePreview}
+            loading={loading}
+          >
+            预览
+          </Button>
+        )}
         <Button
           variant="default"
           leftSection={<IconDeviceFloppy size={16} />}
@@ -788,6 +825,13 @@ export default function PostEditor({ postId }: { postId?: number }) {
                 style={{ flex: 1 }}
                 value={form.slug}
                 onChange={(e) => setField('slug', e.target.value)}
+                error={
+                  form.slug.startsWith('-')
+                    ? 'Slug 不能以 - 开头'
+                    : form.slug.endsWith('-')
+                      ? 'Slug 不能以 - 结尾'
+                      : undefined
+                }
               />
               <Button variant="light" size="sm" onClick={generateSlug}>
                 自动生成

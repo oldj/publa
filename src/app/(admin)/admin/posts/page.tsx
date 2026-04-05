@@ -85,11 +85,11 @@ export default function PostsPage() {
   }
 
   const getPreviewUrl = (post: PostItem) => {
-    if (post.status === 'published') {
+    if (post.status === 'published' && post.slug) {
       return `/posts/${post.slug}`
     }
 
-    return `/posts/${post.slug}?preview=1`
+    return `/posts/--preview-${post.id}`
   }
 
   return (
@@ -190,18 +190,16 @@ export default function PostsPage() {
                   </Table.Td>
                   <Table.Td>
                     <Group gap="xs">
-                      {post.slug && (
-                        <ActionIcon
-                          variant="subtle"
-                          component={Link}
-                          href={getPreviewUrl(post)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          aria-label={`查看文章《${post.title}》`}
-                        >
-                          <IconEye size={16} />
-                        </ActionIcon>
-                      )}
+                      <ActionIcon
+                        variant="subtle"
+                        component={Link}
+                        href={getPreviewUrl(post)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={`查看文章《${post.title}》`}
+                      >
+                        <IconEye size={16} />
+                      </ActionIcon>
                       <ActionIcon
                         variant="subtle"
                         component={Link}

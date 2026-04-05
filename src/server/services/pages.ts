@@ -25,6 +25,14 @@ export function validatePagePath(
     return { valid: false, message: '路径不能以 / 开头' }
   }
 
+  if (path.startsWith('-')) {
+    return { valid: false, message: '路径不能以 - 开头' }
+  }
+
+  if (path.endsWith('-')) {
+    return { valid: false, message: '路径不能以 - 结尾' }
+  }
+
   const topSegment = path.split('/')[0]
   if (RESERVED_PATHS.includes(topSegment)) {
     return { valid: false, message: `"${topSegment}" 是保留路径，不能使用` }

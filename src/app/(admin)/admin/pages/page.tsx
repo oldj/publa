@@ -4,7 +4,7 @@ import adminStyles from '../../_components/AdminShell.module.scss'
 
 import { notify } from '@/lib/notify'
 import { ActionIcon, Badge, Button, Group, Table, Text, Title } from '@mantine/core'
-import { IconPencil, IconPlus, IconTrash } from '@tabler/icons-react'
+import { IconEye, IconPencil, IconPlus, IconTrash } from '@tabler/icons-react'
 import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 
@@ -100,6 +100,20 @@ export default function PagesAdminPage() {
                   </Table.Td>
                   <Table.Td>
                     <Group gap="xs">
+                      <ActionIcon
+                        variant="subtle"
+                        component={Link}
+                        href={
+                          p.status === 'published' && p.path
+                            ? `/${p.path}`
+                            : `/--preview-${p.id}`
+                        }
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={`查看页面《${p.title}》`}
+                      >
+                        <IconEye size={16} />
+                      </ActionIcon>
                       <ActionIcon variant="subtle" component={Link} href={`/admin/pages/${p.id}`}>
                         <IconPencil size={16} />
                       </ActionIcon>

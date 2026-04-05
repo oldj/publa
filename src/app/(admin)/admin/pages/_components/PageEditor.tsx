@@ -22,7 +22,7 @@ import {
   Textarea,
   Title,
 } from '@mantine/core'
-import { IconArrowLeft, IconDeviceFloppy, IconSend } from '@tabler/icons-react'
+import { IconArrowLeft, IconDeviceFloppy, IconEye, IconSend } from '@tabler/icons-react'
 import dayjs from 'dayjs'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -338,6 +338,32 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
     setPathError(validatePath(value))
   }
 
+  // 预览：先保存草稿，再在新窗口打开预览
+  const handlePreview = async () => {
+    if (!pageId) {
+      await createAndRedirect()
+      return
+    }
+
+    setLoading(true)
+    try {
+      const formState = formRef.current
+      const draftSave = await saveDraftRevision(pageId, formState)
+      if (draftSave.json.success) {
+        lastAutoSaveContent.current = draftSave.content.contentRaw
+        lastAutoSaveMetaRef.current = getMetaSnapshot(formState)
+        setAutoSaveTime(draftSave.json.data.updatedAt)
+        window.open(`/--preview-${pageId}`, '_blank')
+      } else {
+        notify({ color: 'red', message: draftSave.json.message || '保存失败' })
+      }
+    } catch {
+      notify({ color: 'red', message: '网络错误' })
+    } finally {
+      setLoading(false)
+    }
+  }
+
   // 手动保存草稿：仅保存完整草稿快照，不阻塞于 path 校验
   const handleSaveDraft = async () => {
     if (!pageId) {
@@ -487,6 +513,16 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
           {isEdit && (
             <Button variant="subtle" onClick={() => setHistoryOpen(true)}>
               历史版本
+            </Button>
+          )}
+          {isEdit && (
+            <Button
+              variant="subtle"
+              leftSection={<IconEye size={16} />}
+              onClick={handlePreview}
+              loading={loading}
+            >
+              预览
             </Button>
           )}
           {isEdit && form.status === 'published' ? (
