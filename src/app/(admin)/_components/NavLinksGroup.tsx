@@ -59,7 +59,8 @@ export function NavLinksGroup({
   const hasLinks = Array.isArray(links) && links.length > 0
   // 先用路由推导的默认值渲染（与服务端一致），再从 localStorage 恢复
   const defaultOpened =
-    initiallyOpened || (hasLinks && links.some((l) => pathname.startsWith(l.link)))
+    initiallyOpened ||
+    (hasLinks && links.some((l) => pathname === l.link || pathname.startsWith(l.link + '/')))
   const [opened, setOpened] = useState(defaultOpened)
 
   useEffect(() => {
@@ -84,7 +85,7 @@ export function NavLinksGroup({
           className={classes.link}
           href={item.link}
           key={item.label}
-          data-active={pathname.startsWith(item.link) || undefined}
+          data-active={pathname === item.link || pathname.startsWith(item.link + '/') || undefined}
         >
           <Group gap="xs" justify="space-between" wrap="nowrap">
             <span>{item.label}</span>

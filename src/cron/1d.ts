@@ -1,9 +1,6 @@
-import { cleanExpiredCaptchas } from '@/server/lib/captcha'
-import { cleanExpiredRateEvents } from '@/server/lib/rate-limit'
+import { cleanOldEmailLogs } from '@/server/services/email-logs'
 
 /** 每日执行的定时任务 */
-export async function runOneMinuteTasks() {
-  // 清理过期数据
-  await cleanExpiredCaptchas()
-  await cleanExpiredRateEvents()
+export async function runDailyTasks() {
+  await cleanOldEmailLogs()
 }

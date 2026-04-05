@@ -1,9 +1,9 @@
 import { COMMENT_MAX_LENGTH } from '@/lib/constants'
-import { eq } from 'drizzle-orm'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { maybeFirst } from '@/server/db/query'
 import * as schema from '@/server/db/schema'
 import { setupTestDb, testDb } from '@/server/services/__test__/setup'
+import { eq } from 'drizzle-orm'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const { mockGetCurrentUser, mockVerifyCaptcha, mockCookies } = vi.hoisted(() => ({
   mockGetCurrentUser: vi.fn(),
@@ -23,6 +23,10 @@ vi.mock('next/headers', () => ({
   cookies: mockCookies,
 }))
 
+vi.mock('@/server/services/notifications', () => ({
+  notifyNewComment: vi.fn().mockResolvedValue(undefined),
+}))
+
 const { GET, POST } = await import('./route')
 
 beforeEach(async () => {
@@ -38,9 +42,7 @@ beforeEach(async () => {
   })
 })
 
-async function createPost(
-  overrides: Partial<typeof schema.contents.$inferInsert> = {},
-) {
+async function createPost(overrides: Partial<typeof schema.contents.$inferInsert> = {}) {
   await testDb.insert(schema.contents).values({
     type: 'post',
     title: '测试文章',
@@ -69,7 +71,9 @@ describe('/api/comments', () => {
       status: 'approved',
     })
 
-    const response = await GET(new Request('http://localhost/api/comments?slug=published-post') as any)
+    const response = await GET(
+      new Request('http://localhost/api/comments?slug=published-post') as any,
+    )
     const json = await response.json()
 
     expect(response.status).toBe(200)
@@ -99,7 +103,9 @@ describe('/api/comments', () => {
     })
     mockGetCurrentUser.mockResolvedValue({ id: 1, username: 'admin', role: 'owner' })
 
-    const response = await GET(new Request('http://localhost/api/comments?slug=draft-post-staff') as any)
+    const response = await GET(
+      new Request('http://localhost/api/comments?slug=draft-post-staff') as any,
+    )
     const json = await response.json()
 
     expect(response.status).toBe(200)
@@ -113,16 +119,18 @@ describe('/api/comments', () => {
       publishedAt: null,
     })
 
-    const response = await POST(new Request('http://localhost/api/comments', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        slug: 'draft-post-submit',
-        username: '访客',
-        content: '测试评论',
-        captchaCode: '1234',
-      }),
-    }) as any)
+    const response = await POST(
+      new Request('http://localhost/api/comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          slug: 'draft-post-submit',
+          username: '访客',
+          content: '测试评论',
+          captchaCode: '1234',
+        }),
+      }) as any,
+    )
     const json = await response.json()
 
     expect(response.status).toBe(404)
@@ -140,27 +148,25 @@ describe('/api/comments', () => {
     })
     mockGetCurrentUser.mockResolvedValue({ id: 1, username: 'admin', role: 'owner' })
 
-    const response = await POST(new Request('http://localhost/api/comments', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contentId: 1,
-        username: '管理员',
-        content: '内部预览评论',
-        captchaCode: '1234',
-      }),
-    }) as any)
+    const response = await POST(
+      new Request('http://localhost/api/comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contentId: 1,
+          username: '管理员',
+          content: '内部预览评论',
+          captchaCode: '1234',
+        }),
+      }) as any,
+    )
     const json = await response.json()
 
     expect(response.status).toBe(200)
     expect(json.success).toBe(true)
 
     const savedComment = await maybeFirst(
-      testDb
-        .select()
-        .from(schema.comments)
-        .where(eq(schema.comments.contentId, 1))
-        .limit(1),
+      testDb.select().from(schema.comments).where(eq(schema.comments.contentId, 1)).limit(1),
     )
     expect(savedComment?.content).toBe('内部预览评论')
     expect(savedComment?.userId).toBe(1)
@@ -169,16 +175,18 @@ describe('/api/comments', () => {
   it('评论内容超过最大长度时返回 CONTENT_TOO_LONG', async () => {
     await createPost({ slug: 'length-test-post' })
 
-    const response = await POST(new Request('http://localhost/api/comments', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        slug: 'length-test-post',
-        username: '访客',
-        content: 'a'.repeat(COMMENT_MAX_LENGTH + 1),
-        captchaCode: '1234',
-      }),
-    }) as any)
+    const response = await POST(
+      new Request('http://localhost/api/comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          slug: 'length-test-post',
+          username: '访客',
+          content: 'a'.repeat(COMMENT_MAX_LENGTH + 1),
+          captchaCode: '1234',
+        }),
+      }) as any,
+    )
     const json = await response.json()
 
     expect(response.status).toBe(400)
@@ -188,16 +196,18 @@ describe('/api/comments', () => {
   it('评论内容恰好等于最大长度时可以提交', async () => {
     await createPost({ slug: 'exact-length-post' })
 
-    const response = await POST(new Request('http://localhost/api/comments', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        slug: 'exact-length-post',
-        username: '访客',
-        content: 'a'.repeat(COMMENT_MAX_LENGTH),
-        captchaCode: '1234',
-      }),
-    }) as any)
+    const response = await POST(
+      new Request('http://localhost/api/comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          slug: 'exact-length-post',
+          username: '访客',
+          content: 'a'.repeat(COMMENT_MAX_LENGTH),
+          captchaCode: '1234',
+        }),
+      }) as any,
+    )
     const json = await response.json()
 
     expect(response.status).toBe(200)
@@ -208,32 +218,36 @@ describe('/api/comments', () => {
     await createPost({ slug: 'rate-limit-post' })
 
     // 第一次提交
-    const first = await POST(new Request('http://localhost/api/comments', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        slug: 'rate-limit-post',
-        username: '访客',
-        content: '第一条评论',
-        captchaCode: '1234',
-      }),
-    }) as any)
+    const first = await POST(
+      new Request('http://localhost/api/comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          slug: 'rate-limit-post',
+          username: '访客',
+          content: '第一条评论',
+          captchaCode: '1234',
+        }),
+      }) as any,
+    )
     expect((await first.json()).success).toBe(true)
 
     // 重置验证码 mock（验证码验证后会被消耗）
     mockVerifyCaptcha.mockResolvedValue(true)
 
     // 第二次提交应被限制
-    const second = await POST(new Request('http://localhost/api/comments', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        slug: 'rate-limit-post',
-        username: '访客',
-        content: '第二条评论',
-        captchaCode: '1234',
-      }),
-    }) as any)
+    const second = await POST(
+      new Request('http://localhost/api/comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          slug: 'rate-limit-post',
+          username: '访客',
+          content: '第二条评论',
+          captchaCode: '1234',
+        }),
+      }) as any,
+    )
     const json = await second.json()
 
     expect(second.status).toBe(429)
@@ -250,7 +264,9 @@ describe('/api/comments', () => {
       status: 'approved',
     })
 
-    const response = await GET(new Request('http://localhost/api/comments?slug=unsafe-comment-post') as any)
+    const response = await GET(
+      new Request('http://localhost/api/comments?slug=unsafe-comment-post') as any,
+    )
     const json = await response.json()
 
     expect(response.status).toBe(200)

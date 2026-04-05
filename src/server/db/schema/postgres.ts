@@ -20,6 +20,7 @@ export const {
   contents,
   contentRevisions,
   contentTags,
+  emailLogs,
   guestbookMessages,
   menus,
   rateEvents,

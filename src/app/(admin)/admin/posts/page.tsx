@@ -74,7 +74,11 @@ export default function PostsPage() {
 
     if (json.success) {
       notify({ color: 'green', message: '删除成功' })
-      fetchPosts()
+      if (data && data.items.length <= 1 && page > 1) {
+        setPage(page - 1)
+      } else {
+        fetchPosts()
+      }
     } else {
       notify({ color: 'red', message: json.message || '删除失败' })
     }

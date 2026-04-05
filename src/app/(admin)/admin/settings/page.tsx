@@ -12,12 +12,11 @@ import {
   Text,
   TextInput,
   Textarea,
-  Title,
 } from '@mantine/core'
-import { IconDeviceFloppy } from '@tabler/icons-react'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { useCurrentUser } from '../../_components/AdminCountsContext'
+import { PageHeader } from '../../_components/PageHeader'
 
 interface FaviconState {
   mode: 'default' | 'url' | 'upload'
@@ -191,30 +190,7 @@ export default function SettingsPage() {
 
   return (
     <div>
-      <Group
-        justify="space-between"
-        mb="lg"
-        pb="md"
-        style={{
-          position: 'sticky',
-          top: 0,
-          zIndex: 10,
-          backgroundColor: '#f7f7f7',
-          // borderBottom: '1px solid var(--mantine-color-gray-3)',
-        }}
-      >
-        <Title order={3}>系统设置</Title>
-        <Group gap="sm">
-          {isDirty && (
-            <Text size="sm" c="orange">
-              设置已修改，需保存后方可生效
-            </Text>
-          )}
-          <Button leftSection={<IconDeviceFloppy size={16} />} onClick={handleSave} loading={loading}>
-            保存
-          </Button>
-        </Group>
-      </Group>
+      <PageHeader title="系统设置" dirty={isDirty} loading={loading} onSave={handleSave} />
 
       <Stack>
         <Divider label="站点信息" labelPosition="left" />

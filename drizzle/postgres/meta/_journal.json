@@ -15,6 +15,13 @@
       "when": 1775300029756,
       "tag": "0001_daffy_albert_cleary",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1775369036192,
+      "tag": "0002_faulty_zombie",
+      "breakpoints": true
     }
   ]
 }

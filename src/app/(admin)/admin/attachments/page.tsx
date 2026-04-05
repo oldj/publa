@@ -294,7 +294,11 @@ export default function AttachmentsPage() {
         next.delete(id)
         return next
       })
-      fetchData()
+      if (data && data.items.length <= 1 && page > 1) {
+        setPage(page - 1)
+      } else {
+        fetchData()
+      }
     } else {
       notifications.update({
         id: nid,
@@ -349,7 +353,11 @@ export default function AttachmentsPage() {
       })
     }
     setSelected(new Set())
-    fetchData()
+    if (data && successCount >= data.items.length && page > 1) {
+      setPage(page - 1)
+    } else {
+      fetchData()
+    }
   }
 
   const handleCopyUrl = (url: string) => {
@@ -878,7 +886,11 @@ export default function AttachmentsPage() {
                     autoClose: 2000,
                   })
                   setDetailAttachment(null)
-                  fetchData()
+                  if (data && data.items.length <= 1 && page > 1) {
+                    setPage(page - 1)
+                  } else {
+                    fetchData()
+                  }
                 } else {
                   notifications.update({
                     id: nid,

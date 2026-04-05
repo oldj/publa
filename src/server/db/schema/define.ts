@@ -4,6 +4,8 @@ import {
   contentItemType,
   contentStatus,
   contentType,
+  emailEventType,
+  emailLogStatus,
   guestbookStatus,
   isoNow,
   menuTarget,
@@ -299,6 +301,20 @@ export function defineSchema(kit: DialectKit) {
     ],
   )
 
+  const emailLogs = table(
+    'email_logs',
+    {
+      id: autoId(),
+      eventType: text('event_type', { enum: emailEventType }).notNull(),
+      recipients: text('recipients').notNull(),
+      subject: text('subject').notNull(),
+      status: text('status', { enum: emailLogStatus }).notNull(),
+      errorMessage: text('error_message'),
+      createdAt: text('created_at').notNull().$defaultFn(isoNow),
+    },
+    (t: any) => [index('email_logs_created_idx').on(desc(t.createdAt))],
+  )
+
   return {
     attachments,
     captchas,
@@ -307,6 +323,7 @@ export function defineSchema(kit: DialectKit) {
     contents,
     contentRevisions,
     contentTags,
+    emailLogs,
     guestbookMessages,
     menus,
     rateEvents,

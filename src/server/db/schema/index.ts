@@ -8,6 +8,7 @@ export const schema = runtimeSchema
 
 export const attachments = runtimeSchema.attachments as typeof sqliteSchema.attachments
 export const captchas = runtimeSchema.captchas as typeof sqliteSchema.captchas
+export const emailLogs = runtimeSchema.emailLogs as typeof sqliteSchema.emailLogs
 export const categories = runtimeSchema.categories as typeof sqliteSchema.categories
 export const comments = runtimeSchema.comments as typeof sqliteSchema.comments
 export const contents = runtimeSchema.contents as typeof sqliteSchema.contents

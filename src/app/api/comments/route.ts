@@ -3,8 +3,9 @@ import { getCurrentUser } from '@/server/auth'
 import { verifyCaptcha } from '@/server/lib/captcha'
 import { acquireSubmissionSlot } from '@/server/lib/rate-limit'
 import { safeParseJson } from '@/server/lib/request'
-import { getFrontendComments } from '@/server/services/posts-frontend'
 import { createComment, getCommentContentAccess } from '@/server/services/comments'
+import { notifyNewComment } from '@/server/services/notifications'
+import { getFrontendComments } from '@/server/services/posts-frontend'
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -57,7 +58,11 @@ export async function POST(request: NextRequest) {
 
   if (content.length > COMMENT_MAX_LENGTH) {
     return NextResponse.json(
-      { success: false, code: 'CONTENT_TOO_LONG', message: `评论内容不能超过 ${COMMENT_MAX_LENGTH} 字符` },
+      {
+        success: false,
+        code: 'CONTENT_TOO_LONG',
+        message: `评论内容不能超过 ${COMMENT_MAX_LENGTH} 字符`,
+      },
       { status: 400 },
     )
   }
@@ -92,7 +97,9 @@ export async function POST(request: NextRequest) {
   }
 
   const forwardedFor = request.headers.get('x-forwarded-for')
-  const ip = forwardedFor ? forwardedFor.split(',')[0].trim() : (request.headers.get('x-real-ip') || '')
+  const ip = forwardedFor
+    ? forwardedFor.split(',')[0].trim()
+    : request.headers.get('x-real-ip') || ''
   const ua = request.headers.get('user-agent') || ''
 
   // 原子地检查并占位，防止并发穿透
@@ -121,6 +128,12 @@ export async function POST(request: NextRequest) {
       { status: 400 },
     )
   }
+
+  void notifyNewComment({
+    authorName: username,
+    content,
+    contentId: access.content.id,
+  }).catch(() => {})
 
   return NextResponse.json({ success: true, data: result.data })
 }

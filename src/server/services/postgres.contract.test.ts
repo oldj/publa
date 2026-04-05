@@ -19,6 +19,7 @@ describePostgres('postgres contract', () => {
     'content_tags',
     'slug_histories',
     'comments',
+    'email_logs',
     'guestbook_messages',
     'contents',
     'categories',
@@ -292,9 +293,10 @@ describePostgres('postgres contract', () => {
       {
         categories: [{ id: 10, name: '技术', slug: 'tech' }],
         tags: [{ id: 20, name: 'PostgreSQL', slug: 'postgresql' }],
-        posts: [
+        contents: [
           {
             id: 100,
+            type: 'post',
             title: '导入文章',
             slug: 'imported-post',
             authorId: ownerId,
@@ -315,9 +317,9 @@ describePostgres('postgres contract', () => {
 
     const exported = await importExportService.exportContentData()
     expect(exported.categories).toHaveLength(1)
-    expect(exported.posts).toHaveLength(1)
+    expect(exported.contents).toHaveLength(1)
     expect(exported.contentTags).toHaveLength(1)
-    expect(exported.posts[0].authorId).toBe(ownerId)
+    expect(exported.contents[0].authorId).toBe(ownerId)
   })
 
   it('导入显式主键后默认自增写入不会复用旧序列', async () => {
@@ -325,9 +327,10 @@ describePostgres('postgres contract', () => {
       {
         categories: [{ id: 10, name: '技术', slug: 'tech' }],
         tags: [],
-        posts: [
+        contents: [
           {
             id: 100,
+            type: 'post',
             title: '已有文章',
             slug: 'seeded-post',
             authorId: ownerId,

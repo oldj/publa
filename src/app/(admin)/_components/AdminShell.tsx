@@ -6,6 +6,7 @@ import { AppShell, Burger, Code, Group, ScrollArea, Text } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import {
   IconGauge,
+  IconMail,
   IconMessage,
   IconNotes,
   IconPhoto,
@@ -56,6 +57,19 @@ function NavLinks({ user }: { user: AuthUser | null }) {
       ],
     },
     { id: 'attachments', label: '附件', icon: IconPhoto, link: '/admin/attachments' },
+    ...(isOwner || isAdmin
+      ? [
+          {
+            id: 'email',
+            label: '邮件',
+            icon: IconMail,
+            links: [
+              { label: '邮件通知', link: '/admin/email' },
+              { label: '邮件日志', link: '/admin/email-logs' },
+            ],
+          },
+        ]
+      : []),
     {
       id: 'system',
       label: '系统',

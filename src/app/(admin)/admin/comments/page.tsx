@@ -144,7 +144,11 @@ export default function CommentsPage() {
     const json = await res.json()
     if (json.success) {
       notify({ color: 'green', message: '删除成功' })
-      fetchComments()
+      if (data && data.items.length <= 1 && page > 1) {
+        setPage(page - 1)
+      } else {
+        fetchComments()
+      }
       refreshCounts()
       if (detail?.id === id) setDrawerOpened(false)
     } else {

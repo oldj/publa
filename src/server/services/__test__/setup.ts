@@ -18,6 +18,7 @@ const resetTableNames = [
   'content_tags',
   'slug_histories',
   'comments',
+  'email_logs',
   'guestbook_messages',
   'contents',
   'categories',

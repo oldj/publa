@@ -128,7 +128,11 @@ export default function GuestbookAdminPage() {
     const json = await res.json()
     if (json.success) {
       notify({ color: 'green', message: '删除成功' })
-      fetchData()
+      if (data && data.items.length <= 1 && page > 1) {
+        setPage(page - 1)
+      } else {
+        fetchData()
+      }
       refreshCounts()
       if (detail?.id === id) setDrawerOpened(false)
     } else {

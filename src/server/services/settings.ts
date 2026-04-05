@@ -29,6 +29,19 @@ export const ADMIN_SETTINGS_KEYS = [
   'customBodyEndHtml',
 ] as const
 
+export const EMAIL_SETTINGS_KEYS = [
+  'emailProvider',
+  'emailResendApiKey',
+  'emailSmtpHost',
+  'emailSmtpPort',
+  'emailSmtpUsername',
+  'emailSmtpPassword',
+  'emailSmtpFrom',
+  'emailSmtpEncryption',
+  'emailNotifyNewComment',
+  'emailNotifyNewGuestbook',
+] as const
+
 export const EDITOR_SETTINGS_KEYS = ['enableComment', 'showCommentsGlobally'] as const
 
 /** 获取单个设置 */

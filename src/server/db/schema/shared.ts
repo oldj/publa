@@ -11,6 +11,8 @@ export const storageProvider = ['s3', 'r2', 'oss', 'cos'] as const
 export const rateEventType = ['login_fail', 'comment', 'guestbook'] as const
 export const userRole = ['owner', 'admin', 'editor'] as const
 export const redirectType = ['301', '302', '307', '308'] as const
+export const emailLogStatus = ['success', 'fail'] as const
+export const emailEventType = ['new_comment', 'new_guestbook', 'test'] as const
 
 export function isoNow() {
   return new Date().toISOString()

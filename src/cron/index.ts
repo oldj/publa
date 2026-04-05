@@ -1,10 +1,11 @@
 import { AsyncTask, SimpleIntervalJob, ToadScheduler } from 'toad-scheduler'
+import { runDailyTasks } from './1d'
 import { runOneMinuteTasks } from './1m'
 
 const scheduler = new ToadScheduler()
 
 export function startScheduler() {
-  const task = new AsyncTask('1m-cron', async () => {
+  const minuteTask = new AsyncTask('1m-cron', async () => {
     try {
       await runOneMinuteTasks()
     } catch (error) {
@@ -12,14 +13,25 @@ export function startScheduler() {
     }
   })
 
-  const job = new SimpleIntervalJob(
-    { minutes: 1, runImmediately: true },
-    task,
-    { id: '1m-cron' },
-  )
+  const minuteJob = new SimpleIntervalJob({ minutes: 1, runImmediately: true }, minuteTask, {
+    id: '1m-cron',
+  })
 
-  scheduler.addSimpleIntervalJob(job)
-  console.log('[cron] Scheduler started. 1m task registered.')
+  const dailyTask = new AsyncTask('1d-cron', async () => {
+    try {
+      await runDailyTasks()
+    } catch (error) {
+      console.error('[cron] 1d task failed:', error)
+    }
+  })
+
+  const dailyJob = new SimpleIntervalJob({ hours: 24, runImmediately: true }, dailyTask, {
+    id: '1d-cron',
+  })
+
+  scheduler.addSimpleIntervalJob(minuteJob)
+  scheduler.addSimpleIntervalJob(dailyJob)
+  console.log('[cron] Scheduler started. 1m and 1d tasks registered.')
 }
 
 export { scheduler }
