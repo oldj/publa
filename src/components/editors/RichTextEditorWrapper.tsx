@@ -11,15 +11,15 @@ import {
   IconAlignLeft,
   IconAlignRight,
   IconArrowsMaximize,
+  IconColumnInsertLeft,
+  IconColumnInsertRight,
+  IconColumnRemove,
   IconLink,
   IconMath,
   IconMath1Divide2,
   IconMathFunction,
   IconMaximizeOff,
   IconPhoto,
-  IconColumnInsertLeft,
-  IconColumnInsertRight,
-  IconColumnRemove,
   IconRowInsertBottom,
   IconRowInsertTop,
   IconRowRemove,
@@ -408,6 +408,7 @@ export default function RichTextEditorWrapper({
                     .run()
                 }}
                 title="插入表格"
+                disabled={editor?.isActive('table')}
               >
                 <IconTable size={16} />
               </RichTextEditor.Control>
