@@ -3,15 +3,15 @@ import PreviewNotice from '@/components/PreviewNotice'
 import BasicLayout from '@/layouts/basic'
 import getHeadersFromHTML, { IHeader } from '@/lib/getHeadersFromHTML'
 import { getCurrentUser } from '@/server/auth'
-import { getSetting } from '@/server/services/settings'
 import { db } from '@/server/db'
 import { maybeFirst } from '@/server/db/query'
 import { contents, slugHistories } from '@/server/db/schema'
 import { redirectOrNotFound } from '@/server/lib/frontend-404'
 import { getFrontendPostBySlug } from '@/server/services/posts-frontend'
-import { parsePreviewId, getPreviewPost } from '@/server/services/preview'
+import { getPreviewPost, parsePreviewId } from '@/server/services/preview'
+import { getSetting } from '@/server/services/settings'
 import { and, eq, isNull } from 'drizzle-orm'
-import { notFound, redirect } from 'next/navigation'
+import { notFound, permanentRedirect, redirect } from 'next/navigation'
 import { IAccount, IPost } from 'typings'
 
 interface IPostData {
@@ -21,28 +21,56 @@ interface IPostData {
   headers?: IHeader[]
 }
 
+type PageSearchParams = Record<string, string | string[] | undefined>
+
 interface GetDataOptions {
-  slug: string[]
+  slugKey: string
+  pathname: string
   preview: boolean
   viewer: Awaited<ReturnType<typeof getCurrentUser>>
   incrementViewCount: boolean
 }
 
-function getSlugKey(slug: string[]): string {
-  let slugKey = ''
-  if (slug) {
-    if (slug.length === 4) {
-      slugKey = slug[3]
-    } else if (slug.length === 1) {
-      slugKey = slug[0]
+function buildSearchQuery(searchParams: PageSearchParams): string {
+  const query = new URLSearchParams()
+
+  for (const [key, value] of Object.entries(searchParams)) {
+    if (value === undefined) continue
+
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        query.append(key, item)
+      }
+      continue
     }
+
+    query.append(key, value)
   }
 
-  if (!slugKey) {
-    notFound()
+  const queryString = query.toString()
+  return queryString ? `?${queryString}` : ''
+}
+
+function isDateAliasSlug(slug: string[]): boolean {
+  if (slug.length !== 4) return false
+
+  const [year, month, day] = slug
+  return (
+    /^\d{4}$/.test(year) && /^(0[1-9]|1[0-2])$/.test(month) && /^(0[1-9]|[12]\d|3[01])$/.test(day)
+  )
+}
+
+// 统一处理文章路由：单段 slug 直接访问，日期型旧 permalink 永久跳到 canonical。
+function resolvePostRoute(slug: string[], searchParams: PageSearchParams): string {
+  if (slug.length === 1 && slug[0]) {
+    return slug[0]
   }
 
-  return slugKey
+  if (isDateAliasSlug(slug) && slug[3]) {
+    permanentRedirect(`/posts/${slug[3]}${buildSearchQuery(searchParams)}`)
+  }
+
+  notFound()
 }
 
 function isPreviewRequest(preview: string | string[] | undefined): boolean {
@@ -50,13 +78,12 @@ function isPreviewRequest(preview: string | string[] | undefined): boolean {
 }
 
 async function getData({
-  slug,
+  slugKey,
+  pathname,
   preview,
   viewer,
   incrementViewCount,
 }: GetDataOptions): Promise<IPostData> {
-  const slugKey = getSlugKey(slug)
-
   // 处理 --preview-{id} 模式的预览请求
   const previewId = parsePreviewId(slugKey)
   if (previewId !== null) {
@@ -88,7 +115,7 @@ async function getData({
         redirect(`/posts/${found.slug}`)
       }
 
-      await redirectOrNotFound(`/posts/${slug.join('/')}`)
+      await redirectOrNotFound(pathname)
     }
 
     notFound()
@@ -108,12 +135,12 @@ export const generateMetadata = async ({
   searchParams,
 }: {
   params: Promise<{ slug: string[] }>
-  searchParams: Promise<{ preview?: string | string[] }>
+  searchParams: Promise<PageSearchParams>
 }) => {
-  const { slug } = await params
-  const { preview: previewParam } = await searchParams
+  const [{ slug }, resolvedSearchParams] = await Promise.all([params, searchParams])
+  const { preview: previewParam } = resolvedSearchParams
 
-  const slugKey = getSlugKey(slug)
+  const slugKey = resolvePostRoute(slug, resolvedSearchParams)
   const previewId = parsePreviewId(slugKey)
   // --preview-{id} 模式或 ?preview=1 参数都视为预览
   const preview = previewId !== null || isPreviewRequest(previewParam)
@@ -124,7 +151,8 @@ export const generateMetadata = async ({
   }
 
   const data = await getData({
-    slug,
+    slugKey,
+    pathname: `/posts/${slugKey}`,
     preview,
     viewer,
     incrementViewCount: false,
@@ -142,14 +170,15 @@ export default async function Page({
   searchParams,
 }: {
   params: Promise<{ slug: string[] }>
-  searchParams: Promise<{ preview?: string | string[] }>
+  searchParams: Promise<PageSearchParams>
 }) {
-  const [{ slug }, { preview: previewParam }, currentUser] = await Promise.all([
+  const [{ slug }, resolvedSearchParams, currentUser] = await Promise.all([
     params,
     searchParams,
     getCurrentUser(),
   ])
-  const slugKey = getSlugKey(slug)
+  const { preview: previewParam } = resolvedSearchParams
+  const slugKey = resolvePostRoute(slug, resolvedSearchParams)
   const previewId = parsePreviewId(slugKey)
   const preview = previewId !== null || isPreviewRequest(previewParam)
 
@@ -159,7 +188,8 @@ export default async function Page({
 
   const [data, afterPostHtml] = await Promise.all([
     getData({
-      slug,
+      slugKey,
+      pathname: `/posts/${slugKey}`,
       preview,
       viewer: currentUser,
       incrementViewCount: !preview && !currentUser,

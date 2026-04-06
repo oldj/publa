@@ -5,6 +5,7 @@ const {
   mockGetFrontendPostBySlug,
   mockRedirectOrNotFound,
   mockMaybeFirst,
+  mockPermanentRedirect,
   mockRedirect,
   mockNotFound,
   mockGetSetting,
@@ -13,6 +14,7 @@ const {
   mockGetFrontendPostBySlug: vi.fn(),
   mockRedirectOrNotFound: vi.fn(),
   mockMaybeFirst: vi.fn(),
+  mockPermanentRedirect: vi.fn(),
   mockRedirect: vi.fn(),
   mockNotFound: vi.fn(),
   mockGetSetting: vi.fn(),
@@ -88,6 +90,7 @@ vi.mock('@/lib/getHeadersFromHTML', () => ({
 }))
 
 vi.mock('next/navigation', () => ({
+  permanentRedirect: mockPermanentRedirect,
   redirect: mockRedirect,
   notFound: mockNotFound,
 }))
@@ -100,6 +103,7 @@ describe('src/app/posts/[...slug]/page', () => {
     mockGetFrontendPostBySlug.mockReset()
     mockRedirectOrNotFound.mockReset()
     mockMaybeFirst.mockReset()
+    mockPermanentRedirect.mockReset()
     mockRedirect.mockReset()
     mockNotFound.mockReset()
     queryChain.from.mockClear()
@@ -111,6 +115,55 @@ describe('src/app/posts/[...slug]/page', () => {
     mockGetFrontendPostBySlug.mockResolvedValue(null)
     mockMaybeFirst.mockResolvedValue(null)
     mockGetSetting.mockResolvedValue(null)
+  })
+
+  it('单段 slug 仍按 canonical 地址加载文章', async () => {
+    mockGetFrontendPostBySlug.mockResolvedValue({ title: '测试文章', html: '' })
+
+    await PostPage({
+      params: Promise.resolve({ slug: ['published-post'] }),
+      searchParams: Promise.resolve({}),
+    })
+
+    expect(mockGetFrontendPostBySlug).toHaveBeenCalledWith(
+      'published-post',
+      expect.objectContaining({ preview: false }),
+    )
+    expect(mockPermanentRedirect).not.toHaveBeenCalled()
+  })
+
+  it('日期型四段路径会永久跳转到 canonical，并保留查询参数', async () => {
+    mockPermanentRedirect.mockImplementation(() => {
+      throw new Error('PERMANENT_REDIRECT')
+    })
+
+    await expect(
+      PostPage({
+        params: Promise.resolve({ slug: ['2025', '05', '02', 'cron-job-with-fc'] }),
+        searchParams: Promise.resolve({ preview: '1', utm_source: 'newsletter' }),
+      }),
+    ).rejects.toThrow('PERMANENT_REDIRECT')
+
+    expect(mockPermanentRedirect).toHaveBeenCalledWith(
+      '/posts/cron-job-with-fc?preview=1&utm_source=newsletter',
+    )
+    expect(mockGetFrontendPostBySlug).not.toHaveBeenCalled()
+  })
+
+  it('非日期四段路径直接 notFound', async () => {
+    mockNotFound.mockImplementation(() => {
+      throw new Error('NOT_FOUND')
+    })
+
+    await expect(
+      PostPage({
+        params: Promise.resolve({ slug: ['foo', 'bar', 'baz', 'published-post'] }),
+        searchParams: Promise.resolve({}),
+      }),
+    ).rejects.toThrow('NOT_FOUND')
+
+    expect(mockPermanentRedirect).not.toHaveBeenCalled()
+    expect(mockGetFrontendPostBySlug).not.toHaveBeenCalled()
   })
 
   it('文章 miss 且没有 slug 历史时会尝试跳转规则', async () => {
