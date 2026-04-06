@@ -2,6 +2,7 @@ import { db, dbFamily } from '@/server/db'
 import { type SQL, sql } from 'drizzle-orm'
 
 const postgresSerialTables = [
+  'activity_logs',
   'users',
   'attachments',
   'categories',

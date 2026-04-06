@@ -11,6 +11,7 @@ import {
 } from '@/server/services/pages'
 import { publishDraft, saveDraft } from '@/server/services/revisions'
 import { parsePageDraftMetadata } from '@/shared/revision-metadata'
+import { logActivity } from '@/server/services/activity-logs'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(request: NextRequest) {
@@ -109,6 +110,8 @@ export async function POST(request: NextRequest) {
         await publishDraft('page', page.id, user.id, tx)
       })
     }
+
+    logActivity(request, user.id, 'create_page')
 
     return NextResponse.json({ success: true, data: page })
   } catch (err) {

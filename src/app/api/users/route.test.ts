@@ -1,12 +1,22 @@
 import { NextResponse } from 'next/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { mockRequireCurrentUser, mockRequireRole, mockListUsers, mockCreateUser, mockGetUserById } = vi.hoisted(() => ({
+const {
+  mockRequireCurrentUser,
+  mockRequireRole,
+  mockListUsers,
+  mockCreateUser,
+  mockGetUserById,
+  mockGetLastActiveMap,
+  mockLogActivity,
+} = vi.hoisted(() => ({
   mockRequireCurrentUser: vi.fn(),
   mockRequireRole: vi.fn(),
   mockListUsers: vi.fn(),
   mockCreateUser: vi.fn(),
   mockGetUserById: vi.fn(),
+  mockGetLastActiveMap: vi.fn(),
+  mockLogActivity: vi.fn(),
 }))
 
 vi.mock('@/server/auth', () => ({
@@ -20,6 +30,11 @@ vi.mock('@/server/services/users', () => ({
   getUserById: mockGetUserById,
 }))
 
+vi.mock('@/server/services/activity-logs', () => ({
+  getLastActiveMap: mockGetLastActiveMap,
+  logActivity: mockLogActivity,
+}))
+
 const { GET, POST } = await import('./route')
 
 describe('/api/users GET', () => {
@@ -29,7 +44,10 @@ describe('/api/users GET', () => {
     mockListUsers.mockReset()
     mockCreateUser.mockReset()
     mockGetUserById.mockReset()
+    mockGetLastActiveMap.mockReset()
+    mockLogActivity.mockReset()
 
+    mockGetLastActiveMap.mockResolvedValue(new Map())
     mockCreateUser.mockResolvedValue({
       id: 4,
       username: 'new-user',
@@ -81,7 +99,10 @@ describe('/api/users GET', () => {
       user: { id: 3, username: 'editor1', role: 'editor' },
     })
     mockGetUserById.mockResolvedValueOnce({
-      id: 3, username: 'editor1', role: 'editor', email: null,
+      id: 3,
+      username: 'editor1',
+      role: 'editor',
+      email: null,
     })
 
     const response = await GET()
@@ -101,16 +122,18 @@ describe('/api/users GET', () => {
       user: { id: 1, username: 'owner', role: 'owner' },
     })
 
-    const response = await POST(new Request('http://localhost/api/users', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        username: '  new-user  ',
-        email: '  new@example.com  ',
-        password: '  pass123  ',
-        role: 'editor',
-      }),
-    }) as any)
+    const response = await POST(
+      new Request('http://localhost/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: '  new-user  ',
+          email: '  new@example.com  ',
+          password: '  pass123  ',
+          role: 'editor',
+        }),
+      }) as any,
+    )
     const json = await response.json()
 
     expect(response.status).toBe(200)
@@ -129,14 +152,16 @@ describe('/api/users GET', () => {
       user: { id: 1, username: 'owner', role: 'owner' },
     })
 
-    const response = await POST(new Request('http://localhost/api/users', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        username: '   ',
-        password: '   ',
-      }),
-    }) as any)
+    const response = await POST(
+      new Request('http://localhost/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: '   ',
+          password: '   ',
+        }),
+      }) as any,
+    )
     const json = await response.json()
 
     expect(response.status).toBe(400)

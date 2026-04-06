@@ -1,5 +1,6 @@
 import { requireRole } from '@/server/auth'
 import { parseIdParam, safeParseJson } from '@/server/lib/request'
+import { logActivity } from '@/server/services/activity-logs'
 import { deleteMenu, updateMenu } from '@/server/services/menus'
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -13,11 +14,12 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   const { data: body, error } = await safeParseJson(request)
   if (error) return error
   const menu = await updateMenu(menuId, body)
+  logActivity(request, guard.user.id, 'update_menu')
   return NextResponse.json({ success: true, data: menu })
 }
 
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const guard = await requireRole(['owner', 'admin'])
@@ -27,5 +29,6 @@ export async function DELETE(
   const { id: menuId, error: idError } = parseIdParam(idStr)
   if (idError) return idError
   await deleteMenu(menuId)
+  logActivity(request, guard.user.id, 'delete_menu')
   return NextResponse.json({ success: true })
 }

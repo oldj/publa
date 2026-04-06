@@ -2,6 +2,7 @@ import { requireCurrentUser } from '@/server/auth'
 import { normalizeEmail, normalizePassword, normalizeUsername } from '@/lib/user-input'
 import { parseIdParam, safeParseJson } from '@/server/lib/request'
 import { deleteUser, getUserById, updateUser } from '@/server/services/users'
+import { logActivity } from '@/server/services/activity-logs'
 import { NextRequest, NextResponse } from 'next/server'
 
 /** 检查当前用户是否有权操作目标用户 */
@@ -30,10 +31,7 @@ async function checkPermission(currentUser: { id: number; role: string }, target
   return { allowed: false, status: 403, message: '权限不足' }
 }
 
-export async function GET(
-  _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const guard = await requireCurrentUser()
   if (!guard.ok) return guard.response
 
@@ -117,11 +115,12 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     updateData.role = body.role
   }
   const updated = await updateUser(targetId, updateData)
+  logActivity(request, guard.user.id, 'update_user')
   return NextResponse.json({ success: true, data: updated })
 }
 
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const guard = await requireCurrentUser()
@@ -145,5 +144,6 @@ export async function DELETE(
       { status: 400 },
     )
   }
+  logActivity(request, guard.user.id, 'delete_user')
   return NextResponse.json({ success: true })
 }

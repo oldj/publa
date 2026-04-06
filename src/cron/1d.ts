@@ -1,3 +1,4 @@
+import { cleanOldActivityLogs } from '@/server/services/activity-logs'
 import { cleanOldEmailLogs } from '@/server/services/email-logs'
 import { cleanOrphanRevisions } from '@/server/services/revisions'
 
@@ -5,4 +6,5 @@ import { cleanOrphanRevisions } from '@/server/services/revisions'
 export async function runDailyTasks() {
   await cleanOldEmailLogs()
   await cleanOrphanRevisions()
+  await cleanOldActivityLogs()
 }

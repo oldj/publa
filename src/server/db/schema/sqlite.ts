@@ -12,6 +12,7 @@ const schema = defineSchema({
 })
 
 export const {
+  activityLogs,
   attachments,
   captchas,
   categories,

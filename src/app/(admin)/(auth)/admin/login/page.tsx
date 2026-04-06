@@ -1,8 +1,8 @@
 'use client'
 
 import { notify } from '@/lib/notify'
-import { version } from '@/lib/version'
 import { normalizePassword, normalizeUsername } from '@/lib/user-input'
+import { version } from '@/lib/version'
 import { Button, Container, Paper, PasswordInput, Text, TextInput, Title } from '@mantine/core'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
@@ -52,7 +52,7 @@ export default function AdminLoginPage() {
         请输入管理员账号登录
       </Text>
 
-      <Paper withBorder shadow="sm" p={22} mt={30} radius="md">
+      <Paper withBorder shadow="sm" p={22} pb={40} mt={30} radius="md">
         <form onSubmit={handleSubmit}>
           <TextInput
             label="用户名"

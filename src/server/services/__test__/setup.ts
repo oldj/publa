@@ -14,6 +14,7 @@ const client = createClient({ url: 'file::memory:?cache=shared' })
 export const testDb = drizzle(client, { schema: sqliteSchema })
 
 const resetTableNames = [
+  'activity_logs',
   'content_revisions',
   'content_tags',
   'slug_histories',

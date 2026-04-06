@@ -1,5 +1,6 @@
 import { requireRole } from '@/server/auth'
 import { parseIdParam, safeParseJson } from '@/server/lib/request'
+import { logActivity } from '@/server/services/activity-logs'
 import {
   deleteRedirectRule,
   getRedirectRuleById,
@@ -35,6 +36,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       )
     }
 
+    logActivity(request, guard.user.id, 'update_redirect')
     return NextResponse.json({ success: true, data: item })
   } catch (caughtError) {
     if (caughtError instanceof RedirectRuleValidationError) {
@@ -45,7 +47,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 }
 
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const guard = await requireRole(['owner', 'admin'])
@@ -64,5 +66,6 @@ export async function DELETE(
   }
 
   await deleteRedirectRule(id)
+  logActivity(request, guard.user.id, 'delete_redirect')
   return NextResponse.json({ success: true })
 }

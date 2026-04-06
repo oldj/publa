@@ -1,5 +1,6 @@
 import { desc } from 'drizzle-orm'
 import {
+  activityAction,
   commentStatus,
   contentItemType,
   contentStatus,
@@ -50,6 +51,24 @@ export function defineSchema(kit: DialectKit) {
     createdAt: text('created_at').notNull().$defaultFn(isoNow),
     updatedAt: text('updated_at').notNull().$defaultFn(isoNow),
   })
+
+  const activityLogs = table(
+    'activity_logs',
+    {
+      id: autoId(),
+      userId: integer('user_id')
+        .notNull()
+        .references(() => users.id),
+      action: text('action', { enum: activityAction }).notNull(),
+      ipAddress: text('ip_address'),
+      userAgent: text('user_agent'),
+      createdAt: text('created_at').notNull().$defaultFn(isoNow),
+    },
+    (t: any) => [
+      index('activity_logs_user_created_idx').on(t.userId, desc(t.createdAt)),
+      index('activity_logs_created_idx').on(desc(t.createdAt)),
+    ],
+  )
 
   const attachments = table(
     'attachments',
@@ -319,6 +338,7 @@ export function defineSchema(kit: DialectKit) {
   )
 
   return {
+    activityLogs,
     attachments,
     captchas,
     categories,

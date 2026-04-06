@@ -6,6 +6,7 @@ const runtimeSchema = getDatabaseFamily() === 'postgres' ? postgresSchema : sqli
 
 export const schema = runtimeSchema
 
+export const activityLogs = runtimeSchema.activityLogs as typeof sqliteSchema.activityLogs
 export const attachments = runtimeSchema.attachments as typeof sqliteSchema.attachments
 export const captchas = runtimeSchema.captchas as typeof sqliteSchema.captchas
 export const emailLogs = runtimeSchema.emailLogs as typeof sqliteSchema.emailLogs

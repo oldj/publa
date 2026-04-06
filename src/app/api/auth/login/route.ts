@@ -1,4 +1,6 @@
 import { createToken, setAuthCookie, verifyPassword } from '@/server/auth'
+import { getRequestInfo } from '@/server/lib/request-info'
+import { logActivity } from '@/server/services/activity-logs'
 import { normalizePassword, normalizeUsername } from '@/lib/user-input'
 import { db, dbReady } from '@/server/db'
 import { maybeFirst } from '@/server/db/query'
@@ -30,8 +32,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const forwardedFor = request.headers.get('x-forwarded-for')
-    const ip = forwardedFor ? forwardedFor.split(',')[0].trim() : (request.headers.get('x-real-ip') || '')
+    const { ip, ua } = getRequestInfo(request)
 
     const user = await maybeFirst(
       db.select().from(users).where(eq(users.username, username)).limit(1),
@@ -60,6 +61,8 @@ export async function POST(request: NextRequest) {
     })
 
     await setAuthCookie(token)
+
+    logActivity(request, user.id, 'login')
 
     return NextResponse.json({
       success: true,

@@ -11,6 +11,7 @@ import {
 } from '@/server/services/pages'
 import { getDraft, publishDraft, saveDraft } from '@/server/services/revisions'
 import { parsePageDraftMetadata } from '@/shared/revision-metadata'
+import { logActivity } from '@/server/services/activity-logs'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -153,6 +154,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
           { status: 404 },
         )
       }
+      logActivity(request, user.id, 'update_page')
+
       return NextResponse.json({ success: true, data: page })
     }
 
@@ -164,6 +167,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         { status: 404 },
       )
     }
+
+    logActivity(request, user.id, 'update_page')
 
     return NextResponse.json({ success: true, data: page })
   } catch (err) {
@@ -178,7 +183,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 }
 
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const user = await getCurrentUser()
@@ -193,5 +198,8 @@ export async function DELETE(
   const { id: pageId, error: idError } = parseIdParam(idStr)
   if (idError) return idError
   await deletePage(pageId)
+
+  logActivity(request, user.id, 'delete_page')
+
   return NextResponse.json({ success: true })
 }
