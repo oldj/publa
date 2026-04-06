@@ -1,6 +1,6 @@
 # Publa
 
-Publa 是一个基于 Next.js 的博客系统，使用 Drizzle ORM，当前支持 SQLite（本地文件 / Turso）与 PostgreSQL。
+Publa 是一个基于 Next.js 的博客系统，使用 Drizzle ORM，支持 SQLite（本地文件 / Turso）与 PostgreSQL。
 
 ## 快速开始
 
@@ -9,7 +9,104 @@ npm install
 npm run dev
 ```
 
-访问 `http://localhost:8084`，首次启动会按当前数据库类型自动执行对应迁移。
+访问 `http://localhost:8084`，首次启动会自动执行数据库迁移并进入初始化引导。
+
+## 部署
+
+### 环境变量
+
+| 变量 | 必填 | 默认值 | 说明 |
+|------|------|--------|------|
+| `DATABASE_FAMILY` | 否 | `sqlite` | 数据库类型，可选 `sqlite` / `postgres` |
+| `DATABASE_URL` | 否 | `file:{cwd}/data/publa.db` | 数据库连接字符串。SQLite 本地部署可省略；Turso 或 PostgreSQL 必填 |
+| `DATABASE_AUTH_TOKEN` | 否 | - | Turso 数据库认证 Token，仅 Turso 需要 |
+| `JWT_SECRET` | 否 | 自动生成 | JWT 签名密钥。未配置时自动生成随机密钥并持久化到数据库，重启不丢失。也可手动指定：`openssl rand -base64 32` |
+| `CRON_SECRET` | 视情况 | - | 保护定时任务 API 的密钥。自托管 Docker 部署不需要（使用进程内调度）；Vercel 部署必填 |
+
+> 本地开发时无需配置任何环境变量，所有值均有开发环境默认值。
+
+### Docker 部署（SQLite）
+
+最简单的部署方式，无需外部数据库。
+
+```bash
+docker build -t publa .
+docker run -d \
+  -p 8084:8084 \
+  -v publa-data:/app/data \
+  publa
+```
+
+`/app/data` 目录存放 SQLite 数据库文件，务必挂载持久化卷。
+
+### Docker 部署（Turso）
+
+使用 Turso 云数据库，适合需要远程数据库的场景。
+
+1. 在 [Turso](https://turso.tech) 创建数据库并获取连接信息：
+
+```bash
+turso db show <数据库名> --url
+turso db tokens create <数据库名>
+```
+
+2. 启动容器：
+
+```bash
+docker run -d \
+  -p 8084:8084 \
+  -e DATABASE_URL=libsql://<db_name>-<org_name>.turso.io \
+  -e DATABASE_AUTH_TOKEN=<your_token> \
+  publa
+```
+
+> `DATABASE_FAMILY` 无需设置，默认值即为 `sqlite`，兼容 Turso。使用远程数据库时不需要挂载本地数据卷。
+
+### Docker 部署（PostgreSQL）
+
+```bash
+docker run -d \
+  -p 8084:8084 \
+  -e DATABASE_FAMILY=postgres \
+  -e DATABASE_URL=postgres://user:pass@host:5432/publa \
+  publa
+```
+
+### 部署到 Vercel
+
+Vercel 部署需要使用 Turso 或外部 PostgreSQL 作为数据库（不支持本地 SQLite 文件）。
+
+#### 环境变量
+
+在 Vercel 项目的 **Settings → Environment Variables** 中配置：
+
+| 变量 | 必填 | 说明 |
+|------|------|------|
+| `DATABASE_URL` | 是 | Turso 连接 URL（`libsql://...`）或 PostgreSQL 连接字符串 |
+| `DATABASE_AUTH_TOKEN` | Turso 必填 | Turso 数据库认证 Token |
+| `JWT_SECRET` | 否 | 未配置时自动生成并持久化到数据库，冷启动后自动恢复。也可手动指定：`openssl rand -base64 32` |
+| `CRON_SECRET` | 是 | 保护定时任务接口，防止未授权访问 |
+
+> `DATABASE_FAMILY`、`NODE_ENV`、`VERCEL` 由 Vercel 自动处理，无需手动配置。
+
+#### 定时任务
+
+项目通过 `vercel.json` 配置 Vercel Cron Jobs：
+
+- `/api/cron/1d` — 每天 04:05 UTC 执行
+
+Vercel 调用 cron 路由时会携带 `Authorization` 头，需要 `CRON_SECRET` 环境变量与之匹配。
+
+### 附件存储
+
+附件（图片等）需要上传到云存储服务，在后台管理界面中配置。支持：
+
+- AWS S3（或 S3 兼容服务，如 MinIO）
+- Cloudflare R2
+- 阿里云 OSS
+- 腾讯云 COS
+
+存储配置通过后台界面管理，不需要环境变量。
 
 ## 数据库配置
 
@@ -26,34 +123,20 @@ DATABASE_URL=file:./data/publa.db
 
 ### Turso 云数据库
 
-1. 在 [Turso](https://turso.tech) 创建数据库
-2. 获取连接 URL 和认证 Token：
-
-```bash
-turso db show 你的数据库名 --url
-turso db tokens create 你的数据库名
-```
-
-3. 在 `.env` 中配置：
-
 ```env
 DATABASE_FAMILY=sqlite
 DATABASE_URL=libsql://your_db_name-your_org_name.turso.io
 DATABASE_AUTH_TOKEN=your_token
 ```
 
-启动服务后会自动执行迁移，无需手动操作。
-
 ### PostgreSQL
-
-在 `.env` 中配置：
 
 ```env
 DATABASE_FAMILY=postgres
 DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/publa
 ```
 
-启动服务后会自动执行 `drizzle/postgres` 下的迁移。
+启动后自动执行迁移，无需手动操作。
 
 ## 修改数据库 Schema 的流程
 
@@ -61,12 +144,7 @@ DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/publa
 
 ### 1. 修改 schema 定义
 
-按数据库类型分别修改：
-
-- SQLite：`src/server/db/schema/sqlite.ts`
-- PostgreSQL：`src/server/db/schema/postgres.ts`
-
-如果这次变更属于业务表结构变更，通常需要同时更新两份 schema，保持字段、索引和约束一致。
+修改统一的 schema 定义文件 `src/server/db/schema/define.ts`。SQLite 和 PostgreSQL 共用同一份 schema。
 
 ### 2. 生成迁移脚本
 
@@ -103,7 +181,7 @@ npm run db:check-migrations
 - `meta/_journal.json` 是否可解析
 - 迁移编号和时间是否保持递增
 - `journal`、`.sql`、`_snapshot.json` 是否一一对应
-- 是否存在重复前缀、重复 tag、或“回插旧迁移”
+- 是否存在重复前缀、重复 tag、或"回插旧迁移"
 
 如果这里失败，不要继续启动应用，先修正迁移链。
 
@@ -125,36 +203,6 @@ npm run db:migrate:pg
 ```
 
 建议至少补一轮对应的测试，确认读写路径没有被 schema 变更破坏。
-
-## 部署到 Vercel
-
-### 环境变量
-
-在 Vercel 项目的 Settings → Environment Variables 中配置以下变量：
-
-| 变量 | 必填 | 说明 |
-|------|------|------|
-| `DATABASE_URL` | 是 | Turso 数据库连接 URL，如 `libsql://xxx.turso.io` |
-| `DATABASE_AUTH_TOKEN` | 是 | Turso 数据库认证 Token |
-| `JWT_SECRET` | 是 | JWT 签名密钥，必须为强随机字符串（可用 `openssl rand -base64 32` 生成） |
-| `CRON_SECRET` | 是 | 保护定时任务接口的密钥，防止未授权访问 |
-
-> `DATABASE_FAMILY` 无需设置，Turso 属于 libsql，默认走 SQLite 驱动。
-> `NODE_ENV` 和 `VERCEL` 由 Vercel 自动注入，无需手动配置。
-
-### 定时任务
-
-项目通过 `vercel.json` 配置 Vercel Cron Jobs，当前计划：
-
-- `/api/cron/1d` — 每天 04:05 UTC 执行
-
-Vercel 调用 cron 路由时会携带 `Authorization` 头，需要 `CRON_SECRET` 环境变量与之匹配才能通过鉴权。
-
-### 注意事项
-
-- 首次部署前务必配齐所有环境变量，否则构建或运行时会报错（如 `JWT_SECRET is not configured`）
-- 数据库迁移在服务启动时自动执行，无需手动操作
-- 本地开发时不需要配置 `JWT_SECRET` 和 `CRON_SECRET`，代码会使用默认值
 
 ## 常用命令
 
