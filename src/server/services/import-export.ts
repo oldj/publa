@@ -24,8 +24,9 @@ import { asc, eq } from 'drizzle-orm'
 
 const META_VERSION = '2.0'
 
-// 存储配置中的敏感字段，导出时排除，导入时忽略
-const STORAGE_SECRET_KEYS = new Set([
+// 敏感字段黑名单，导出时排除，导入时忽略并保留已有值
+const SECRET_KEYS = new Set([
+  'jwtSecret',
   'storageS3AccessKey',
   'storageS3SecretKey',
   'storageOssAccessKeyId',
@@ -69,7 +70,7 @@ export async function exportSettingsData() {
 
   // 设置数据中排除存储敏感信息
   const allSettings = await db.select().from(settings)
-  const filteredSettings = allSettings.filter((s) => !STORAGE_SECRET_KEYS.has(s.key))
+  const filteredSettings = allSettings.filter((s) => !SECRET_KEYS.has(s.key))
 
   return {
     meta: { type: 'settings', version: META_VERSION, exportedAt: new Date().toISOString() },
@@ -329,7 +330,7 @@ export async function importSettingsData(data: any, currentUserId: number) {
   if (Array.isArray(data.settings)) {
     const existing = await db.select().from(settings)
     for (const s of existing) {
-      if (STORAGE_SECRET_KEYS.has(s.key)) existingSecrets[s.key] = s.value
+      if (SECRET_KEYS.has(s.key)) existingSecrets[s.key] = s.value
     }
   }
 
@@ -360,7 +361,7 @@ export async function importSettingsData(data: any, currentUserId: number) {
 
       // 导入非敏感设置
       for (const item of data.settings) {
-        if (item.key && item.value !== undefined && !STORAGE_SECRET_KEYS.has(item.key)) {
+        if (item.key && item.value !== undefined && !SECRET_KEYS.has(item.key)) {
           await tx.insert(settings).values(item)
         }
       }

@@ -285,7 +285,7 @@
 | key   | string | 是   | 设置项键名 |
 | value | string | 是   | 设置项值   |
 
-> 注意：出于安全考虑，存储服务商的密钥字段（如 `storageS3AccessKey`、`storageS3SecretKey` 等）不会被导出，导入时也会被忽略，并保留当前系统中已有的敏感值。
+> 注意：出于安全考虑，敏感字段（如 `jwtSecret`、`storageS3AccessKey`、`storageS3SecretKey` 等）不会被导出，导入时也会被忽略，并保留当前系统中已有的值。
 
 ### menus（菜单）
 

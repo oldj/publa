@@ -228,12 +228,13 @@ describe('exportSettingsData', () => {
     expect(data.redirectRules[0]).not.toHaveProperty('order')
   })
 
-  it('导出设置数据不包含存储敏感字段', async () => {
+  it('导出设置数据不包含敏感字段', async () => {
     await testDb.insert(schema.settings).values([
       { key: 'storageProvider', value: 's3' },
       { key: 'storageS3Bucket', value: 'my-bucket' },
       { key: 'storageS3AccessKey', value: 'AKID_SECRET' },
       { key: 'storageS3SecretKey', value: 'SECRET_KEY_VALUE' },
+      { key: 'jwtSecret', value: 'jwt-secret-value' },
     ])
     const data = await exportSettingsData()
     const keys = data.settings.map((s) => s.key)
@@ -241,6 +242,7 @@ describe('exportSettingsData', () => {
     expect(keys).toContain('storageS3Bucket')
     expect(keys).not.toContain('storageS3AccessKey')
     expect(keys).not.toContain('storageS3SecretKey')
+    expect(keys).not.toContain('jwtSecret')
   })
 
   it('用户数据不包含密码', async () => {
@@ -820,6 +822,7 @@ describe('importSettingsData', () => {
     await testDb.insert(schema.settings).values([
       { key: 'storageS3AccessKey', value: 'EXISTING_KEY' },
       { key: 'storageS3SecretKey', value: 'EXISTING_SECRET' },
+      { key: 'jwtSecret', value: 'EXISTING_JWT_SECRET' },
     ])
 
     await importSettingsData(
@@ -830,6 +833,7 @@ describe('importSettingsData', () => {
           // 即使导入数据包含敏感字段，也应被忽略
           { key: 'storageS3AccessKey', value: 'IMPORTED_KEY' },
           { key: 'storageS3SecretKey', value: 'IMPORTED_SECRET' },
+          { key: 'jwtSecret', value: 'IMPORTED_JWT_SECRET' },
         ],
       },
       1,
@@ -843,6 +847,7 @@ describe('importSettingsData', () => {
     // 敏感字段保留原值，不被导入数据覆盖
     expect(map.storageS3AccessKey).toBe('EXISTING_KEY')
     expect(map.storageS3SecretKey).toBe('EXISTING_SECRET')
+    expect(map.jwtSecret).toBe('EXISTING_JWT_SECRET')
   })
 
   it('覆盖导入菜单和跳转规则', async () => {
