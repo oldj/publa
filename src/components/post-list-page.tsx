@@ -33,23 +33,29 @@ const PostCard = (props: { post: IPost }) => {
 
   return (
     <div
-      className="post-list-item"
+      className={`post-list-item${post.coverImage ? ' has-cover' : ''}`}
       onClick={async () => {
-        // location.href = post.url
         await router.push(post.url)
       }}
     >
-      <h2 className="post-list-title">
-        <Link href={post.url}>{post.title}</Link>
-      </h2>
-      <div className="post-list-time post-list-info">{pubTime}</div>
-      <div className="post-list-summary">{post.html}</div>
-      <Link href={post.url} className="post-list-read-more">
-        <span>阅读全文</span>
-        <span className="post-list-icon">
-          <IconChevronRight size={16} />
-        </span>
-      </Link>
+      {post.coverImage && (
+        <div className="post-list-cover">
+          <img src={post.coverImage} alt={post.title} />
+        </div>
+      )}
+      <div className="post-list-body">
+        <h2 className="post-list-title">
+          <Link href={post.url}>{post.title}</Link>
+        </h2>
+        <div className="post-list-time post-list-info">{pubTime}</div>
+        <div className="post-list-summary">{post.html}</div>
+        <Link href={post.url} className="post-list-read-more">
+          <span>阅读全文</span>
+          <span className="post-list-icon">
+            <IconChevronRight size={16} />
+          </span>
+        </Link>
+      </div>
     </div>
   )
 }

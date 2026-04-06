@@ -412,6 +412,29 @@
   opacity: 0.5;
 }
 
+/* 有头图时：左图右文两栏布局 */
+.post-list-item.has-cover {
+  display: flex;
+  gap: 24px;
+}
+
+.post-list-cover {
+  flex-shrink: 0;
+  width: 200px;
+}
+
+.post-list-cover img {
+  width: 100%;
+  height: auto;
+  border-radius: 4px;
+  display: block;
+}
+
+.post-list-body {
+  flex: 1;
+  min-width: 0;
+}
+
 .post-list-empty {
   font-style: italic;
   color: var(--color-text-tertiary);
@@ -1407,6 +1430,14 @@
 
   .post-list-item {
     border-radius: 0;
+  }
+
+  .post-list-item.has-cover {
+    flex-direction: column;
+  }
+
+  .post-list-cover {
+    width: 100%;
   }
 
   .captcha-input-field {
