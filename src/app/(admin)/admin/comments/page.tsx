@@ -1,5 +1,5 @@
 'use client'
-import myModal from '@/components/myModals'
+import myModal from '@/app/(admin)/_components/myModals'
 import { useAdminCounts } from '../../_components/AdminCountsContext'
 import adminStyles from '../../_components/AdminShell.module.scss'
 

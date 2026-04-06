@@ -1,6 +1,6 @@
 'use client'
 
-import myModal from '@/components/myModals'
+import myModal from '@/app/(admin)/_components/myModals'
 import {
   Button,
   Checkbox,

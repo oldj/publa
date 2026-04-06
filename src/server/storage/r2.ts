@@ -1,10 +1,10 @@
 import {
-  S3Client,
-  PutObjectCommand,
+  CopyObjectCommand,
   DeleteObjectCommand,
   HeadBucketCommand,
   HeadObjectCommand,
-  CopyObjectCommand,
+  PutObjectCommand,
+  S3Client,
 } from '@aws-sdk/client-s3'
 import type { StorageProvider } from './index'
 

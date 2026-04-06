@@ -1,8 +1,8 @@
 import { db } from '@/server/db'
 import { insertOne, maybeFirst } from '@/server/db/query'
 import { guestbookMessages } from '@/server/db/schema'
-import { eq, and, isNull, desc, count } from 'drizzle-orm'
 import { normalizeExternalUrl } from '@/server/lib/user-content'
+import { and, count, desc, eq, isNull } from 'drizzle-orm'
 
 export interface GuestbookInput {
   authorName: string
@@ -15,25 +15,32 @@ export interface GuestbookInput {
 
 /** 提交留言 */
 export async function createGuestbookMessage(input: GuestbookInput) {
-  const row = await insertOne(db.insert(guestbookMessages).values({
-    authorName: input.authorName,
-    authorEmail: input.authorEmail || null,
-    authorWebsite: normalizeExternalUrl(input.authorWebsite),
-    content: input.content,
-    ipAddress: input.ipAddress || null,
-    userAgent: input.userAgent || null,
-    status: 'unread',
-  }).returning())
+  const row = await insertOne(
+    db
+      .insert(guestbookMessages)
+      .values({
+        authorName: input.authorName,
+        authorEmail: input.authorEmail || null,
+        authorWebsite: normalizeExternalUrl(input.authorWebsite),
+        content: input.content,
+        ipAddress: input.ipAddress || null,
+        userAgent: input.userAgent || null,
+        status: 'unread',
+      })
+      .returning(),
+  )
 
   return { success: true, data: row }
 }
 
 /** 列出所有留言（后台） */
-export async function listGuestbookMessages(options: {
-  page?: number
-  pageSize?: number
-  status?: string
-} = {}) {
+export async function listGuestbookMessages(
+  options: {
+    page?: number
+    pageSize?: number
+    status?: string
+  } = {},
+) {
   const { page = 1, pageSize = 20, status } = options
 
   const conditions = [isNull(guestbookMessages.deletedAt)]
@@ -81,24 +88,29 @@ export async function markGuestbookMessageUnread(id: number) {
 
 /** 批量标记为已读 */
 export async function markAllGuestbookMessagesRead() {
-  await db.update(guestbookMessages).set({ status: 'read' }).where(
-    and(eq(guestbookMessages.status, 'unread'), isNull(guestbookMessages.deletedAt)),
-  )
+  await db
+    .update(guestbookMessages)
+    .set({ status: 'read' })
+    .where(and(eq(guestbookMessages.status, 'unread'), isNull(guestbookMessages.deletedAt)))
   return { success: true }
 }
 
 /** 未读留言数 */
 export async function countUnreadGuestbookMessages() {
-  const [{ total }] = await db.select({ total: count() }).from(guestbookMessages).where(
-    and(eq(guestbookMessages.status, 'unread'), isNull(guestbookMessages.deletedAt)),
-  )
+  const [{ total }] = await db
+    .select({ total: count() })
+    .from(guestbookMessages)
+    .where(and(eq(guestbookMessages.status, 'unread'), isNull(guestbookMessages.deletedAt)))
   return total
 }
 
 /** 软删除留言 */
 export async function deleteGuestbookMessage(id: number) {
-  await db.update(guestbookMessages).set({
-    deletedAt: new Date().toISOString(),
-  }).where(eq(guestbookMessages.id, id))
+  await db
+    .update(guestbookMessages)
+    .set({
+      deletedAt: new Date().toISOString(),
+    })
+    .where(eq(guestbookMessages.id, id))
   return { success: true }
 }

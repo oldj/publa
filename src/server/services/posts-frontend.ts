@@ -3,14 +3,12 @@
  */
 import { db } from '@/server/db'
 import { maybeFirst } from '@/server/db/query'
-import { contents, contentTags, categories, tags, comments } from '@/server/db/schema'
+import { categories, comments, contents, contentTags, tags } from '@/server/db/schema'
+import { normalizeExternalUrl, renderUserTextToHtml } from '@/server/lib/user-content'
 import { publishScheduledPosts } from '@/server/services/posts'
 import { getSetting } from '@/server/services/settings'
-import { normalizeExternalUrl, renderUserTextToHtml } from '@/server/lib/user-content'
-import {
-  eq, and, isNull, desc, asc, count, lte, sql, exists,
-} from 'drizzle-orm'
-import type { IPost, ICategory, ITag, IComment, IItemPage } from 'typings'
+import { and, asc, count, desc, eq, exists, isNull, lte, sql } from 'drizzle-orm'
+import type { ICategory, IComment, IItemPage, IPost, ITag } from 'typings'
 
 interface FrontendPostViewer {
   id: number
@@ -90,8 +88,8 @@ async function buildFrontendPost(
   // 获取分类
   const category = post.categoryId
     ? await maybeFirst(
-      db.select().from(categories).where(eq(categories.id, post.categoryId)).limit(1),
-    )
+        db.select().from(categories).where(eq(categories.id, post.categoryId)).limit(1),
+      )
     : null
 
   // 获取标签
@@ -107,11 +105,13 @@ async function buildFrontendPost(
     const commentRows = await db
       .select()
       .from(comments)
-      .where(and(
-        eq(comments.contentId, post.id),
-        eq(comments.status, 'approved'),
-        isNull(comments.deletedAt),
-      ))
+      .where(
+        and(
+          eq(comments.contentId, post.id),
+          eq(comments.status, 'approved'),
+          isNull(comments.deletedAt),
+        ),
+      )
       .orderBy(asc(comments.createdAt))
 
     // 构建评论树
@@ -146,9 +146,7 @@ async function buildFrontendPost(
   }
 
   // 列表场景（不含评论）：优先使用手动摘要
-  const displayHtml = !includeComments && post.excerpt
-    ? post.excerpt
-    : post.contentHtml
+  const displayHtml = !includeComments && post.excerpt ? post.excerpt : post.contentHtml
 
   return {
     id: post.id,
@@ -157,9 +155,8 @@ async function buildFrontendPost(
     url: `/posts/${post.slug}`,
     slug: post.slug,
     pubTime: post.publishedAt || post.createdAt,
-    category: category
-      ? { id: category.id, name: category.name, count: 0 }
-      : null,
+    category: category ? { id: category.id, name: category.name, count: 0 } : null,
+    coverImage: post.coverImage || undefined,
     tags: postTagRows.map((t) => ({ id: t.id, name: t.name, count: 0 })),
     previous: { title: '', url: '' },
     next: { title: '', url: '' },
@@ -179,14 +176,7 @@ export async function getFrontendPosts(options: {
   tagId?: number
 }): Promise<IItemPage<IPost>> {
   await publishScheduledPosts()
-  const {
-    page = 1,
-    pageSize = 10,
-    category,
-    tag,
-    categoryId,
-    tagId,
-  } = options
+  const { page = 1, pageSize = 10, category, tag, categoryId, tagId } = options
   const now = new Date().toISOString()
 
   let baseConditions = and(
@@ -216,17 +206,12 @@ export async function getFrontendPosts(options: {
         db
           .select({ value: sql`1` })
           .from(contentTags)
-          .where(and(
-            eq(contentTags.contentId, contents.id),
-            eq(contentTags.tagId, tagId),
-          )),
+          .where(and(eq(contentTags.contentId, contents.id), eq(contentTags.tagId, tagId))),
       ),
     )
   } else if (tag) {
     // 兼容旧调用方传标签名的方式
-    const matchedTag = await maybeFirst(
-      db.select().from(tags).where(eq(tags.name, tag)).limit(1),
-    )
+    const matchedTag = await maybeFirst(db.select().from(tags).where(eq(tags.name, tag)).limit(1))
     if (!matchedTag) {
       return { items: [], page, pageCount: 0, pageSize, itemCount: 0 }
     }
@@ -236,10 +221,7 @@ export async function getFrontendPosts(options: {
         db
           .select({ value: sql`1` })
           .from(contentTags)
-          .where(and(
-            eq(contentTags.contentId, contents.id),
-            eq(contentTags.tagId, matchedTag.id),
-          )),
+          .where(and(eq(contentTags.contentId, contents.id), eq(contentTags.tagId, matchedTag.id))),
       ),
     )
   }
@@ -277,26 +259,16 @@ export async function getFrontendPostBySlug(
   if (preview && !viewer) return null
 
   const conditions = preview
-    ? and(
-      eq(contents.type, 'post'),
-      eq(contents.slug, slug),
-      isNull(contents.deletedAt),
-    )
+    ? and(eq(contents.type, 'post'), eq(contents.slug, slug), isNull(contents.deletedAt))
     : and(
-      eq(contents.type, 'post'),
-      eq(contents.slug, slug),
-      eq(contents.status, 'published'),
-      lte(contents.publishedAt, now),
-      isNull(contents.deletedAt),
-    )
+        eq(contents.type, 'post'),
+        eq(contents.slug, slug),
+        eq(contents.status, 'published'),
+        lte(contents.publishedAt, now),
+        isNull(contents.deletedAt),
+      )
 
-  const row = await maybeFirst(
-    db
-    .select()
-    .from(contents)
-    .where(conditions)
-    .limit(1),
-  )
+  const row = await maybeFirst(db.select().from(contents).where(conditions).limit(1))
 
   if (!row) return null
 
@@ -307,26 +279,30 @@ export async function getFrontendPostBySlug(
     const prev = await db
       .select({ title: contents.title, slug: contents.slug })
       .from(contents)
-      .where(and(
-        eq(contents.type, 'post'),
-        eq(contents.status, 'published'),
-        lte(contents.publishedAt, now),
-        isNull(contents.deletedAt),
-        sql`${contents.publishedAt} < ${row.publishedAt}`,
-      ))
+      .where(
+        and(
+          eq(contents.type, 'post'),
+          eq(contents.status, 'published'),
+          lte(contents.publishedAt, now),
+          isNull(contents.deletedAt),
+          sql`${contents.publishedAt} < ${row.publishedAt}`,
+        ),
+      )
       .orderBy(desc(contents.publishedAt))
       .limit(1)
 
     const next = await db
       .select({ title: contents.title, slug: contents.slug })
       .from(contents)
-      .where(and(
-        eq(contents.type, 'post'),
-        eq(contents.status, 'published'),
-        lte(contents.publishedAt, now),
-        isNull(contents.deletedAt),
-        sql`${contents.publishedAt} > ${row.publishedAt}`,
-      ))
+      .where(
+        and(
+          eq(contents.type, 'post'),
+          eq(contents.status, 'published'),
+          lte(contents.publishedAt, now),
+          isNull(contents.deletedAt),
+          sql`${contents.publishedAt} > ${row.publishedAt}`,
+        ),
+      )
       .orderBy(asc(contents.publishedAt))
       .limit(1)
 
@@ -339,7 +315,10 @@ export async function getFrontendPostBySlug(
   }
 
   if (incrementViewCount) {
-    await db.update(contents).set({ viewCount: sql`${contents.viewCount} + 1` }).where(eq(contents.id, row.id))
+    await db
+      .update(contents)
+      .set({ viewCount: sql`${contents.viewCount} + 1` })
+      .where(eq(contents.id, row.id))
   }
 
   return post
@@ -356,12 +335,14 @@ export async function getFrontendArchive() {
       publishedAt: contents.publishedAt,
     })
     .from(contents)
-    .where(and(
-      eq(contents.type, 'post'),
-      eq(contents.status, 'published'),
-      lte(contents.publishedAt, now),
-      isNull(contents.deletedAt),
-    ))
+    .where(
+      and(
+        eq(contents.type, 'post'),
+        eq(contents.status, 'published'),
+        lte(contents.publishedAt, now),
+        isNull(contents.deletedAt),
+      ),
+    )
     .orderBy(desc(contents.publishedAt))
 
   const archive: Record<number, { title: string; url: string; pubTime: string }[]> = {}
@@ -383,20 +364,24 @@ export async function getFrontendArchive() {
 /** 获取文章评论（兼容 IComment[]） */
 export async function getFrontendComments(postSlug: string): Promise<IComment[]> {
   const post = await maybeFirst(
-    db.select({ id: contents.id }).from(contents).where(
-      and(eq(contents.slug, postSlug), eq(contents.type, 'post')),
-    ).limit(1),
+    db
+      .select({ id: contents.id })
+      .from(contents)
+      .where(and(eq(contents.slug, postSlug), eq(contents.type, 'post')))
+      .limit(1),
   )
   if (!post) return []
 
   const rows = await db
     .select()
     .from(comments)
-    .where(and(
-      eq(comments.contentId, post.id),
-      eq(comments.status, 'approved'),
-      isNull(comments.deletedAt),
-    ))
+    .where(
+      and(
+        eq(comments.contentId, post.id),
+        eq(comments.status, 'approved'),
+        isNull(comments.deletedAt),
+      ),
+    )
     .orderBy(asc(comments.createdAt))
 
   const topLevel = rows.filter((c) => !c.parentId)

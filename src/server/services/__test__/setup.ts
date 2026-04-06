@@ -2,13 +2,13 @@
  * 测试用数据库初始化
  * 使用真实的 drizzle 迁移脚本创建表，确保与 schema 保持同步
  */
+import { sqliteSchema } from '@/server/db/schema/sqlite'
 import { createClient } from '@libsql/client'
 import { sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/libsql'
 import { migrate } from 'drizzle-orm/libsql/migrator'
 import path from 'path'
 import { vi } from 'vitest'
-import { sqliteSchema } from '@/server/db/schema/sqlite'
 
 const client = createClient({ url: 'file::memory:?cache=shared' })
 export const testDb = drizzle(client, { schema: sqliteSchema })

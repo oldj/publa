@@ -1,33 +1,21 @@
 /**
- * comment-form
  * @author: oldj
  * @homepage: https://oldj.net
  */
 
+import lodash from 'lodash'
+import { useRef, useState } from 'react'
+import { useForm } from 'react-hook-form'
 import CaptchaInput from 'src/components/captcha-input'
 import { COMMENT_MAX_LENGTH } from 'src/lib/constants'
 import { isBrowser } from 'src/lib/where'
-import lodash from 'lodash'
-import React, { useRef, useState } from 'react'
-import { useForm } from 'react-hook-form'
 import Button from 'src/widgets/Button'
 import dialog from '../widgets/dialog'
-import styles from './comment-form.module.scss'
 
 interface Props {
   contentId: number
   parentId?: number
   onSuccess?: (data?: any) => void
-}
-
-interface ICommentFields {
-  contentId: number
-  parentId?: number
-  username: string
-  email: string
-  url: string
-  content: string
-  captchaCode: string
 }
 
 const CommentForm = (props: Props) => {
@@ -38,21 +26,23 @@ const CommentForm = (props: Props) => {
     handleSubmit,
     watch,
     reset,
-    formState: { errors },
+    formState: { errors: _errors },
   } = useForm()
-  const ref_form = useRef<HTMLFormElement>(null)
+  const refForm = useRef<HTMLFormElement>(null)
   const contentValue = watch('content', '')
 
   let refreshCaptcha = () => {}
 
-  let _init_values: any = {}
+  let _initValues: any = {}
   if (isBrowser()) {
     let c = localStorage.getItem('_cmt_cfg')
     if (c) {
       try {
         let d = JSON.parse(c)
-        _init_values = { ...d }
-      } catch (e) {}
+        _initValues = { ...d }
+      } catch (e) {
+        console.error(e)
+      }
     }
   }
 
@@ -65,8 +55,8 @@ const CommentForm = (props: Props) => {
     if (loading) return
     setLoading(true)
 
-    _init_values = lodash.pick(values, ['username', 'email', 'url'])
-    localStorage.setItem('_cmt_cfg', JSON.stringify(_init_values))
+    _initValues = lodash.pick(values, ['username', 'email', 'url'])
+    localStorage.setItem('_cmt_cfg', JSON.stringify(_initValues))
 
     fetch('/api/comments', {
       method: 'POST',
@@ -78,7 +68,9 @@ const CommentForm = (props: Props) => {
         // console.log(r)
         if (r && r.success) {
           let message: string =
-            r.data && r.data.status === 'approved' ? '评论成功，感谢你的评论！' : '评论成功，将在审核后展示！'
+            r.data && r.data.status === 'approved'
+              ? '评论成功，感谢你的评论！'
+              : '评论成功，将在审核后展示！'
 
           // alert(msg)
           dialog.Alert({
@@ -89,7 +81,7 @@ const CommentForm = (props: Props) => {
 
           // form.setFieldsValue({ content: '', captchaCode: '' })
           refreshCaptcha()
-          reset({ contentId, parentId, content: '', captchaCode: '', ..._init_values })
+          reset({ contentId, parentId, content: '', captchaCode: '', ..._initValues })
           if (typeof onSuccess === 'function') {
             onSuccess(r.data)
           }
@@ -117,7 +109,7 @@ const CommentForm = (props: Props) => {
             message,
             onConfirm: () => {
               if (r.code === 'INVALID_CAPTCHA') {
-                let ipt: HTMLInputElement | null | undefined = ref_form.current?.querySelector(
+                let ipt: HTMLInputElement | null | undefined = refForm.current?.querySelector(
                   'input[name="captchaCode"]',
                 )
                 ipt?.focus()
@@ -136,12 +128,12 @@ const CommentForm = (props: Props) => {
       })
   }
 
-  const onFinishFailed = (errorInfo: any) => {
-    console.log('Failed:', errorInfo)
-  }
+  // const onFinishFailed = (errorInfo: any) => {
+  //   console.log('Failed:', errorInfo)
+  // }
 
   return (
-    <div className={styles.root}>
+    <div className="comment-form">
       <form
         name="comment"
         // form={form}
@@ -155,7 +147,7 @@ const CommentForm = (props: Props) => {
         // }}
         // validateTrigger="onBlur"
         onSubmit={handleSubmit(onSubmit)}
-        ref={ref_form}
+        ref={refForm}
       >
         {/*<Form.Item name="contentId" noStyle>*/}
         {/*  <Input type="hidden" />*/}
@@ -188,8 +180,8 @@ const CommentForm = (props: Props) => {
           rows={8}
           {...register('content')}
         />
-        <span className={styles.info}>
-          {(contentValue?.length || 0)} / {COMMENT_MAX_LENGTH}
+        <span className="comment-form-info">
+          {contentValue?.length || 0} / {COMMENT_MAX_LENGTH}
         </span>
 
         {/*<Form.Item*/}
@@ -205,7 +197,7 @@ const CommentForm = (props: Props) => {
         <input
           required={true}
           maxLength={50}
-          defaultValue={_init_values.username}
+          defaultValue={_initValues.username}
           {...register('username')}
         />
 
@@ -226,14 +218,14 @@ const CommentForm = (props: Props) => {
           required={true}
           type={'email'}
           maxLength={100}
-          defaultValue={_init_values.email}
+          defaultValue={_initValues.email}
           {...register('email')}
         />
 
         {/*<Form.Item*/}
         {/*  label={*/}
         {/*    <>*/}
-        {/*      站点<span className={styles.info}>（选填）</span>*/}
+        {/*      站点<span className="comment-form-info">（选填）</span>*/}
         {/*    </>*/}
         {/*  }*/}
         {/*  name="url"*/}
@@ -242,14 +234,14 @@ const CommentForm = (props: Props) => {
         {/*  <Input maxLength={200} />*/}
         {/*</Form.Item>*/}
         <label>
-          站点<span className={styles.info}>（选填）</span>
+          站点<span className="comment-form-info">（选填）</span>
         </label>
-        <input type={'url'} maxLength={200} defaultValue={_init_values.url} {...register('url')} />
+        <input type={'url'} maxLength={200} defaultValue={_initValues.url} {...register('url')} />
 
         {/*<Form.Item*/}
         {/*  label={*/}
         {/*    <>*/}
-        {/*      验证码<span className={styles.info}>（不区分大小写）</span>*/}
+        {/*      验证码<span className="comment-form-info">（不区分大小写）</span>*/}
         {/*    </>*/}
         {/*  }*/}
         {/*  name="captchaCode"*/}
@@ -259,7 +251,7 @@ const CommentForm = (props: Props) => {
         {/*</Form.Item>*/}
         <label>
           验证码 <span>*</span>
-          <span className={styles.info}>（不区分大小写）</span>
+          <span className="comment-form-info">（不区分大小写）</span>
         </label>
         <CaptchaInput
           setRefresh={(fn: () => void) => (refreshCaptcha = fn)}

@@ -6,10 +6,10 @@
 import { getMenuTree } from '@/server/services/menus'
 import { getFrontendCategories, getFrontendTags } from '@/server/services/posts-frontend'
 import { getSetting } from '@/server/services/settings'
+import '@/styles/themes/oj-2025.css'
 import React from 'react'
 import Footer from 'src/components/footer'
 import Nav from 'src/components/nav'
-import styles from './basic.module.scss'
 
 interface IProps {
   children?: React.ReactNode
@@ -21,16 +21,12 @@ export default async function BasicLayout(props: IProps) {
 
   return (
     <>
-      <div className={styles.page}>
+      <div className="basic-layout">
         <Nav menus={menus} siteTitle={siteTitle} siteSlogan={siteSlogan} />
-        <main className={styles.body}>{children}</main>
+        <main className="basic-layout-body">{children}</main>
       </div>
 
-      <Footer
-        categories={categories || []}
-        tags={tags || []}
-        footerCopyright={footerCopyright}
-      />
+      <Footer categories={categories || []} tags={tags || []} footerCopyright={footerCopyright} />
     </>
   )
 }
@@ -42,8 +38,7 @@ async function getData() {
   const siteTitle = (await getSetting('siteTitle')) || 'Publa'
   const siteSlogan = (await getSetting('siteSlogan')) || 'Yet Another Amazing Blog'
   const year = String(new Date().getFullYear())
-  const rawCopyright =
-    (await getSetting('footerCopyright')) || '{SITE_NAME} &copy; {FULL_YEAR}'
+  const rawCopyright = (await getSetting('footerCopyright')) || '{SITE_NAME} &copy; {FULL_YEAR}'
   const footerCopyright = rawCopyright
     .replace(/\{SITE_NAME}/g, siteTitle)
     .replace(/\{FULL_YEAR}/g, year)

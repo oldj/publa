@@ -26,7 +26,7 @@ export interface PostInput {
   tagIds?: number[]
   allowComment?: boolean
   showComments?: boolean
-  coverImageId?: number | null
+  coverImage?: string | null
   seoTitle?: string
   seoDescription?: string
   canonicalUrl?: string
@@ -112,11 +112,12 @@ export async function listPostsAdmin(options: PostListOptions = {}) {
   const draftMap = new Map(drafts.map((draft) => [draft.targetId, draft]))
   const items = rows.map((row) => {
     const draft = draftMap.get(row.id)
-    if (!draft) return row
+    if (!draft) return { ...row, hasDraft: false }
 
     return {
       ...row,
       title: draft.title,
+      hasDraft: true,
     }
   })
 
@@ -393,7 +394,7 @@ export async function createPost(input: PostInput) {
         excerptAuto: input.contentText.substring(0, 200),
         status: input.status,
         categoryId: input.categoryId || null,
-        coverImageId: input.coverImageId || null,
+        coverImage: input.coverImage || null,
         allowComment: input.allowComment ?? true,
         showComments: input.showComments ?? true,
         seoTitle: input.seoTitle || null,
@@ -462,7 +463,7 @@ export async function updatePost(
   }
   if (input.publishedAt !== undefined) updateData.publishedAt = input.publishedAt
   if (input.categoryId !== undefined) updateData.categoryId = input.categoryId || null
-  if (input.coverImageId !== undefined) updateData.coverImageId = input.coverImageId || null
+  if (input.coverImage !== undefined) updateData.coverImage = input.coverImage || null
   if (input.allowComment !== undefined) updateData.allowComment = input.allowComment
   if (input.showComments !== undefined) updateData.showComments = input.showComments
   if (input.seoTitle !== undefined) updateData.seoTitle = input.seoTitle || null

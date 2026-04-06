@@ -1,7 +1,7 @@
-import { eq } from 'drizzle-orm'
-import { beforeEach, describe, expect, it } from 'vitest'
 import { maybeFirst } from '@/server/db/query'
 import * as schema from '@/server/db/schema'
+import { eq } from 'drizzle-orm'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { setupTestDb, testDb } from './__test__/setup'
 
 const { getFrontendPostBySlug, getFrontendPosts } = await import('./posts-frontend')
@@ -10,9 +10,7 @@ beforeEach(async () => {
   await setupTestDb()
 })
 
-async function createPost(
-  overrides: Partial<typeof schema.contents.$inferInsert> = {},
-) {
+async function createPost(overrides: Partial<typeof schema.contents.$inferInsert> = {}) {
   const now = new Date()
   const basePost: typeof schema.contents.$inferInsert = {
     type: 'post',
@@ -106,31 +104,26 @@ describe('getFrontendPostBySlug', () => {
       status: 'scheduled' as const,
       publishedAt: new Date(Date.now() + 3_600_000).toISOString(),
     },
-  ])('%s文章带预览且有 viewer 时可访问，且不增加浏览量并关闭评论交互', async ({
-    slug,
-    status,
-    publishedAt,
-  }) => {
-    await createPost({ slug, status, publishedAt })
+  ])(
+    '%s文章带预览且有 viewer 时可访问，且不增加浏览量并关闭评论交互',
+    async ({ slug, status, publishedAt }) => {
+      await createPost({ slug, status, publishedAt })
 
-    const post = await getFrontendPostBySlug(slug, {
-      preview: true,
-      viewer: { id: 1 },
-      incrementViewCount: false,
-    })
+      const post = await getFrontendPostBySlug(slug, {
+        preview: true,
+        viewer: { id: 1 },
+        incrementViewCount: false,
+      })
 
-    expect(post).not.toBeNull()
-    expect(post?.canComment).toBe(false)
+      expect(post).not.toBeNull()
+      expect(post?.canComment).toBe(false)
 
-    const saved = await maybeFirst(
-      testDb
-        .select()
-        .from(schema.contents)
-        .where(eq(schema.contents.slug, slug))
-        .limit(1),
-    )
-    expect(saved?.viewCount).toBe(0)
-  })
+      const saved = await maybeFirst(
+        testDb.select().from(schema.contents).where(eq(schema.contents.slug, slug)).limit(1),
+      )
+      expect(saved?.viewCount).toBe(0)
+    },
+  )
 
   it('预览模式下 miss 当前 slug 时不走 slug 历史跳转', async () => {
     await createPost({ id: 10, slug: 'current-slug' })

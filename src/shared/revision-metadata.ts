@@ -4,6 +4,7 @@ export interface PostDraftMetadata {
   slug: string
   categoryId: number | null
   tagNames: string[]
+  coverImage: string
   seoTitle: string
   seoDescription: string
   publishedAt: string | null
@@ -58,6 +59,7 @@ export function parsePostDraftMetadata(input: unknown): PostDraftMetadata {
     slug: readString(data.slug),
     categoryId: readNullableNumber(data.categoryId),
     tagNames: readStringArray(data.tagNames),
+    coverImage: readString(data.coverImage),
     seoTitle: readString(data.seoTitle),
     seoDescription: readString(data.seoDescription),
     publishedAt: readNullableString(data.publishedAt),

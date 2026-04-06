@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect } from 'react'
-import NProgress from 'nprogress'
 import { usePathname, useSearchParams } from 'next/navigation'
+import NProgress from 'nprogress'
+import { useEffect } from 'react'
 import './NProgress.scss'
 
 // 自定义 NProgress 样式

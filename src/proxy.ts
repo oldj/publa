@@ -1,6 +1,6 @@
+import { getJwtSecret, isAuthConfigError } from '@/server/auth/shared'
 import { jwtVerify } from 'jose'
 import { NextRequest, NextResponse } from 'next/server'
-import { getJwtSecret, isAuthConfigError } from '@/server/auth/shared'
 
 const COOKIE_NAME = 'blog_token'
 

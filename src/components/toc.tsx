@@ -6,7 +6,6 @@ import clsx from 'clsx'
 import React, { useEffect, useState } from 'react'
 import { IHeader } from 'src/lib/getHeadersFromHTML'
 import { isAnyPartOfElementInViewport } from '../lib/element'
-import styles from './toc.module.scss'
 
 interface IProps {
   headers: IHeader[]
@@ -42,9 +41,9 @@ const TOC = React.forwardRef<HTMLDivElement, IProps>((props, ref) => {
   }
 
   return (
-    <div className={clsx(styles.root, className)} ref={ref}>
-      <div className={styles.wrapper}>
-        <div className={styles.header}>
+    <div className={clsx('toc', className)} ref={ref}>
+      <div>
+        <div className="toc-header">
           <IconMenuDeep size={16} />
           <span>目录</span>
         </div>
@@ -54,16 +53,12 @@ const TOC = React.forwardRef<HTMLDivElement, IProps>((props, ref) => {
           return (
             <div
               key={index}
-              className={clsx(
-                styles.item,
-                styles[`toc-h${level}`],
-                number === currentNumber && styles.current,
-              )}
+              className={clsx('toc-item', `toc-h${level}`)}
               data-current={number === currentNumber}
             >
               <a href={`#${number || index + 1}-${title}`}>
-                {/* {number && <span className={styles.number}>{number}&nbsp;</span>} */}
-                <span className={styles.title}>{title}</span>
+                {/* {number && <span className="toc-number">{number}&nbsp;</span>} */}
+                <span className="toc-title">{title}</span>
               </a>
             </div>
           )

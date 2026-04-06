@@ -1,7 +1,7 @@
 import { db } from '@/server/db'
 import { insertOne, maybeFirst, updateOne } from '@/server/db/query'
 import { categories, contents } from '@/server/db/schema'
-import { eq, count, sql, and, isNull, asc } from 'drizzle-orm'
+import { and, asc, count, eq, isNull } from 'drizzle-orm'
 
 export interface CategoryInput {
   name: string
@@ -54,40 +54,47 @@ export async function listCategories(): Promise<CategoryWithCount[]> {
 
 /** 通过 ID 获取分类 */
 export async function getCategoryById(id: number) {
-  return maybeFirst(
-    db.select().from(categories).where(eq(categories.id, id)).limit(1),
-  )
+  return maybeFirst(db.select().from(categories).where(eq(categories.id, id)).limit(1))
 }
 
 /** 通过 slug 获取分类 */
 export async function getCategoryBySlug(slug: string) {
-  return maybeFirst(
-    db.select().from(categories).where(eq(categories.slug, slug)).limit(1),
-  )
+  return maybeFirst(db.select().from(categories).where(eq(categories.slug, slug)).limit(1))
 }
 
 /** 创建分类 */
 export async function createCategory(input: CategoryInput) {
-  return insertOne(db.insert(categories).values({
-    name: input.name,
-    slug: input.slug,
-    description: input.description || null,
-    sortOrder: input.sortOrder ?? 0,
-    seoTitle: input.seoTitle || null,
-    seoDescription: input.seoDescription || null,
-  }).returning())
+  return insertOne(
+    db
+      .insert(categories)
+      .values({
+        name: input.name,
+        slug: input.slug,
+        description: input.description || null,
+        sortOrder: input.sortOrder ?? 0,
+        seoTitle: input.seoTitle || null,
+        seoDescription: input.seoDescription || null,
+      })
+      .returning(),
+  )
 }
 
 /** 更新分类 */
 export async function updateCategory(id: number, input: Partial<CategoryInput>) {
-  return updateOne(db.update(categories).set({
-    ...(input.name !== undefined && { name: input.name }),
-    ...(input.slug !== undefined && { slug: input.slug }),
-    ...(input.description !== undefined && { description: input.description || null }),
-    ...(input.sortOrder !== undefined && { sortOrder: input.sortOrder }),
-    ...(input.seoTitle !== undefined && { seoTitle: input.seoTitle || null }),
-    ...(input.seoDescription !== undefined && { seoDescription: input.seoDescription || null }),
-  }).where(eq(categories.id, id)).returning())
+  return updateOne(
+    db
+      .update(categories)
+      .set({
+        ...(input.name !== undefined && { name: input.name }),
+        ...(input.slug !== undefined && { slug: input.slug }),
+        ...(input.description !== undefined && { description: input.description || null }),
+        ...(input.sortOrder !== undefined && { sortOrder: input.sortOrder }),
+        ...(input.seoTitle !== undefined && { seoTitle: input.seoTitle || null }),
+        ...(input.seoDescription !== undefined && { seoDescription: input.seoDescription || null }),
+      })
+      .where(eq(categories.id, id))
+      .returning(),
+  )
 }
 
 /** 删除分类（仅当无文章引用时） */

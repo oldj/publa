@@ -7,7 +7,11 @@ import { postgresSchema } from './schema/postgres'
 import { sqliteSchema } from './schema/sqlite'
 
 const dbFamily = getDatabaseFamily()
-const migrationsFolder = path.join(process.cwd(), 'drizzle', dbFamily === 'postgres' ? 'postgres' : 'sqlite')
+const migrationsFolder = path.join(
+  process.cwd(),
+  'drizzle',
+  dbFamily === 'postgres' ? 'postgres' : 'sqlite',
+)
 
 type CommonDatabase = LibSQLDatabase<typeof sqliteSchema>
 
@@ -38,7 +42,8 @@ async function createRuntimeDb(): Promise<{
   const { drizzle } = await import('drizzle-orm/libsql')
   const { migrate } = await import('drizzle-orm/libsql/migrator')
 
-  const sqliteDbUrl = process.env.DATABASE_URL || `file:${path.join(process.cwd(), 'data', 'publa.db')}`
+  const sqliteDbUrl =
+    process.env.DATABASE_URL || `file:${path.join(process.cwd(), 'data', 'publa.db')}`
 
   // 确保数据库文件所在目录存在
   if (sqliteDbUrl.startsWith('file:')) {

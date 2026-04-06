@@ -1,7 +1,6 @@
 'use client'
 
 import checkOutLinks from '@/app/posts/[...slug]/libs/checkOutLinks'
-import { AdPostFooter } from '@/components/ads'
 import CommentForm from '@/components/comment-form'
 import PageLoading from '@/components/page-loading'
 import TOC from '@/components/toc'
@@ -19,8 +18,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { IoChevronUp } from 'react-icons/io5'
-import { IAccount, IPost, ICategory, ITag, IComment } from 'typings'
-import styles from '../post.module.scss'
+import { IAccount, ICategory, IComment, IPost, ITag } from 'typings'
 import Comment from './Comment'
 
 for (const [name, language] of Object.entries(codeHighlightLanguages)) {
@@ -38,19 +36,20 @@ interface IProps {
   account?: IAccount
   html?: string
   headers?: IHeader[]
+  afterPostHtml?: string
 }
 
 export default function Post(props: IProps) {
-  const { account, post, html, headers } = props
+  const { account, post, html, headers, afterPostHtml } = props
   const router = useRouter()
   const [comments, setComments] = useState<IComment[]>(post?.comments || [])
   // const [html, setHTML] = useState<string>('')
   // const [headers, setHeaders] = useState<IHeader[]>([])
-  const [show_back_to_top, setShowBackToTop] = useState<boolean>(false)
-  const [show_toc2, setShowToc2] = useState<boolean>(false)
-  const ref_content = useRef<HTMLDivElement>(null)
-  const ref_toc1 = useRef<HTMLDivElement>(null)
-  const ref_toc2 = useRef<HTMLDivElement>(null)
+  const [showBackToTop, setShowBackToTop] = useState<boolean>(false)
+  const [showToc2, setShowToc2] = useState<boolean>(false)
+  const refContent = useRef<HTMLDivElement>(null)
+  const refToc1 = useRef<HTMLDivElement>(null)
+  const refToc2 = useRef<HTMLDivElement>(null)
 
   if (!post) {
     return <PageLoading />
@@ -67,7 +66,7 @@ export default function Post(props: IProps) {
   // }, [post.html])
 
   useEffect(() => {
-    const el = ref_content.current
+    const el = refContent.current
     if (!el) {
       return
     }
@@ -83,7 +82,7 @@ export default function Post(props: IProps) {
     hljs.highlightAll()
 
     // 渲染 Tiptap 数学公式节点（data-latex 属性）
-    const el = ref_content.current
+    const el = refContent.current
     if (el) {
       el.querySelectorAll<HTMLElement>(
         '[data-type="inline-math"], [data-type="block-math"]',
@@ -111,27 +110,27 @@ export default function Post(props: IProps) {
         { left: '\\(', right: '\\)', display: false },
       ],
     })
-  }, [html, show_back_to_top, show_toc2])
+  }, [html, showBackToTop, showToc2])
 
   useEffect(() => {
-    document.querySelectorAll(`.${styles.content} table`).forEach((tb) => {
+    document.querySelectorAll('.post-detail-content table').forEach((tb) => {
       const el = document.createElement('div')
-      el.className = styles.table_wrapper
+      el.className = 'post-detail-table-wrapper'
       tb.parentNode?.insertBefore(el, tb)
       el.appendChild(tb)
     })
 
-    document.querySelectorAll(`.${styles.content} img`).forEach((img) => {
+    document.querySelectorAll('.post-detail-content img').forEach((img) => {
       const parent: HTMLElement = img.parentNode as HTMLElement
       if (!parent) return
 
       if (
         parent.tagName.toLowerCase() === 'center' ||
-        (parent.className && parent.className.indexOf(styles.content) >= 0)
+        (parent.className && parent.className.indexOf('post-detail-content') >= 0)
       ) {
         const p = document.createElement('p')
         parent.insertBefore(p, img)
-        p.className = styles.p_img
+        p.className = 'post-detail-img'
         p.appendChild(img)
       }
     })
@@ -142,7 +141,7 @@ export default function Post(props: IProps) {
       const scroll_top = document.documentElement.scrollTop || document.body.scrollTop
       setShowBackToTop(scroll_top > 300)
 
-      const toc1 = ref_toc1.current
+      const toc1 = refToc1.current
       if (!toc1) return
 
       const rect = toc1.getBoundingClientRect()
@@ -166,28 +165,26 @@ export default function Post(props: IProps) {
   }
 
   return (
-    <div className={styles.root}>
-      <h1 className={styles.post_title}>{post.title}</h1>
-      <div className={clsx(styles.post_pub_date, styles.info)}>
+    <div className="post-detail">
+      {post.coverImage && (
+        <img className="post-detail-cover" src={post.coverImage} alt={post.title} />
+      )}
+      <h1 className="post-detail-title">{post.title}</h1>
+      <div className="post-detail-date post-detail-info">
         {dayjs(post.pubTime).format('YYYY-MM-DD')}
       </div>
-      <TOC headers={headers || []} ref={ref_toc1} />
+      <TOC headers={headers || []} ref={refToc1} />
       <div
-        className={`${styles.content} post-content`}
-        ref={ref_content}
+        className="post-detail-content post-content"
+        ref={refContent}
         dangerouslySetInnerHTML={{ __html: html || '' }}
       />
-      {/*<div className={styles.post_copyright}>*/}
-      {/*  <a rel="license" href="https://creativecommons.org/licenses/by-nc/4.0/">*/}
-      {/*    <img alt="知识共享许可协议" src="https://i.creativecommons.org/l/by-nc/4.0/88x31.png"/>*/}
-      {/*  </a>*/}
-      {/*  <br/>*/}
-      {/*  本作品采用<a rel="license" href="https://creativecommons.org/licenses/by-nc/4.0/">知识共享署名-非商业性使用 4.0 国际许可协议</a>进行许可。*/}
-      {/*</div>*/}
 
-      <AdPostFooter />
+      {afterPostHtml && (
+        <div className="post-after-content" dangerouslySetInnerHTML={{ __html: afterPostHtml }} />
+      )}
 
-      <div className={styles.post_props}>
+      <div className="post-detail-props">
         {post.category && (
           <span>
             <strong>分类：</strong>
@@ -217,34 +214,30 @@ export default function Post(props: IProps) {
         )}
       </div>
 
-      <div className={styles.neighbors}>
+      <div className="post-detail-neighbors">
         <div
-          className={clsx(styles.prev, !post?.previous && styles.disabled)}
+          className={clsx('post-detail-prev', !post?.previous && 'is-disabled')}
           onClick={async () => {
             if (!post?.previous) return
             router.push(post.previous.url)
           }}
         >
-          <span className={styles.label}>前一篇</span>
-          {post.previous ? (
-            <Link href={post.previous.url}>{post.previous.title}</Link>
-          ) : (
-            '无'
-          )}
+          <span className="post-detail-label">前一篇</span>
+          {post.previous ? <Link href={post.previous.url}>{post.previous.title}</Link> : '无'}
         </div>
         <div
-          className={clsx(styles.next, !post?.next && styles.disabled)}
+          className={clsx('post-detail-next', !post?.next && 'is-disabled')}
           onClick={async () => {
             if (!post?.next) return
             router.push(post.next.url)
           }}
         >
-          <span className={styles.label}>后一篇</span>
+          <span className="post-detail-label">后一篇</span>
           {post.next ? <Link href={post.next.url}>{post.next.title}</Link> : '无'}
         </div>
       </div>
 
-      <div className={styles.related}>
+      <div className="post-detail-related">
         <h2>相关文章：</h2>
         {post.related.length > 0 ? (
           <ul>
@@ -255,23 +248,23 @@ export default function Post(props: IProps) {
             ))}
           </ul>
         ) : (
-          <div className={styles.norecords}>暂无相关文章</div>
+          <div className="post-detail-no-records">暂无相关文章</div>
         )}
       </div>
 
-      <div className={styles.comments}>
+      <div className="post-comments">
         <h2>评论：</h2>
         {comments.length === 0 ? (
-          <div className={styles.norecords}>暂无评论</div>
+          <div className="post-detail-no-records">暂无评论</div>
         ) : (
           comments.map((i) => <Comment data={i} key={i.id} refreshComments={refreshComments} />)
         )}
       </div>
 
       {post.canComment ? (
-        <div className={styles.comment_form}>
+        <div className="post-comment-form">
           <h2>发表评论：</h2>
-          <div className={styles.info}>电子邮件地址不会被公开。必填项已用 * 标注。</div>
+          <div className="post-detail-info">电子邮件地址不会被公开。必填项已用 * 标注。</div>
 
           <CommentForm
             contentId={post.id}
@@ -284,24 +277,24 @@ export default function Post(props: IProps) {
           />
         </div>
       ) : (
-        <div className={styles.comment_closed}>评论已关闭。</div>
+        <div className="post-comment-closed">评论已关闭。</div>
       )}
 
-      {show_toc2 && (
-        <div className={styles.toc2_wrapper}>
+      {showToc2 && (
+        <div className="post-detail-toc-wrapper">
           <TOC
             headers={headers || []}
-            ref={ref_toc2}
-            className={clsx(styles.toc2, 'animate__animated animate__fadeIn')}
+            ref={refToc2}
+            className={clsx('post-detail-toc', 'animate__animated animate__fadeIn')}
           />
         </div>
       )}
 
-      {show_back_to_top && (
-        <div className={styles.back_to_top_wrapper}>
+      {showBackToTop && (
+        <div className="back-to-top-wrapper">
           <button
             title={'回到顶部'}
-            className={clsx(styles.back_to_top, 'animate__animated animate__fadeIn')}
+            className={clsx('back-to-top', 'animate__animated animate__fadeIn')}
             onClick={() => {
               window.scrollTo(0, 0)
             }}

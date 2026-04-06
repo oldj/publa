@@ -1,9 +1,9 @@
+import { normalizeEmail, normalizePassword, normalizeUsername } from '@/lib/user-input'
+import { hashPassword } from '@/server/auth'
 import { db } from '@/server/db'
 import { insertOne, maybeFirst, updateOne } from '@/server/db/query'
 import { users } from '@/server/db/schema'
 import { eq } from 'drizzle-orm'
-import { hashPassword } from '@/server/auth'
-import { normalizeEmail, normalizePassword, normalizeUsername } from '@/lib/user-input'
 
 /** 列出所有用户 */
 export async function listUsers() {
@@ -22,16 +22,16 @@ export async function listUsers() {
 export async function getUserById(id: number) {
   return maybeFirst(
     db
-    .select({
-      id: users.id,
-      username: users.username,
-      email: users.email,
-      role: users.role,
-      createdAt: users.createdAt,
-    })
-    .from(users)
-    .where(eq(users.id, id))
-    .limit(1),
+      .select({
+        id: users.id,
+        username: users.username,
+        email: users.email,
+        role: users.role,
+        createdAt: users.createdAt,
+      })
+      .from(users)
+      .where(eq(users.id, id))
+      .limit(1),
   )
 }
 
@@ -48,21 +48,29 @@ export async function createUser(input: {
   if (!password) throw new Error('Password cannot be empty after normalization')
 
   const passwordHash = await hashPassword(password)
-  return insertOne(db.insert(users).values({
-    username,
-    email: normalizeEmail(input.email),
-    passwordHash,
-    role: input.role,
-  }).returning())
+  return insertOne(
+    db
+      .insert(users)
+      .values({
+        username,
+        email: normalizeEmail(input.email),
+        passwordHash,
+        role: input.role,
+      })
+      .returning(),
+  )
 }
 
 /** 更新用户 */
-export async function updateUser(id: number, input: {
-  username?: string
-  email?: string
-  password?: string
-  role?: 'owner' | 'admin' | 'editor'
-}) {
+export async function updateUser(
+  id: number,
+  input: {
+    username?: string
+    email?: string
+    password?: string
+    role?: 'owner' | 'admin' | 'editor'
+  },
+) {
   const updateData: Record<string, any> = { updatedAt: new Date().toISOString() }
 
   if (input.username !== undefined) {
@@ -78,17 +86,16 @@ export async function updateUser(id: number, input: {
   }
   if (input.role) updateData.role = input.role
 
-  return updateOne(
-    db.update(users).set(updateData).where(eq(users.id, id)).returning(),
-  )
+  return updateOne(db.update(users).set(updateData).where(eq(users.id, id)).returning())
 }
 
 /** 删除用户 */
-export async function deleteUser(id: number, operatorId: number): Promise<{ success: boolean; message?: string }> {
+export async function deleteUser(
+  id: number,
+  operatorId: number,
+): Promise<{ success: boolean; message?: string }> {
   if (id === operatorId) return { success: false, message: '不能删除自己' }
-  const user = await maybeFirst(
-    db.select().from(users).where(eq(users.id, id)).limit(1),
-  )
+  const user = await maybeFirst(db.select().from(users).where(eq(users.id, id)).limit(1))
   if (!user) return { success: false, message: '用户不存在' }
 
   await db.delete(users).where(eq(users.id, id))

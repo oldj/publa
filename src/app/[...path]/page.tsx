@@ -3,10 +3,10 @@ import BasicLayout from '@/layouts/basic'
 import { getCurrentUser } from '@/server/auth'
 import { redirectOrNotFound } from '@/server/lib/frontend-404'
 import { getPublishedPageByPath } from '@/server/services/pages'
-import { parsePreviewId, getPreviewPage } from '@/server/services/preview'
+import { getPreviewPage, parsePreviewId } from '@/server/services/preview'
+import '@/styles/themes/oj-2025.css'
 import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import styles from './page.module.scss'
 
 export async function generateMetadata({
   params,
@@ -60,7 +60,7 @@ export default async function DynamicPage({ params }: { params: Promise<{ path: 
         <>
           <PreviewNotice />
           <div
-            className={styles.content}
+            className="dynamic-page-content"
             dangerouslySetInnerHTML={{ __html: page.contentHtml }}
           />
         </>
@@ -70,9 +70,9 @@ export default async function DynamicPage({ params }: { params: Promise<{ path: 
     return (
       <BasicLayout>
         <PreviewNotice />
-        <div className={styles.root}>
+        <div className="dynamic-page">
           <div
-            className={styles.content}
+            className="dynamic-page-content"
             dangerouslySetInnerHTML={{ __html: page.contentHtml }}
           />
         </div>
@@ -87,14 +87,22 @@ export default async function DynamicPage({ params }: { params: Promise<{ path: 
 
   // blank 模板：不包含头尾
   if (page.template === 'blank') {
-    return <div className={styles.content} dangerouslySetInnerHTML={{ __html: page.contentHtml }} />
+    return (
+      <div
+        className="dynamic-page-content"
+        dangerouslySetInnerHTML={{ __html: page.contentHtml }}
+      />
+    )
   }
 
   // default 模板：包含 BasicLayout
   return (
     <BasicLayout>
-      <div className={styles.root}>
-        <div className={styles.content} dangerouslySetInnerHTML={{ __html: page.contentHtml }} />
+      <div className="dynamic-page">
+        <div
+          className="dynamic-page-content"
+          dangerouslySetInnerHTML={{ __html: page.contentHtml }}
+        />
       </div>
     </BasicLayout>
   )

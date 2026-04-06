@@ -372,6 +372,16 @@ export default function SettingsPage() {
 
         <Divider label="自定义 HTML" labelPosition="left" mt="md" />
         <Textarea
+          label="文章末尾自定义 HTML"
+          description="显示在每篇文章内容之后，可用于放置广告代码等"
+          placeholder="<div>...</div>"
+          autosize
+          minRows={3}
+          value={settings.customAfterPostHtml || ''}
+          onChange={(e) => setField('customAfterPostHtml', e.target.value)}
+          styles={{ input: { fontFamily: 'monospace' } }}
+        />
+        <Textarea
           label="自定义 Head HTML"
           description="在 </head> 标签前方插入 HTML"
           placeholder="<script>...</script>"

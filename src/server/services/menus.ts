@@ -1,7 +1,7 @@
 import { db } from '@/server/db'
 import { insertOne, updateOne } from '@/server/db/query'
 import { menus } from '@/server/db/schema'
-import { eq, asc } from 'drizzle-orm'
+import { asc, eq } from 'drizzle-orm'
 
 export interface MenuInput {
   title: string
@@ -9,6 +9,7 @@ export interface MenuInput {
   parentId?: number | null
   sortOrder?: number
   target?: '_self' | '_blank'
+  hidden?: number
 }
 
 /** 获取所有菜单（按 sortOrder 排序） */
@@ -16,14 +17,15 @@ export async function listMenus() {
   return db.select().from(menus).orderBy(asc(menus.sortOrder), asc(menus.id))
 }
 
-/** 获取菜单树（前台用） */
+/** 获取菜单树（前台用，过滤隐藏菜单） */
 export async function getMenuTree() {
   const all = await listMenus()
+  const visible = all.filter((m) => !m.hidden)
 
-  const topLevel = all.filter((m) => !m.parentId)
+  const topLevel = visible.filter((m) => !m.parentId)
   return topLevel.map((menu) => ({
     ...menu,
-    children: all.filter((m) => m.parentId === menu.id),
+    children: visible.filter((m) => m.parentId === menu.id),
   }))
 }
 
@@ -38,6 +40,7 @@ export async function createMenu(input: MenuInput) {
         parentId: input.parentId || null,
         sortOrder: input.sortOrder ?? 0,
         target: input.target || '_self',
+        hidden: input.hidden ?? 0,
       })
       .returning(),
   )
@@ -51,6 +54,7 @@ export async function updateMenu(id: number, input: Partial<MenuInput>) {
   if (input.parentId !== undefined) updateData.parentId = input.parentId || null
   if (input.sortOrder !== undefined) updateData.sortOrder = input.sortOrder
   if (input.target !== undefined) updateData.target = input.target
+  if (input.hidden !== undefined) updateData.hidden = input.hidden
 
   return updateOne(db.update(menus).set(updateData).where(eq(menus.id, id)).returning())
 }

@@ -3,6 +3,7 @@ import PreviewNotice from '@/components/PreviewNotice'
 import BasicLayout from '@/layouts/basic'
 import getHeadersFromHTML, { IHeader } from '@/lib/getHeadersFromHTML'
 import { getCurrentUser } from '@/server/auth'
+import { getSetting } from '@/server/services/settings'
 import { db } from '@/server/db'
 import { maybeFirst } from '@/server/db/query'
 import { contents, slugHistories } from '@/server/db/schema'
@@ -156,12 +157,15 @@ export default async function Page({
     notFound()
   }
 
-  const data = await getData({
-    slug,
-    preview,
-    viewer: currentUser,
-    incrementViewCount: !preview && !currentUser,
-  })
+  const [data, afterPostHtml] = await Promise.all([
+    getData({
+      slug,
+      preview,
+      viewer: currentUser,
+      incrementViewCount: !preview && !currentUser,
+    }),
+    getSetting('customAfterPostHtml'),
+  ])
   const account: IAccount | undefined = currentUser
     ? { username: currentUser.username, isStaff: true }
     : undefined
@@ -169,7 +173,13 @@ export default async function Page({
   return (
     <BasicLayout>
       {preview && <PreviewNotice />}
-      <Post account={account} post={data.post} html={data.html} headers={data.headers} />
+      <Post
+        account={account}
+        post={data.post}
+        html={data.html}
+        headers={data.headers}
+        afterPostHtml={afterPostHtml || undefined}
+      />
     </BasicLayout>
   )
 }

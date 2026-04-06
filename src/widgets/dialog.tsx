@@ -2,7 +2,6 @@
  */
 
 import Swal from 'sweetalert2'
-import styles from './dialog.module.scss'
 
 interface IAlertOptions {
   title?: string
@@ -19,8 +18,8 @@ export async function Alert(options: IAlertOptions) {
     icon: options.icon ?? 'info',
     confirmButtonText: options.buttons_text || '好的',
     customClass: {
-      confirmButton: styles.btn_primary,
-      popup: styles.popup,
+      confirmButton: 'w-dialog-btn-primary',
+      popup: 'w-dialog-popup',
     },
     buttonsStyling: false,
     showClass: {

@@ -1,8 +1,7 @@
 'use client'
 
-import { Button } from '@mantine/core'
 import { IconArrowLeft } from '@tabler/icons-react'
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 
 const GoBackButton = () => {
   const [hasHistory, setHasHistory] = useState(false)
@@ -16,16 +15,15 @@ const GoBackButton = () => {
   }
 
   return (
-    <Button
-      leftSection={<IconArrowLeft />}
-      variant="filled"
-      size="md"
+    <button
+      className="not-found-btn"
       onClick={() => {
         window.history.back()
       }}
     >
+      <IconArrowLeft size={18} />
       返回上一页
-    </Button>
+    </button>
   )
 }
 

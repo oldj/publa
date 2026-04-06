@@ -43,6 +43,20 @@
       "when": 1775392898418,
       "tag": "0005_add_updated_by_to_revisions",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1775456199995,
+      "tag": "0006_right_namorita",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1775500000000,
+      "tag": "0007_add_cover_image",
+      "breakpoints": true
     }
   ]
 }

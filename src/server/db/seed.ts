@@ -33,8 +33,8 @@ const defaultSettings: { key: string; value: string }[] = [
   { key: 'guestbookWelcome', value: '欢迎给我留言！' },
   // 底部版权
   { key: 'footerCopyright', value: '{SITE_NAME} &copy; {FULL_YEAR}' },
-  // 分析与广告
-  { key: 'googleAnalyticsId', value: '' },
+  // 自定义 HTML
+  { key: 'customAfterPostHtml', value: '' },
   { key: 'customHeadHtml', value: '' },
   { key: 'customBodyStartHtml', value: '' },
   { key: 'customBodyEndHtml', value: '' },

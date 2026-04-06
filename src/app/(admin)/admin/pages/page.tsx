@@ -1,10 +1,10 @@
 'use client'
-import myModal from '@/components/myModals'
+import myModal from '@/app/(admin)/_components/myModals'
 import adminStyles from '../../_components/AdminShell.module.scss'
 
+import { NowrapBadge } from '@/app/(admin)/_components/NowrapBadge'
 import { notify } from '@/lib/notify'
-import { NowrapBadge } from '@/components/NowrapBadge'
-import { ActionIcon, Button, Group, Table, Text, Title } from '@mantine/core'
+import { ActionIcon, Badge, Button, Group, Table, Text, Title } from '@mantine/core'
 import { IconEye, IconPencil, IconPlus, IconTrash } from '@tabler/icons-react'
 import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
@@ -16,6 +16,7 @@ interface PageItem {
   status: string
   template: string
   contentType: string
+  hasDraft: boolean
 }
 
 const statusMap: Record<string, { label: string; color: string }> = {
@@ -72,21 +73,28 @@ export default function PagesAdminPage() {
               return (
                 <Table.Tr key={p.id}>
                   <Table.Td>
-                    <Link
-                      href={`/admin/pages/${p.id}`}
-                      style={{
-                        color: 'inherit',
-                        textDecoration: 'none',
-                        fontWeight: 500,
-                        fontSize: 'var(--mantine-font-size-sm)',
-                      }}
-                    >
-                      {p.title || (
-                        <Text span c="dimmed" inherit>
-                          (无标题)
-                        </Text>
+                    <Group gap="xs">
+                      <Link
+                        href={`/admin/pages/${p.id}`}
+                        style={{
+                          color: 'inherit',
+                          textDecoration: 'none',
+                          fontWeight: 500,
+                          fontSize: 'var(--mantine-font-size-sm)',
+                        }}
+                      >
+                        {p.title || (
+                          <Text span c="dimmed" inherit>
+                            (无标题)
+                          </Text>
+                        )}
+                      </Link>
+                      {p.status === 'published' && p.hasDraft && (
+                        <Badge color="orange" variant="light" size="xs">
+                          已修改
+                        </Badge>
                       )}
-                    </Link>
+                    </Group>
                   </Table.Td>
                   <Table.Td className={adminStyles.cellFit}>
                     {p.path ? (

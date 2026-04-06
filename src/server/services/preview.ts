@@ -35,6 +35,7 @@ export async function getPreviewPost(contentId: number): Promise<IPost | null> {
   let title = row.title || ''
   let contentHtml = row.contentHtml || ''
   let slug = row.slug || ''
+  let coverImage = row.coverImage || ''
   let categoryId = row.categoryId
   let tagNames: string[] = []
   let pubTime = row.publishedAt || row.createdAt
@@ -44,6 +45,7 @@ export async function getPreviewPost(contentId: number): Promise<IPost | null> {
     contentHtml = draft.contentHtml || contentHtml
     const meta = parsePostDraftMetadata(draft.metadata)
     slug = meta.slug || slug
+    coverImage = meta.coverImage || coverImage
     categoryId = meta.categoryId ?? categoryId
     tagNames = meta.tagNames || []
     if (meta.publishedAt) pubTime = meta.publishedAt
@@ -79,6 +81,7 @@ export async function getPreviewPost(contentId: number): Promise<IPost | null> {
     html: contentHtml,
     url: slug ? `/posts/${slug}` : '',
     slug,
+    coverImage: coverImage || undefined,
     pubTime,
     category,
     tags: postTags,

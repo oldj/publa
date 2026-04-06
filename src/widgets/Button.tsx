@@ -1,10 +1,8 @@
 /**
- * Button.tsx
  */
 
 import clsx from 'clsx'
 import React from 'react'
-import styles from './Button.module.scss'
 
 interface Props {
   children: React.ReactNode
@@ -17,21 +15,10 @@ interface Props {
 }
 
 const Button = (props: Props) => {
-  const { className, children, type, htmlType, size, disabled, loading } = props
+  const { className, children, htmlType, disabled } = props
 
   return (
-    <button
-      className={clsx(
-        styles.root,
-        className,
-        size === 'small' && styles.small,
-        size === 'medium' && styles.medium,
-        size === 'large' && styles.large,
-        loading && styles.loading,
-      )}
-      type={htmlType}
-      disabled={disabled}
-    >
+    <button className={clsx(className)} type={htmlType} disabled={disabled}>
       {children}
     </button>
   )

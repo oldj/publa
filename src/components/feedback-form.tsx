@@ -5,25 +5,17 @@
 
 'use client'
 
+import lodash from 'lodash'
+import { useRef, useState } from 'react'
+import { useForm } from 'react-hook-form'
 import CaptchaInput from 'src/components/captcha-input'
 import { GUESTBOOK_MAX_LENGTH } from 'src/lib/constants'
 import { isBrowser } from 'src/lib/where'
-import lodash from 'lodash'
-import React, { useRef, useState } from 'react'
-import { useForm } from 'react-hook-form'
 import Button from 'src/widgets/Button'
 import dialog from 'src/widgets/dialog'
-import styles from './feedback-form.module.scss'
 
 interface Props {
   onSuccess?: () => void
-}
-
-interface IFeedbackFields {
-  username: string
-  email: string
-  url: string
-  content: string
 }
 
 const FeedbackForm = (props: Props) => {
@@ -34,21 +26,23 @@ const FeedbackForm = (props: Props) => {
     handleSubmit,
     watch,
     reset,
-    formState: { errors },
+    formState: { errors: _errors },
   } = useForm()
-  const ref_form = useRef<HTMLFormElement>(null)
+  const refForm = useRef<HTMLFormElement>(null)
   const contentValue = watch('content', '')
 
   let refreshCaptcha = () => {}
 
-  let _init_values: any = {}
+  let _initValues: any = {}
   if (isBrowser()) {
     let c = localStorage.getItem('_cmt_cfg')
     if (c) {
       try {
         let d = JSON.parse(c)
-        _init_values = { ...d }
-      } catch (e) {}
+        _initValues = { ...d }
+      } catch (e) {
+        console.error(e)
+      }
     }
   }
 
@@ -57,8 +51,8 @@ const FeedbackForm = (props: Props) => {
     if (loading) return
     setLoading(true)
 
-    _init_values = lodash.pick(values, ['username', 'email', 'url'])
-    localStorage.setItem('_cmt_cfg', JSON.stringify(_init_values))
+    _initValues = lodash.pick(values, ['username', 'email', 'url'])
+    localStorage.setItem('_cmt_cfg', JSON.stringify(_initValues))
 
     fetch('/api/guestbook', {
       method: 'POST',
@@ -75,7 +69,7 @@ const FeedbackForm = (props: Props) => {
             message: '留言已收到，感谢您的留言！',
           })
           refreshCaptcha()
-          reset({ content: '', captchaCode: '', ..._init_values })
+          reset({ content: '', captchaCode: '', ..._initValues })
           if (typeof onSuccess === 'function') {
             onSuccess()
           }
@@ -99,7 +93,7 @@ const FeedbackForm = (props: Props) => {
             message,
             onConfirm: () => {
               if (r.code === 'INVALID_CAPTCHA') {
-                let ipt: HTMLInputElement | null | undefined = ref_form.current?.querySelector(
+                let ipt: HTMLInputElement | null | undefined = refForm.current?.querySelector(
                   'input[name="captchaCode"]',
                 )
                 ipt?.focus()
@@ -119,14 +113,14 @@ const FeedbackForm = (props: Props) => {
   }
 
   return (
-    <div className={styles.root}>
+    <div className="feedback-form">
       <form
         name="feedback"
         // initialValues={{
         //   ..._init_values,
         // }}
         onSubmit={handleSubmit(onSubmit)}
-        ref={ref_form}
+        ref={refForm}
       >
         <label>
           你的称呼 <span>*</span>
@@ -135,7 +129,7 @@ const FeedbackForm = (props: Props) => {
         {/*name="username"*/}
         {/*rules={[{ required: true, message: '请输入你的称呼。' }]}*/}
         <input
-          defaultValue={_init_values['username']}
+          defaultValue={_initValues['username']}
           maxLength={50}
           required={true}
           {...register('username')}
@@ -153,7 +147,7 @@ const FeedbackForm = (props: Props) => {
           电子邮件 <span>*</span>
         </label>
         <input
-          defaultValue={_init_values['email']}
+          defaultValue={_initValues['email']}
           maxLength={100}
           required={true}
           {...register('email')}
@@ -162,16 +156,16 @@ const FeedbackForm = (props: Props) => {
         {/*<Form.Item*/}
         {/*  label={*/}
         {/*    <>*/}
-        {/*      站点<span className={styles.info}>（选填）</span>*/}
+        {/*      站点<span className="feedback-form-info">（选填）</span>*/}
         {/*    </>*/}
         {/*  }*/}
         {/*  name="url"*/}
         {/*  rules={[{ required: false }, { type: 'url', message: '请输入一个合法的 URL 地址。' }]}*/}
         {/*>*/}
         <label>
-          站点<span className={styles.info}>（选填）</span>
+          站点<span className="feedback-form-info">（选填）</span>
         </label>
-        <input defaultValue={_init_values['url']} maxLength={200} {...register('url')} />
+        <input defaultValue={_initValues['url']} maxLength={200} {...register('url')} />
 
         {/*<Form.Item*/}
         {/*  label="留言"*/}
@@ -190,18 +184,18 @@ const FeedbackForm = (props: Props) => {
           rows={8}
           minLength={3}
           maxLength={GUESTBOOK_MAX_LENGTH}
-          defaultValue={_init_values['content']}
+          defaultValue={_initValues['content']}
           required={true}
           {...register('content')}
         />
-        <span className={styles.info}>
-          {(contentValue?.length || 0)} / {GUESTBOOK_MAX_LENGTH}
+        <span className="feedback-form-info">
+          {contentValue?.length || 0} / {GUESTBOOK_MAX_LENGTH}
         </span>
 
         {/*<Form.Item*/}
         {/*  label={*/}
         {/*    <>*/}
-        {/*      验证码<span className={styles.info}>（不区分大小写）</span>*/}
+        {/*      验证码<span className="feedback-form-info">（不区分大小写）</span>*/}
         {/*    </>*/}
         {/*  }*/}
         {/*  name="captchaCode"*/}
@@ -211,7 +205,7 @@ const FeedbackForm = (props: Props) => {
         {/*</Form.Item>*/}
         <label>
           验证码 <span>*</span>
-          <span className={styles.info}>（不区分大小写）</span>
+          <span className="feedback-form-info">（不区分大小写）</span>
         </label>
         <CaptchaInput
           setRefresh={(fn: () => void) => (refreshCaptcha = fn)}

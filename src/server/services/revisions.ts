@@ -1,7 +1,7 @@
-import type { DraftContentType } from '@/shared/revision-metadata'
 import { db } from '@/server/db'
 import { maybeFirst } from '@/server/db/query'
 import { contentRevisions, contents } from '@/server/db/schema'
+import type { DraftContentType } from '@/shared/revision-metadata'
 import { and, desc, eq, inArray, notExists } from 'drizzle-orm'
 
 type TargetType = 'post' | 'page'

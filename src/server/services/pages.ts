@@ -1,7 +1,7 @@
-import { parsePageDraftMetadata } from '@/shared/revision-metadata'
 import { db } from '@/server/db'
 import { insertOne, maybeFirst, updateOne } from '@/server/db/query'
 import { contents } from '@/server/db/schema'
+import { parsePageDraftMetadata } from '@/shared/revision-metadata'
 import { and, count, desc, eq, isNull, lte, ne, sql } from 'drizzle-orm'
 import { listDraftsByTargetIds } from './revisions'
 
@@ -11,7 +11,7 @@ const RESERVED_PATHS = ['admin', 'api', 'setup', 'rss.xml', 'sitemap.xml', 'uplo
 /** 校验页面路径 */
 export function validatePagePath(
   path: string,
-  excludeId?: number,
+  _excludeId?: number,
 ): { valid: boolean; message?: string } {
   if (!path) {
     return { valid: false, message: '路径不能为空' }
@@ -100,7 +100,7 @@ export async function listPages(options: { page?: number; pageSize?: number } = 
   const draftMap = new Map(drafts.map((draft) => [draft.targetId, draft]))
   const items = rows.map((row) => {
     const draft = draftMap.get(row.id)
-    if (!draft) return row
+    if (!draft) return { ...row, hasDraft: false }
 
     const metadata = parsePageDraftMetadata(draft.metadata)
 
@@ -110,6 +110,7 @@ export async function listPages(options: { page?: number; pageSize?: number } = 
       path: metadata.path || null,
       template: metadata.template,
       contentType: draft.contentType,
+      hasDraft: true,
     }
   })
 

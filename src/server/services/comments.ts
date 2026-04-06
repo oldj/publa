@@ -1,9 +1,9 @@
 import { db } from '@/server/db'
 import { insertOne, maybeFirst } from '@/server/db/query'
 import { comments, contents } from '@/server/db/schema'
-import { eq, and, isNull, desc, asc, count, inArray } from 'drizzle-orm'
-import { publishScheduledPosts } from './posts'
 import { normalizeExternalUrl } from '@/server/lib/user-content'
+import { and, asc, count, desc, eq, inArray, isNull } from 'drizzle-orm'
+import { publishScheduledPosts } from './posts'
 
 export interface CommentInput {
   contentId: number
@@ -50,11 +50,13 @@ export async function getCommentContentAccess(
           publishedAt: contents.publishedAt,
         })
         .from(contents)
-        .where(and(
-          eq(contents.id, input.contentId),
-          eq(contents.type, 'post'),
-          isNull(contents.deletedAt),
-        ))
+        .where(
+          and(
+            eq(contents.id, input.contentId),
+            eq(contents.type, 'post'),
+            isNull(contents.deletedAt),
+          ),
+        )
         .limit(1),
     )
   } else if (input.slug) {
@@ -67,11 +69,9 @@ export async function getCommentContentAccess(
           publishedAt: contents.publishedAt,
         })
         .from(contents)
-        .where(and(
-          eq(contents.slug, input.slug),
-          eq(contents.type, 'post'),
-          isNull(contents.deletedAt),
-        ))
+        .where(
+          and(eq(contents.slug, input.slug), eq(contents.type, 'post'), isNull(contents.deletedAt)),
+        )
         .limit(1),
     )
   }
@@ -79,9 +79,8 @@ export async function getCommentContentAccess(
   if (!content) return null
 
   const now = new Date().toISOString()
-  const isPublic = content.status === 'published'
-    && !!content.publishedAt
-    && content.publishedAt <= now
+  const isPublic =
+    content.status === 'published' && !!content.publishedAt && content.publishedAt <= now
 
   return { content, isPublic }
 }
@@ -90,7 +89,11 @@ export async function getCommentContentAccess(
 export async function createComment(input: CommentInput) {
   // 检查内容是否存在且允许评论
   const content = await maybeFirst(
-    db.select().from(contents).where(and(eq(contents.id, input.contentId), eq(contents.type, 'post'))).limit(1),
+    db
+      .select()
+      .from(contents)
+      .where(and(eq(contents.id, input.contentId), eq(contents.type, 'post')))
+      .limit(1),
   )
   if (!content || !content.allowComment || content.deletedAt) {
     return { success: false, message: '该内容不允许评论' }
@@ -99,7 +102,8 @@ export async function createComment(input: CommentInput) {
   // 校验父评论有效性（评论最多嵌套一层，不允许回复子评论）
   if (input.parentId) {
     const parent = await maybeFirst(
-      db.select({ id: comments.id, contentId: comments.contentId, parentId: comments.parentId })
+      db
+        .select({ id: comments.id, contentId: comments.contentId, parentId: comments.parentId })
         .from(comments)
         .where(and(eq(comments.id, input.parentId), isNull(comments.deletedAt)))
         .limit(1),
@@ -115,18 +119,23 @@ export async function createComment(input: CommentInput) {
   // 检查是否需要默认审核通过（后续从 settings 读取）
   const status = 'pending' as const
 
-  const row = await insertOne(db.insert(comments).values({
-    contentId: input.contentId,
-    parentId: input.parentId || null,
-    userId: input.userId || null,
-    authorName: input.authorName,
-    authorEmail: input.authorEmail || null,
-    authorWebsite: normalizeExternalUrl(input.authorWebsite),
-    content: input.content,
-    ipAddress: input.ipAddress || null,
-    userAgent: input.userAgent || null,
-    status,
-  }).returning())
+  const row = await insertOne(
+    db
+      .insert(comments)
+      .values({
+        contentId: input.contentId,
+        parentId: input.parentId || null,
+        userId: input.userId || null,
+        authorName: input.authorName,
+        authorEmail: input.authorEmail || null,
+        authorWebsite: normalizeExternalUrl(input.authorWebsite),
+        content: input.content,
+        ipAddress: input.ipAddress || null,
+        userAgent: input.userAgent || null,
+        status,
+      })
+      .returning(),
+  )
 
   return { success: true, data: row }
 }
@@ -136,21 +145,25 @@ export async function getApprovedComments(contentId: number) {
   return db
     .select()
     .from(comments)
-    .where(and(
-      eq(comments.contentId, contentId),
-      eq(comments.status, 'approved'),
-      isNull(comments.deletedAt),
-    ))
+    .where(
+      and(
+        eq(comments.contentId, contentId),
+        eq(comments.status, 'approved'),
+        isNull(comments.deletedAt),
+      ),
+    )
     .orderBy(asc(comments.createdAt))
 }
 
 /** 列出所有评论（后台管理，含内容标题和作者统计） */
-export async function listComments(options: {
-  page?: number
-  pageSize?: number
-  status?: string
-  contentId?: number
-} = {}) {
+export async function listComments(
+  options: {
+    page?: number
+    pageSize?: number
+    status?: string
+    contentId?: number
+  } = {},
+) {
   const { page = 1, pageSize = 20, status, contentId } = options
 
   const conditions = [isNull(comments.deletedAt)]
@@ -194,10 +207,7 @@ export async function listComments(options: {
         cnt: count(),
       })
       .from(comments)
-      .where(and(
-        inArray(comments.authorEmail, emails),
-        isNull(comments.deletedAt),
-      ))
+      .where(and(inArray(comments.authorEmail, emails), isNull(comments.deletedAt)))
       .groupBy(comments.authorEmail, comments.status)
 
     for (const stat of stats) {
@@ -248,25 +258,25 @@ export async function listComments(options: {
 export async function getCommentById(id: number) {
   const comment = await maybeFirst(
     db
-    .select({
-      id: comments.id,
-      contentId: comments.contentId,
-      parentId: comments.parentId,
-      authorName: comments.authorName,
-      authorEmail: comments.authorEmail,
-      authorWebsite: comments.authorWebsite,
-      content: comments.content,
-      ipAddress: comments.ipAddress,
-      userAgent: comments.userAgent,
-      status: comments.status,
-      createdAt: comments.createdAt,
-      contentTitle: contents.title,
-      contentSlug: contents.slug,
-    })
-    .from(comments)
-    .leftJoin(contents, eq(comments.contentId, contents.id))
-    .where(eq(comments.id, id))
-    .limit(1),
+      .select({
+        id: comments.id,
+        contentId: comments.contentId,
+        parentId: comments.parentId,
+        authorName: comments.authorName,
+        authorEmail: comments.authorEmail,
+        authorWebsite: comments.authorWebsite,
+        content: comments.content,
+        ipAddress: comments.ipAddress,
+        userAgent: comments.userAgent,
+        status: comments.status,
+        createdAt: comments.createdAt,
+        contentTitle: contents.title,
+        contentSlug: contents.slug,
+      })
+      .from(comments)
+      .leftJoin(contents, eq(comments.contentId, contents.id))
+      .where(eq(comments.id, id))
+      .limit(1),
   )
 
   if (!comment) return null
@@ -308,20 +318,28 @@ export async function getCommentById(id: number) {
 }
 
 /** 审核评论 */
-export async function moderateComment(id: number, action: 'approved' | 'rejected', moderatedBy: number) {
-  await db.update(comments).set({
-    status: action,
-    moderatedBy,
-    moderatedAt: new Date().toISOString(),
-  }).where(eq(comments.id, id))
+export async function moderateComment(
+  id: number,
+  action: 'approved' | 'rejected',
+  moderatedBy: number,
+) {
+  await db
+    .update(comments)
+    .set({
+      status: action,
+      moderatedBy,
+      moderatedAt: new Date().toISOString(),
+    })
+    .where(eq(comments.id, id))
   return { success: true }
 }
 
 /** 待审核评论数 */
 export async function countPendingComments() {
-  const [{ total }] = await db.select({ total: count() }).from(comments).where(
-    and(eq(comments.status, 'pending'), isNull(comments.deletedAt)),
-  )
+  const [{ total }] = await db
+    .select({ total: count() })
+    .from(comments)
+    .where(and(eq(comments.status, 'pending'), isNull(comments.deletedAt)))
   return total
 }
 
@@ -329,9 +347,10 @@ export async function countPendingComments() {
 export async function deleteComment(id: number) {
   const now = new Date().toISOString()
   // 级联软删除子评论
-  await db.update(comments).set({ deletedAt: now }).where(
-    and(eq(comments.parentId, id), isNull(comments.deletedAt)),
-  )
+  await db
+    .update(comments)
+    .set({ deletedAt: now })
+    .where(and(eq(comments.parentId, id), isNull(comments.deletedAt)))
   // 删除评论本身
   await db.update(comments).set({ deletedAt: now }).where(eq(comments.id, id))
   return { success: true }

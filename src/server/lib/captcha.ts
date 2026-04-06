@@ -1,8 +1,8 @@
-import svgCaptcha from 'svg-captcha'
 import { db } from '@/server/db'
 import { maybeFirst } from '@/server/db/query'
 import { captchas } from '@/server/db/schema'
 import { eq, lt } from 'drizzle-orm'
+import svgCaptcha from 'svg-captcha'
 
 /** 生成验证码 */
 export async function generateCaptcha(sessionId: string) {
@@ -15,14 +15,17 @@ export async function generateCaptcha(sessionId: string) {
 
   const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString()
 
-  await db.insert(captchas).values({
-    sessionId,
-    text: captcha.text.toLowerCase(),
-    expiresAt,
-  }).onConflictDoUpdate({
-    target: captchas.sessionId,
-    set: { text: captcha.text.toLowerCase(), expiresAt },
-  })
+  await db
+    .insert(captchas)
+    .values({
+      sessionId,
+      text: captcha.text.toLowerCase(),
+      expiresAt,
+    })
+    .onConflictDoUpdate({
+      target: captchas.sessionId,
+      set: { text: captcha.text.toLowerCase(), expiresAt },
+    })
 
   return captcha.data // SVG 字符串
 }

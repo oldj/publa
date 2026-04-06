@@ -1,10 +1,10 @@
 import {
-  S3Client,
-  PutObjectCommand,
+  CopyObjectCommand,
   DeleteObjectCommand,
   HeadBucketCommand,
   HeadObjectCommand,
-  CopyObjectCommand,
+  PutObjectCommand,
+  S3Client,
 } from '@aws-sdk/client-s3'
 import type { StorageProvider } from './index'
 
@@ -59,28 +59,34 @@ export class S3Storage implements StorageProvider {
   }
 
   async save(file: Buffer, key: string, mimeType: string) {
-    await this.client.send(new PutObjectCommand({
-      Bucket: this.bucket,
-      Key: this.normalizeKey(key),
-      Body: file,
-      ContentType: mimeType,
-    }))
+    await this.client.send(
+      new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: this.normalizeKey(key),
+        Body: file,
+        ContentType: mimeType,
+      }),
+    )
     return { key }
   }
 
   async delete(key: string) {
-    await this.client.send(new DeleteObjectCommand({
-      Bucket: this.bucket,
-      Key: this.normalizeKey(key),
-    }))
+    await this.client.send(
+      new DeleteObjectCommand({
+        Bucket: this.bucket,
+        Key: this.normalizeKey(key),
+      }),
+    )
   }
 
   async exists(key: string): Promise<boolean> {
     try {
-      await this.client.send(new HeadObjectCommand({
-        Bucket: this.bucket,
-        Key: this.normalizeKey(key),
-      }))
+      await this.client.send(
+        new HeadObjectCommand({
+          Bucket: this.bucket,
+          Key: this.normalizeKey(key),
+        }),
+      )
       return true
     } catch (err: any) {
       if (err.name === 'NotFound' || err.$metadata?.httpStatusCode === 404) {
@@ -93,11 +99,13 @@ export class S3Storage implements StorageProvider {
   async move(fromKey: string, toKey: string): Promise<void> {
     const sourceKey = this.normalizeKey(fromKey)
     const encodedSource = `${this.bucket}/${sourceKey.split('/').map(encodeURIComponent).join('/')}`
-    await this.client.send(new CopyObjectCommand({
-      Bucket: this.bucket,
-      CopySource: encodedSource,
-      Key: this.normalizeKey(toKey),
-    }))
+    await this.client.send(
+      new CopyObjectCommand({
+        Bucket: this.bucket,
+        CopySource: encodedSource,
+        Key: this.normalizeKey(toKey),
+      }),
+    )
     await this.delete(fromKey)
   }
 

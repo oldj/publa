@@ -41,7 +41,7 @@
 
 `meta_json` 当前保存的是完整草稿元数据，而不只是正文：
 
-- 文章：`slug`、`categoryId`、`tagNames`、`seoTitle`、`seoDescription`、`publishedAt`
+- 文章：`slug`、`categoryId`、`tagNames`、`coverImage`、`seoTitle`、`seoDescription`、`publishedAt`
 - 页面：`path`、`template`、`seoTitle`、`seoDescription`
 
 其中有一个重要边界：
@@ -219,7 +219,7 @@
 
 同步主表时：
 
-- 文章会恢复分类、标签、SEO、正文
+- 文章会恢复分类、标签、头图、SEO、正文
 - 页面会恢复 `template`、SEO、正文
 
 评论开关和置顶状态不会随版本恢复而回滚，因为它们不属于版本化内容。

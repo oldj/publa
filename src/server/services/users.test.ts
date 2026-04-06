@@ -1,18 +1,12 @@
-import { beforeEach, describe, expect, it } from 'vitest'
 import { verifyPassword } from '@/server/auth'
 import { maybeFirst } from '@/server/db/query'
 import { users } from '@/server/db/schema'
 import { eq } from 'drizzle-orm'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { setupTestDb } from './__test__/setup'
 
 // setup.ts 中已执行 vi.mock('@/server/db')
-const {
-  listUsers,
-  getUserById,
-  createUser,
-  updateUser,
-  deleteUser,
-} = await import('./users')
+const { listUsers, getUserById, createUser, updateUser, deleteUser } = await import('./users')
 
 beforeEach(async () => {
   await setupTestDb()
