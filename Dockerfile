@@ -49,7 +49,8 @@ USER app
 
 ENV NODE_ENV=production
 ENV PORT=8084
-ENV DATABASE_URL=file:/app/data/publa.db
+ENV HOSTNAME=0.0.0.0
+# ENV DATABASE_URL=file:/app/data/publa.db
 
 EXPOSE 8084
 
