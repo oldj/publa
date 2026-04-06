@@ -7,6 +7,7 @@ const {
   mockMaybeFirst,
   mockRedirect,
   mockNotFound,
+  mockGetSetting,
 } = vi.hoisted(() => ({
   mockGetCurrentUser: vi.fn(),
   mockGetFrontendPostBySlug: vi.fn(),
@@ -14,6 +15,7 @@ const {
   mockMaybeFirst: vi.fn(),
   mockRedirect: vi.fn(),
   mockNotFound: vi.fn(),
+  mockGetSetting: vi.fn(),
 }))
 
 const queryChain = {
@@ -33,6 +35,15 @@ vi.mock('@/server/auth', () => ({
 
 vi.mock('@/server/services/posts-frontend', () => ({
   getFrontendPostBySlug: mockGetFrontendPostBySlug,
+}))
+
+vi.mock('@/server/services/settings', () => ({
+  getSetting: mockGetSetting,
+}))
+
+vi.mock('@/server/services/preview', () => ({
+  parsePreviewId: vi.fn(() => null),
+  getPreviewPost: vi.fn(),
 }))
 
 vi.mock('@/server/lib/frontend-404', () => ({
@@ -99,6 +110,7 @@ describe('src/app/posts/[...slug]/page', () => {
     mockGetCurrentUser.mockResolvedValue(null)
     mockGetFrontendPostBySlug.mockResolvedValue(null)
     mockMaybeFirst.mockResolvedValue(null)
+    mockGetSetting.mockResolvedValue(null)
   })
 
   it('文章 miss 且没有 slug 历史时会尝试跳转规则', async () => {
