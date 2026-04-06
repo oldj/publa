@@ -1373,6 +1373,12 @@
 .w-dialog-btn-primary {
   background-color: var(--color-primary);
   color: var(--color-text-reverse);
+  height: 42px;
+  min-width: 120px;
+  padding: 0 2em;
+  font-size: 16px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
 }
 
 .w-dialog-popup {
