@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
   }
 
   const newUser = await createUser({ username, password, email: email ?? undefined, role })
-  logActivity(request, guard.user.id, 'create_user')
+  await logActivity(request, guard.user.id, 'create_user')
   return NextResponse.json({
     success: true,
     data: { id: newUser.id, username: newUser.username, role: newUser.role },

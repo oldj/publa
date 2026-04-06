@@ -39,6 +39,6 @@ export async function POST(request: NextRequest) {
   }
 
   const menu = await createMenu(body)
-  logActivity(request, guard.user.id, 'create_menu')
+  await logActivity(request, guard.user.id, 'create_menu')
   return NextResponse.json({ success: true, data: menu })
 }

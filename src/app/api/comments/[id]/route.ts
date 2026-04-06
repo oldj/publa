@@ -51,7 +51,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   }
 
   await moderateComment(commentId, action, user.id)
-  logActivity(request, user.id, 'moderate_comment')
+  await logActivity(request, user.id, 'moderate_comment')
   return NextResponse.json({ success: true })
 }
 
@@ -71,6 +71,6 @@ export async function DELETE(
   const { id: commentId, error: idError } = parseIdParam(idStr)
   if (idError) return idError
   await deleteComment(commentId)
-  logActivity(request, user.id, 'delete_comment')
+  await logActivity(request, user.id, 'delete_comment')
   return NextResponse.json({ success: true })
 }

@@ -38,7 +38,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       )
     }
 
-    logActivity(request, user.id, 'update_tag')
+    await logActivity(request, user.id, 'update_tag')
     return NextResponse.json({ success: true, data: tag })
   } catch (err) {
     if (isUniqueConstraintError(err)) {
@@ -67,6 +67,6 @@ export async function DELETE(
   const { id: tagId, error: idError } = parseIdParam(idStr)
   if (idError) return idError
   await deleteTag(tagId)
-  logActivity(request, user.id, 'delete_tag')
+  await logActivity(request, user.id, 'delete_tag')
   return NextResponse.json({ success: true })
 }

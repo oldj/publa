@@ -61,7 +61,7 @@ export async function PUT(request: NextRequest) {
   // 全部标记为已读
   if (body.action === 'readAll') {
     await markAllGuestbookMessagesRead()
-    logActivity(request, user.id, 'moderate_guestbook')
+    await logActivity(request, user.id, 'moderate_guestbook')
     return NextResponse.json({ success: true })
   }
 
@@ -79,7 +79,7 @@ export async function PUT(request: NextRequest) {
   } else {
     await markGuestbookMessageRead(id)
   }
-  logActivity(request, user.id, 'moderate_guestbook')
+  await logActivity(request, user.id, 'moderate_guestbook')
   return NextResponse.json({ success: true })
 }
 
@@ -104,6 +104,6 @@ export async function DELETE(request: NextRequest) {
   if (idError) return idError
 
   await deleteGuestbookMessage(msgId)
-  logActivity(request, user.id, 'delete_guestbook')
+  await logActivity(request, user.id, 'delete_guestbook')
   return NextResponse.json({ success: true })
 }

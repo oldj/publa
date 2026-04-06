@@ -2,7 +2,7 @@ import { normalizeEmail, normalizePassword, normalizeUsername } from '@/lib/user
 import { hashPassword } from '@/server/auth'
 import { db } from '@/server/db'
 import { insertOne, maybeFirst, updateOne } from '@/server/db/query'
-import { users } from '@/server/db/schema'
+import { activityLogs, users } from '@/server/db/schema'
 import { eq } from 'drizzle-orm'
 
 /** 列出所有用户 */
@@ -98,6 +98,8 @@ export async function deleteUser(
   const user = await maybeFirst(db.select().from(users).where(eq(users.id, id)).limit(1))
   if (!user) return { success: false, message: '用户不存在' }
 
+  // 先清除活动日志，避免外键约束阻塞删除
+  await db.delete(activityLogs).where(eq(activityLogs.userId, id))
   await db.delete(users).where(eq(users.id, id))
   return { success: true }
 }

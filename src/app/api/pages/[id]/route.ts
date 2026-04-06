@@ -154,7 +154,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
           { status: 404 },
         )
       }
-      logActivity(request, user.id, 'update_page')
+      await logActivity(request, user.id, 'update_page')
 
       return NextResponse.json({ success: true, data: page })
     }
@@ -168,7 +168,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       )
     }
 
-    logActivity(request, user.id, 'update_page')
+    await logActivity(request, user.id, 'update_page')
 
     return NextResponse.json({ success: true, data: page })
   } catch (err) {
@@ -199,7 +199,7 @@ export async function DELETE(
   if (idError) return idError
   await deletePage(pageId)
 
-  logActivity(request, user.id, 'delete_page')
+  await logActivity(request, user.id, 'delete_page')
 
   return NextResponse.json({ success: true })
 }

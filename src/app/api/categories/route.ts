@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const category = await createCategory(body)
-    logActivity(request, guard.user.id, 'create_category')
+    await logActivity(request, guard.user.id, 'create_category')
     return NextResponse.json({ success: true, data: category })
   } catch (err) {
     if (isUniqueConstraintError(err)) {

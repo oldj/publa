@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { ip, ua } = getRequestInfo(request)
+    const { ip } = getRequestInfo(request)
 
     const user = await maybeFirst(
       db.select().from(users).where(eq(users.username, username)).limit(1),
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
 
     await setAuthCookie(token)
 
-    logActivity(request, user.id, 'login')
+    await logActivity(request, user.id, 'login')
 
     return NextResponse.json({
       success: true,

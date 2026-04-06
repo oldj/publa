@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
 
   if (type === 'settings') {
     const data = await exportSettingsData()
-    logActivity(request, guard.user.id, 'export_data')
+    await logActivity(request, guard.user.id, 'export_data')
     return new NextResponse(JSON.stringify(data, null, 2), {
       headers: {
         'Content-Type': 'application/json',
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
   }
 
   const data = await exportContentData()
-  logActivity(request, guard.user.id, 'export_data')
+  await logActivity(request, guard.user.id, 'export_data')
   return new NextResponse(JSON.stringify(data, null, 2), {
     headers: {
       'Content-Type': 'application/json',
@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
       results = await importSettingsData(data, guard.user.id)
     }
 
-    logActivity(request, guard.user.id, 'import_data')
+    await logActivity(request, guard.user.id, 'import_data')
     return NextResponse.json({ success: true, data: { results } })
   } catch (error) {
     return NextResponse.json(

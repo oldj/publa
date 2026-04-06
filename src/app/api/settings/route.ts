@@ -38,6 +38,6 @@ export async function PUT(request: NextRequest) {
   }
 
   await updateSettings(body)
-  logActivity(request, guard.user.id, 'update_settings')
+  await logActivity(request, guard.user.id, 'update_settings')
   return NextResponse.json({ success: true })
 }

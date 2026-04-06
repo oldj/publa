@@ -112,6 +112,14 @@ export default function UsersPage() {
   const logsPageSize = 30
 
   const isEditor = currentUser?.role === 'editor'
+  const isAdmin = currentUser?.role === 'admin'
+
+  /** 当前用户是否可查看目标用户的活动日志 */
+  const canViewLogs = (target: { role: string }) => {
+    if (isEditor) return false
+    if (isAdmin && target.role === 'owner') return false
+    return true
+  }
 
   const fetchUsers = useCallback(async () => {
     const res = await fetch('/api/users')
@@ -311,7 +319,7 @@ export default function UsersPage() {
                   </Table.Td>
                   <Table.Td>
                     <Group gap="xs">
-                      {!isEditor && (
+                      {canViewLogs(u) && (
                         <ActionIcon
                           variant="subtle"
                           color="gray"

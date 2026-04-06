@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    logActivity(request, user.id, 'create_page')
+    await logActivity(request, user.id, 'create_page')
 
     return NextResponse.json({ success: true, data: page })
   } catch (err) {

@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const tag = await createTag(body)
-    logActivity(request, guard.user.id, 'create_tag')
+    await logActivity(request, guard.user.id, 'create_tag')
     return NextResponse.json({ success: true, data: tag })
   } catch (err) {
     if (isUniqueConstraintError(err)) {

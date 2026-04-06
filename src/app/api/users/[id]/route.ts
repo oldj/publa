@@ -115,7 +115,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     updateData.role = body.role
   }
   const updated = await updateUser(targetId, updateData)
-  logActivity(request, guard.user.id, 'update_user')
+  await logActivity(request, guard.user.id, 'update_user')
   return NextResponse.json({ success: true, data: updated })
 }
 
@@ -144,6 +144,6 @@ export async function DELETE(
       { status: 400 },
     )
   }
-  logActivity(request, guard.user.id, 'delete_user')
+  await logActivity(request, guard.user.id, 'delete_user')
   return NextResponse.json({ success: true })
 }

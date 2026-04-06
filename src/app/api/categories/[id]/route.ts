@@ -39,7 +39,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       )
     }
 
-    logActivity(request, user.id, 'update_category')
+    await logActivity(request, user.id, 'update_category')
     return NextResponse.json({ success: true, data: category })
   } catch (err) {
     if (isUniqueConstraintError(err)) {
@@ -76,6 +76,6 @@ export async function DELETE(
     )
   }
 
-  logActivity(request, user.id, 'delete_category')
+  await logActivity(request, user.id, 'delete_category')
   return NextResponse.json({ success: true })
 }

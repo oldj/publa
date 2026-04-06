@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
   await clearAuthCookie()
 
   if (user) {
-    logActivity(request, user.id, 'logout')
+    await logActivity(request, user.id, 'logout')
   }
 
   return NextResponse.json({ success: true })

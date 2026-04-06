@@ -213,6 +213,16 @@ describe('deleteUser', () => {
     expect(result.success).toBe(true)
   })
 
+  it('有活动日志的用户也能正常删除', async () => {
+    const { createActivityLog } = await import('./activity-logs')
+    await createActivityLog({ userId: 2, action: 'login' })
+    await createActivityLog({ userId: 2, action: 'create_post' })
+
+    const result = await deleteUser(2, 1)
+    expect(result.success).toBe(true)
+    expect(await getUserById(2)).toBeNull()
+  })
+
   it('删除后用户列表减少', async () => {
     const before = await listUsers()
     await deleteUser(2, 1)

@@ -14,7 +14,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   const { data: body, error } = await safeParseJson(request)
   if (error) return error
   const menu = await updateMenu(menuId, body)
-  logActivity(request, guard.user.id, 'update_menu')
+  await logActivity(request, guard.user.id, 'update_menu')
   return NextResponse.json({ success: true, data: menu })
 }
 
@@ -29,6 +29,6 @@ export async function DELETE(
   const { id: menuId, error: idError } = parseIdParam(idStr)
   if (idError) return idError
   await deleteMenu(menuId)
-  logActivity(request, guard.user.id, 'delete_menu')
+  await logActivity(request, guard.user.id, 'delete_menu')
   return NextResponse.json({ success: true })
 }

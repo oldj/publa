@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
       uploadedBy: user.id,
     })
     const publicUrl = await getAttachmentUrl(attachment.storageKey)
-    logActivity(request, user.id, 'upload_attachment')
+    await logActivity(request, user.id, 'upload_attachment')
     return NextResponse.json({ success: true, data: { ...attachment, publicUrl } })
   } catch (err: any) {
     return NextResponse.json(
@@ -91,6 +91,6 @@ export async function DELETE(request: NextRequest) {
       { status: 400 },
     )
   }
-  logActivity(request, user.id, 'delete_attachment')
+  await logActivity(request, user.id, 'delete_attachment')
   return NextResponse.json({ success: true })
 }

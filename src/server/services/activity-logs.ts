@@ -21,10 +21,14 @@ export async function createActivityLog(data: {
   })
 }
 
-/** 从请求中提取客户端信息并异步记录活动日志（fire-and-forget） */
-export function logActivity(request: Request, userId: number, action: ActivityAction) {
-  const { ip, ua } = getRequestInfo(request)
-  void createActivityLog({ userId, action, ipAddress: ip, userAgent: ua }).catch(() => {})
+/** 从请求中提取客户端信息并记录活动日志，失败时仅打印错误不中断主流程 */
+export async function logActivity(request: Request, userId: number, action: ActivityAction) {
+  try {
+    const { ip, ua } = getRequestInfo(request)
+    await createActivityLog({ userId, action, ipAddress: ip, userAgent: ua })
+  } catch (err) {
+    console.error('[logActivity] Failed to log activity:', err)
+  }
 }
 
 /** 分页查询某用户的活动日志 */
