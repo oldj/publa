@@ -1102,11 +1102,20 @@
 
 .post-comment-content {
   overflow: auto;
+  line-height: 1.5em;
 }
 
 .post-comment-detail-info {
   color: var(--color-text-tertiary);
   font-size: 14px;
+}
+
+.post-comment-detail-info a {
+  display: block;
+  margin-top: 0.6em;
+  color: var(--color-text-tertiary);
+  text-decoration: underline;
+  text-underline-offset: 6px;
 }
 
 .post-comment-reply-form {
