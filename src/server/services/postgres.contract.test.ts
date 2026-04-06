@@ -13,7 +13,6 @@ const describePostgres = pgTestDatabaseUrl ? describe : describe.skip
 
 /** 注意：该测试会清空 PG_TEST_DATABASE_URL 指向的测试库。 */
 describePostgres('postgres contract', () => {
-  const originalDatabaseFamily = process.env.DATABASE_FAMILY
   const truncateTables = [
     'content_revisions',
     'content_tags',
@@ -50,8 +49,11 @@ describePostgres('postgres contract', () => {
   let ownerId = 0
   let editorId = 0
 
+  const originalDatabaseUrl = process.env.DATABASE_URL
+
   beforeAll(async () => {
-    process.env.DATABASE_FAMILY = 'postgres'
+    // 设置 DATABASE_URL 以便 getDatabaseFamily() 推导出 postgres
+    process.env.DATABASE_URL = pgTestDatabaseUrl
 
     pool = new Pool({ connectionString: pgTestDatabaseUrl })
     // 清除 drizzle 迁移记录和所有业务表，确保迁移在干净状态下执行
@@ -109,8 +111,8 @@ describePostgres('postgres contract', () => {
     vi.doUnmock('@/server/db')
     if (pool) await pool.end()
 
-    if (originalDatabaseFamily) process.env.DATABASE_FAMILY = originalDatabaseFamily
-    else delete process.env.DATABASE_FAMILY
+    if (originalDatabaseUrl) process.env.DATABASE_URL = originalDatabaseUrl
+    else delete process.env.DATABASE_URL
   })
 
   it('用户服务在 PostgreSQL 上可读写', async () => {

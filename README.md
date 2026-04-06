@@ -19,7 +19,6 @@ DATABASE_URL=libsql://your_db_name-your_org_name.turso.io
 DATABASE_AUTH_TOKEN=your_token
 
 # PostgreSQL
-DATABASE_FAMILY=postgres
 DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/publa
 ```
 
@@ -31,8 +30,7 @@ DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/publa
 
 | 变量 | 必填 | 默认值 | 说明 |
 |------|------|--------|------|
-| `DATABASE_FAMILY` | 否 | `sqlite` | 数据库类型，可选 `sqlite` / `postgres` |
-| `DATABASE_URL` | 否 | `file:{cwd}/data/publa.db` | 数据库连接字符串。SQLite 本地部署可省略；Turso 或 PostgreSQL 必填 |
+| `DATABASE_URL` | 否 | `file:{cwd}/data/publa.db` | 数据库连接字符串。SQLite 本地部署可省略；Turso 或 PostgreSQL 必填。数据库类型从 URL 前缀自动识别（`postgres://` → PostgreSQL，其余 → SQLite） |
 | `DATABASE_AUTH_TOKEN` | 否 | - | Turso 数据库认证 Token，仅 Turso 需要 |
 | `JWT_SECRET` | 否 | 自动生成 | JWT 签名密钥。未配置时自动生成并持久化到数据库，重启不丢失。也可手动指定：`openssl rand -base64 32` |
 | `CRON_SECRET` | 视情况 | - | 保护定时任务 API 的密钥。自托管部署不需要（使用进程内调度）；Vercel 部署必填 |
@@ -61,14 +59,13 @@ docker run -d \
   publa
 ```
 
-> `DATABASE_FAMILY` 无需设置，默认值即为 `sqlite`，兼容 Turso。使用远程数据库时不需要挂载本地数据卷。
+> 使用远程数据库时不需要挂载本地数据卷。
 
 ### Docker — PostgreSQL
 
 ```bash
 docker run -d \
   -p 8084:8084 \
-  -e DATABASE_FAMILY=postgres \
   -e DATABASE_URL=postgres://user:pass@host:5432/publa \
   publa
 ```
@@ -85,7 +82,7 @@ Vercel 部署需要使用 Turso 或外部 PostgreSQL 作为数据库（不支持
 | `DATABASE_AUTH_TOKEN` | Turso 必填 | Turso 数据库认证 Token |
 | `CRON_SECRET` | 是 | 保护定时任务接口，防止未授权访问 |
 
-> `DATABASE_FAMILY`、`NODE_ENV`、`VERCEL` 由 Vercel 自动处理，无需手动配置。
+> `NODE_ENV`、`VERCEL` 由 Vercel 自动处理，无需手动配置。
 
 定时任务通过 `vercel.json` 配置 Vercel Cron Jobs：
 

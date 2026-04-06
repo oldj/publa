@@ -1,19 +1,11 @@
 export type DatabaseFamily = 'sqlite' | 'postgres'
 
-function normalizeFamily(value?: string): DatabaseFamily {
-  const family = value?.trim().toLowerCase()
+export function getDatabaseFamily(): DatabaseFamily {
+  const url = process.env.DATABASE_URL?.trim().toLowerCase() || ''
 
-  if (!family || family === 'sqlite' || family === 'libsql' || family === 'turso') {
-    return 'sqlite'
-  }
-
-  if (family === 'postgres' || family === 'postgresql' || family === 'pg') {
+  if (url.startsWith('postgres://') || url.startsWith('postgresql://')) {
     return 'postgres'
   }
 
-  throw new Error(`Unsupported DATABASE_FAMILY: ${value}`)
-}
-
-export function getDatabaseFamily(): DatabaseFamily {
-  return normalizeFamily(process.env.DATABASE_FAMILY)
+  return 'sqlite'
 }

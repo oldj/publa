@@ -9,10 +9,7 @@ export default defineConfig(() => {
     DATABASE_AUTH_TOKEN: _databaseAuthToken,
     ...nextEnv
   } = combinedEnv
-  const testEnv = {
-    ...nextEnv,
-    DATABASE_FAMILY: 'sqlite',
-  }
+  const testEnv = { ...nextEnv }
 
   return {
     resolve: {
