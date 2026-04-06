@@ -23,7 +23,7 @@ export const ADMIN_SETTINGS_KEYS = [
   'enableGuestbook',
   'guestbookWelcome',
   'footerCopyright',
-  'googleAnalyticsId',
+  'customAfterPostHtml',
   'customHeadHtml',
   'customBodyStartHtml',
   'customBodyEndHtml',

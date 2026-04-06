@@ -1,5 +1,4 @@
 /**
- * captcha-input
  * @author: oldj
  * @homepage: https://oldj.net
  */

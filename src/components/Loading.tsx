@@ -2,7 +2,6 @@
  */
 
 import clsx from 'clsx'
-import React from 'react'
 
 interface IProps {
   className?: string

@@ -1,11 +1,11 @@
-import bcrypt from 'bcryptjs'
+import { db } from '@/server/db'
 import { maybeFirst } from '@/server/db/query'
+import { users } from '@/server/db/schema'
+import bcrypt from 'bcryptjs'
+import { eq } from 'drizzle-orm'
 import { SignJWT, jwtVerify, type JWTPayload } from 'jose'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
-import { db } from '@/server/db'
-import { users } from '@/server/db/schema'
-import { eq } from 'drizzle-orm'
 import { getJwtSecret, isAuthConfigError } from './shared'
 
 const SALT_ROUNDS = 10
@@ -26,9 +26,7 @@ interface TokenPayload extends JWTPayload {
   role: string
 }
 
-type AuthGuardResult =
-  | { ok: true; user: AuthUser }
-  | { ok: false; response: NextResponse }
+type AuthGuardResult = { ok: true; user: AuthUser } | { ok: false; response: NextResponse }
 
 export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, SALT_ROUNDS)
@@ -104,13 +102,14 @@ export async function clearAuthCookie() {
 
 /** 检查系统是否已初始化（是否存在 owner） */
 export async function isSystemInitialized(): Promise<boolean> {
-  const owner = await maybeFirst(
-    db.select().from(users).where(eq(users.role, 'owner')).limit(1),
-  )
+  const owner = await maybeFirst(db.select().from(users).where(eq(users.role, 'owner')).limit(1))
   return !!owner
 }
 
-export function hasRole(user: Pick<AuthUser, 'role'> | null, roles: AuthRole | AuthRole[]): boolean {
+export function hasRole(
+  user: Pick<AuthUser, 'role'> | null,
+  roles: AuthRole | AuthRole[],
+): boolean {
   if (!user) return false
 
   const roleList = Array.isArray(roles) ? roles : [roles]
@@ -118,17 +117,11 @@ export function hasRole(user: Pick<AuthUser, 'role'> | null, roles: AuthRole | A
 }
 
 export function unauthorizedResponse(message = 'Unauthorized') {
-  return NextResponse.json(
-    { success: false, code: 'UNAUTHORIZED', message },
-    { status: 401 },
-  )
+  return NextResponse.json({ success: false, code: 'UNAUTHORIZED', message }, { status: 401 })
 }
 
 export function forbiddenResponse(message = 'Forbidden') {
-  return NextResponse.json(
-    { success: false, code: 'FORBIDDEN', message },
-    { status: 403 },
-  )
+  return NextResponse.json({ success: false, code: 'FORBIDDEN', message }, { status: 403 })
 }
 
 export async function requireCurrentUser(): Promise<AuthGuardResult> {

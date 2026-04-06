@@ -5,7 +5,7 @@ import { getFrontendPosts } from '@/server/services/posts-frontend'
 import { IconChevronLeft } from '@tabler/icons-react'
 import { Metadata } from 'next'
 import Link from 'next/link'
-import { IPost, IItemPage } from 'typings'
+import { IItemPage, IPost } from 'typings'
 
 export const metadata: Metadata = {
   title: '文章列表',
@@ -18,29 +18,29 @@ export default async function Page({
 }) {
   const { page, category, tag } = await searchParams
   const data = await getData({ page, category, tag })
-  const { posts_page, filter } = data
+  const { postsPage, filter } = data
 
-  let filter_by: string = ''
-  let filter_key: string = ''
+  let filterBy: string = ''
+  let filterKey: string = ''
 
   if (filter) {
     let { category, tag } = filter
     if (category) {
-      filter_by = '分类'
-      filter_key = category
+      filterBy = '分类'
+      filterKey = category
     } else if (tag) {
-      filter_by = '标签'
-      filter_key = tag
+      filterBy = '标签'
+      filterKey = tag
     }
   }
 
   let r_title: React.ReactNode = '文章列表'
-  if (filter_by) {
+  if (filterBy) {
     // title = `${filter_by}：${filter_key}`
     r_title = (
       <>
-        <span className="posts-filter-by">{filter_by}：</span>
-        <span>{filter_key}</span>
+        <span className="posts-filter-by">{filterBy}：</span>
+        <span>{filterKey}</span>
       </>
     )
   }
@@ -48,7 +48,7 @@ export default async function Page({
   return (
     <BasicLayout>
       <div className="posts-filter">
-        {filter_by ? (
+        {filterBy ? (
           <div className="posts-filter-bar">
             <h1 className="page_title">{r_title}</h1>
             <div className="posts-filter-back">
@@ -60,7 +60,7 @@ export default async function Page({
           </div>
         ) : null}
 
-        {posts_page && <PostListPage data={posts_page} />}
+        {postsPage && <PostListPage data={postsPage} />}
       </div>
     </BasicLayout>
   )
@@ -72,7 +72,7 @@ interface IData {
     category?: string
     tag?: string
   }
-  posts_page: IItemPage<IPost> | null
+  postsPage: IItemPage<IPost> | null
 }
 
 async function getData(params: {
@@ -80,14 +80,14 @@ async function getData(params: {
   category?: string
   tag?: string
 }): Promise<IData> {
-  let posts_page = await getFrontendPosts({
+  let postsPage = await getFrontendPosts({
     page: Number(params.page || 1),
     category: params.category,
     tag: params.tag,
   })
 
-  if (posts_page) {
-    posts_page.items = posts_page.items.map((item: IPost) => {
+  if (postsPage) {
+    postsPage.items = postsPage.items.map((item: IPost) => {
       item.html = contentSummary(item.html)
       item.comments = []
       return item
@@ -95,7 +95,7 @@ async function getData(params: {
   }
 
   return {
-    posts_page,
+    postsPage,
     filter: {
       page: params.page,
       category: params.category,

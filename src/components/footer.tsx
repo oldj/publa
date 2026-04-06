@@ -6,7 +6,7 @@
 'use client'
 
 import Link from 'next/link'
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { ICategory, ITag } from 'typings'
 
 interface IProps {

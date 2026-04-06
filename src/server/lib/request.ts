@@ -7,9 +7,11 @@ import { NextResponse } from 'next/server'
 export function isUniqueConstraintError(err: unknown): boolean {
   if (!(err instanceof Error)) return false
   const msg = err.message
-  return msg.includes('UNIQUE constraint failed')
-    || msg.includes('SQLITE_CONSTRAINT_UNIQUE')
-    || (err as any).code === '23505'
+  return (
+    msg.includes('UNIQUE constraint failed') ||
+    msg.includes('SQLITE_CONSTRAINT_UNIQUE') ||
+    (err as any).code === '23505'
+  )
 }
 
 /**

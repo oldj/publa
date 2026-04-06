@@ -13,7 +13,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import qs from 'qs'
 import { Suspense } from 'react'
 import PageLoading from 'src/components/page-loading'
-import { IPost, IItemPage } from 'typings'
+import { IItemPage, IPost } from 'typings'
 
 interface Props {
   data: IItemPage<IPost>

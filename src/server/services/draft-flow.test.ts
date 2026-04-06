@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { setupTestDb } from './__test__/setup'
 
 const { createEmptyPost, listPostsAdmin, updatePost } = await import('./posts')
-const { createEmptyPage, listPages, updatePage } = await import('./pages')
+const { createEmptyPage, listPages } = await import('./pages')
 const { saveDraft, getDraft, publishDraft, listPublishedRevisions } = await import('./revisions')
 
 beforeEach(async () => {
@@ -322,7 +322,13 @@ describe('转为草稿（下线）', () => {
     await saveDraft(
       'post',
       post.id,
-      { title: '已发布', excerpt: '', contentRaw: '正文', contentHtml: '<p>正文</p>', contentText: '正文' },
+      {
+        title: '已发布',
+        excerpt: '',
+        contentRaw: '正文',
+        contentHtml: '<p>正文</p>',
+        contentText: '正文',
+      },
       1,
     )
     await publishDraft('post', post.id, 1)

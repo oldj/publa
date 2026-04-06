@@ -1,14 +1,9 @@
 /**
- * page-loading.tsx
  * @author: oldj
  * @homepage: https://oldj.net
  */
 
-import React from 'react'
-
-interface Props {}
-
-const PageLoading = (props: Props) => {
+const PageLoading = () => {
   return <div className="page-loading">loading...</div>
 }
 

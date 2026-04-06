@@ -1,12 +1,12 @@
-import path from 'path'
-import { beforeAll, beforeEach, afterAll, describe, expect, it, vi } from 'vitest'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { migrate } from 'drizzle-orm/node-postgres/migrator'
+import path from 'path'
 import { Pool } from 'pg'
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 // 运行时 postgresSchema 包含 PG 表对象，但统一 schema 后静态类型为 SQLite，
 // 此处 cast 为 any 以兼容 drizzle PG 驱动的类型要求
 import { postgresSchema as _postgresSchema } from '@/server/db/schema/postgres'
-const postgresSchema = _postgresSchema as any // eslint-disable-line @typescript-eslint/no-explicit-any
+const postgresSchema = _postgresSchema as any
 
 const pgTestDatabaseUrl = process.env.PG_TEST_DATABASE_URL
 const describePostgres = pgTestDatabaseUrl ? describe : describe.skip
@@ -36,7 +36,7 @@ describePostgres('postgres contract', () => {
     .join(', ')
 
   let pool: Pool
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   let db: ReturnType<typeof drizzle<any>>
   let usersService: Awaited<typeof import('./users')>
   let pagesService: Awaited<typeof import('./pages')>

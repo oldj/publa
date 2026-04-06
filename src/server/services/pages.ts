@@ -1,7 +1,7 @@
-import { parsePageDraftMetadata } from '@/shared/revision-metadata'
 import { db } from '@/server/db'
 import { insertOne, maybeFirst, updateOne } from '@/server/db/query'
 import { contents } from '@/server/db/schema'
+import { parsePageDraftMetadata } from '@/shared/revision-metadata'
 import { and, count, desc, eq, isNull, lte, ne, sql } from 'drizzle-orm'
 import { listDraftsByTargetIds } from './revisions'
 
@@ -11,7 +11,7 @@ const RESERVED_PATHS = ['admin', 'api', 'setup', 'rss.xml', 'sitemap.xml', 'uplo
 /** 校验页面路径 */
 export function validatePagePath(
   path: string,
-  excludeId?: number,
+  _excludeId?: number,
 ): { valid: boolean; message?: string } {
   if (!path) {
     return { valid: false, message: '路径不能为空' }

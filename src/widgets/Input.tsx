@@ -1,5 +1,4 @@
 /**
- * Input.tsx
  */
 
 import React from 'react'

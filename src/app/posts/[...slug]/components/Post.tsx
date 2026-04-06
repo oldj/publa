@@ -1,7 +1,6 @@
 'use client'
 
 import checkOutLinks from '@/app/posts/[...slug]/libs/checkOutLinks'
-import { AdPostFooter } from '@/components/ads'
 import CommentForm from '@/components/comment-form'
 import PageLoading from '@/components/page-loading'
 import TOC from '@/components/toc'
@@ -37,19 +36,20 @@ interface IProps {
   account?: IAccount
   html?: string
   headers?: IHeader[]
+  afterPostHtml?: string
 }
 
 export default function Post(props: IProps) {
-  const { account, post, html, headers } = props
+  const { account, post, html, headers, afterPostHtml } = props
   const router = useRouter()
   const [comments, setComments] = useState<IComment[]>(post?.comments || [])
   // const [html, setHTML] = useState<string>('')
   // const [headers, setHeaders] = useState<IHeader[]>([])
-  const [show_back_to_top, setShowBackToTop] = useState<boolean>(false)
-  const [show_toc2, setShowToc2] = useState<boolean>(false)
-  const ref_content = useRef<HTMLDivElement>(null)
-  const ref_toc1 = useRef<HTMLDivElement>(null)
-  const ref_toc2 = useRef<HTMLDivElement>(null)
+  const [showBackToTop, setShowBackToTop] = useState<boolean>(false)
+  const [showToc2, setShowToc2] = useState<boolean>(false)
+  const refContent = useRef<HTMLDivElement>(null)
+  const refToc1 = useRef<HTMLDivElement>(null)
+  const refToc2 = useRef<HTMLDivElement>(null)
 
   if (!post) {
     return <PageLoading />
@@ -66,7 +66,7 @@ export default function Post(props: IProps) {
   // }, [post.html])
 
   useEffect(() => {
-    const el = ref_content.current
+    const el = refContent.current
     if (!el) {
       return
     }
@@ -82,7 +82,7 @@ export default function Post(props: IProps) {
     hljs.highlightAll()
 
     // 渲染 Tiptap 数学公式节点（data-latex 属性）
-    const el = ref_content.current
+    const el = refContent.current
     if (el) {
       el.querySelectorAll<HTMLElement>(
         '[data-type="inline-math"], [data-type="block-math"]',
@@ -110,7 +110,7 @@ export default function Post(props: IProps) {
         { left: '\\(', right: '\\)', display: false },
       ],
     })
-  }, [html, show_back_to_top, show_toc2])
+  }, [html, showBackToTop, showToc2])
 
   useEffect(() => {
     document.querySelectorAll('.post-detail-content table').forEach((tb) => {
@@ -141,7 +141,7 @@ export default function Post(props: IProps) {
       const scroll_top = document.documentElement.scrollTop || document.body.scrollTop
       setShowBackToTop(scroll_top > 300)
 
-      const toc1 = ref_toc1.current
+      const toc1 = refToc1.current
       if (!toc1) return
 
       const rect = toc1.getBoundingClientRect()
@@ -170,14 +170,16 @@ export default function Post(props: IProps) {
       <div className="post-detail-date post-detail-info">
         {dayjs(post.pubTime).format('YYYY-MM-DD')}
       </div>
-      <TOC headers={headers || []} ref={ref_toc1} />
+      <TOC headers={headers || []} ref={refToc1} />
       <div
         className="post-detail-content post-content"
-        ref={ref_content}
+        ref={refContent}
         dangerouslySetInnerHTML={{ __html: html || '' }}
       />
 
-      <AdPostFooter />
+      {afterPostHtml && (
+        <div className="post-after-content" dangerouslySetInnerHTML={{ __html: afterPostHtml }} />
+      )}
 
       <div className="post-detail-props">
         {post.category && (
@@ -275,17 +277,17 @@ export default function Post(props: IProps) {
         <div className="post-comment-closed">评论已关闭。</div>
       )}
 
-      {show_toc2 && (
+      {showToc2 && (
         <div className="post-detail-toc-wrapper">
           <TOC
             headers={headers || []}
-            ref={ref_toc2}
+            ref={refToc2}
             className={clsx('post-detail-toc', 'animate__animated animate__fadeIn')}
           />
         </div>
       )}
 
-      {show_back_to_top && (
+      {showBackToTop && (
         <div className="back-to-top-wrapper">
           <button
             title={'回到顶部'}

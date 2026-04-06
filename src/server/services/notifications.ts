@@ -19,7 +19,9 @@ function parseNotifyConfig(value: string | null): NotifyConfig | null {
     if (parsed?.enabled && Array.isArray(parsed.userIds) && parsed.userIds.length > 0) {
       return parsed as NotifyConfig
     }
-  } catch {}
+  } catch (e) {
+    console.error(e)
+  }
   return null
 }
 

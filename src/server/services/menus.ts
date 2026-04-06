@@ -1,7 +1,7 @@
 import { db } from '@/server/db'
 import { insertOne, updateOne } from '@/server/db/query'
 import { menus } from '@/server/db/schema'
-import { eq, asc } from 'drizzle-orm'
+import { asc, eq } from 'drizzle-orm'
 
 export interface MenuInput {
   title: string

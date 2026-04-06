@@ -1,7 +1,7 @@
 'use client'
 
 import { IconArrowLeft } from '@tabler/icons-react'
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 
 const GoBackButton = () => {
   const [hasHistory, setHasHistory] = useState(false)

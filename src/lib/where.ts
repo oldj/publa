@@ -1,9 +1,7 @@
 /**
- * where
  * @author: oldj
  * @homepage: https://oldj.net
  */
-
 
 export const isBrowser = () => typeof window !== 'undefined'
 

@@ -1,7 +1,7 @@
 import { db } from '@/server/db'
 import { insertOne, maybeFirst, updateOne } from '@/server/db/query'
-import { tags, contentTags, contents } from '@/server/db/schema'
-import { eq, count, and, isNull, asc } from 'drizzle-orm'
+import { contentTags, contents, tags } from '@/server/db/schema'
+import { and, asc, count, eq, isNull } from 'drizzle-orm'
 
 export interface TagInput {
   name: string

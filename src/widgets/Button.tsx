@@ -1,5 +1,4 @@
 /**
- * Button.tsx
  */
 
 import clsx from 'clsx'
@@ -16,7 +15,7 @@ interface Props {
 }
 
 const Button = (props: Props) => {
-  const { className, children, type, htmlType, size, disabled, loading } = props
+  const { className, children, htmlType, disabled } = props
 
   return (
     <button className={clsx(className)} type={htmlType} disabled={disabled}>

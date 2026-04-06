@@ -6,10 +6,10 @@
 import { getMenuTree } from '@/server/services/menus'
 import { getFrontendCategories, getFrontendTags } from '@/server/services/posts-frontend'
 import { getSetting } from '@/server/services/settings'
+import '@/styles/themes/oj-2025.css'
 import React from 'react'
 import Footer from 'src/components/footer'
 import Nav from 'src/components/nav'
-import '@/styles/themes/oj-2025.css'
 
 interface IProps {
   children?: React.ReactNode

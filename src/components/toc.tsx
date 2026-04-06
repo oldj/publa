@@ -53,10 +53,7 @@ const TOC = React.forwardRef<HTMLDivElement, IProps>((props, ref) => {
           return (
             <div
               key={index}
-              className={clsx(
-                'toc-item',
-                `toc-h${level}`,
-              )}
+              className={clsx('toc-item', `toc-h${level}`)}
               data-current={number === currentNumber}
             >
               <a href={`#${number || index + 1}-${title}`}>
