@@ -32,8 +32,14 @@ DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/publa
 |------|------|--------|------|
 | `DATABASE_URL` | 否 | `file:{cwd}/data/publa.db` | 数据库连接字符串。SQLite 本地部署可省略；Turso 或 PostgreSQL 必填。数据库类型从 URL 前缀自动识别（`postgres://` → PostgreSQL，其余 → SQLite） |
 | `DATABASE_AUTH_TOKEN` | 否 | - | Turso 数据库认证 Token，仅 Turso 需要 |
-| `JWT_SECRET` | 否 | 自动生成 | JWT 签名密钥。未配置时自动生成并持久化到数据库，重启不丢失。也可手动指定：`openssl rand -base64 32` |
+| `JWT_SECRET` | 视情况 | - | JWT 签名密钥。生成方式：`openssl rand -base64 32`。详见下方说明 |
 | `CRON_SECRET` | 视情况 | - | 保护定时任务 API 的密钥。自托管部署不需要（使用进程内调度）；Vercel 部署必填 |
+
+**关于 `JWT_SECRET`：**
+
+- **本地开发**：无需配置，使用内置默认值
+- **Docker 自托管**：可不配置，首次启动时自动生成随机密钥并持久化到数据库，后续重启自动加载，不影响已登录用户。如需要指定值也可手动配置
+- **Vercel**：**必须配置**！Vercel 的中间件运行在 Edge Runtime（与服务端 Node.js 隔离的环境），无法读取数据库中自动生成的密钥，只能通过环境变量获取
 
 ### Docker — SQLite
 
@@ -80,6 +86,7 @@ Vercel 部署需要使用 Turso 或外部 PostgreSQL 作为数据库（不支持
 |------|------|------|
 | `DATABASE_URL` | 是 | Turso 连接 URL（`libsql://...`）或 PostgreSQL 连接字符串 |
 | `DATABASE_AUTH_TOKEN` | Turso 必填 | Turso 数据库认证 Token |
+| `JWT_SECRET` | 是 | JWT 签名密钥，`openssl rand -base64 32` 生成 |
 | `CRON_SECRET` | 是 | 保护定时任务接口，防止未授权访问 |
 
 > `NODE_ENV`、`VERCEL` 由 Vercel 自动处理，无需手动配置。
