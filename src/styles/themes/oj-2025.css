@@ -121,7 +121,15 @@
   text-decoration-thickness: 3px;
 }
 
+/* 下拉菜单容器 */
+.site-nav-dropdown {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
 .site-nav-trigger {
+  display: inline-block;
   padding: 0.5rem 1rem;
   cursor: pointer;
   transition: all 0.3s ease-in-out;
@@ -138,6 +146,46 @@
   text-decoration: underline;
   text-underline-offset: 6px;
   text-decoration-thickness: 3px;
+}
+
+/* 下拉面板：默认 bottom-center */
+.site-nav-dropdown-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 120px;
+  padding: 4px 0;
+  background: var(--bg-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  z-index: 100;
+}
+
+/* 下方空间不足时改为 top-center */
+.site-nav-dropdown--top .site-nav-dropdown-menu {
+  top: auto;
+  bottom: 100%;
+}
+
+.site-nav-dropdown:hover .site-nav-dropdown-menu {
+  display: flex;
+  flex-direction: column;
+}
+
+.site-nav-dropdown-item {
+  padding: 6px 12px;
+  margin: 2px 6px;
+  font-size: 14px;
+  white-space: nowrap;
+  border-radius: var(--radius-sm);
+  transition: background 0.15s;
+}
+
+.site-nav-dropdown-item:hover {
+  background-color: var(--bg-gray);
 }
 
 .site-nav-dropdown-active {
@@ -1209,6 +1257,82 @@
 
 .dynamic-page-content img {
   max-width: 100%;
+}
+
+/* --- 预览提示 --- */
+.preview-notice {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 8px 16px;
+  font-size: 13px;
+  background: #f59e0b;
+  color: #fff;
+}
+
+.preview-notice-close {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+  opacity: 0.7;
+  padding: 0 4px;
+  line-height: 1;
+}
+
+.preview-notice-close:hover {
+  opacity: 1;
+}
+
+/* --- 404 页面 --- */
+.not-found {
+  max-width: var(--width-content);
+  margin: 0 auto;
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.not-found-title {
+  font-size: 1.5em;
+  font-weight: 500;
+}
+
+.not-found-desc {
+  color: var(--color-text-tertiary);
+  margin: 16px 0 32px;
+}
+
+.not-found-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+.not-found-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 20px;
+  font-size: 14px;
+  background: var(--color-primary);
+  color: var(--color-text-reverse);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  text-decoration: none;
+  transition: opacity 0.2s;
+}
+
+.not-found-btn:hover {
+  opacity: 0.85;
+  color: var(--color-text-reverse);
 }
 
 /* --- Widgets --- */

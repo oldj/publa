@@ -5,7 +5,6 @@
 
 'use client'
 
-import { Menu } from '@mantine/core'
 import clsx from 'clsx'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -51,6 +50,30 @@ export default function Nav({
     return item.children?.some((child) => isActive(child.url)) ?? false
   }
 
+  // 根据视口空间决定下拉面板的对齐方向
+  const positionDropdown = (e: React.MouseEvent<HTMLDivElement>) => {
+    const container = e.currentTarget
+    const menu = container.querySelector<HTMLElement>('.site-nav-dropdown-menu')
+    if (!menu) return
+
+    container.classList.remove('site-nav-dropdown--top')
+
+    // 临时显示以测量尺寸
+    menu.style.visibility = 'hidden'
+    menu.style.display = 'flex'
+    const menuRect = menu.getBoundingClientRect()
+    menu.style.display = ''
+    menu.style.visibility = ''
+
+    // 下方溢出且上方有足够空间则改为上弹
+    if (menuRect.bottom > window.innerHeight) {
+      const triggerRect = container.getBoundingClientRect()
+      if (triggerRect.top >= menuRect.height) {
+        container.classList.add('site-nav-dropdown--top')
+      }
+    }
+  }
+
   return (
     <div className="site-nav">
       <div className="site-nav-header">
@@ -63,28 +86,28 @@ export default function Nav({
       <div className="site-nav-links">
         {menuItems.map((item) =>
           item.children && item.children.length > 0 ? (
-            <Menu key={item.id} trigger="hover" shadow="md" openDelay={100} closeDelay={200}>
-              <Menu.Target>
-                <span
-                  className={clsx('site-nav-trigger', isParentActive(item) && 'site-nav-current')}
-                >
-                  {item.title}
-                </span>
-              </Menu.Target>
-              <Menu.Dropdown>
+            <div key={item.id} className="site-nav-dropdown" onMouseEnter={positionDropdown}>
+              <span
+                className={clsx('site-nav-trigger', isParentActive(item) && 'site-nav-current')}
+              >
+                {item.title}
+              </span>
+              <div className="site-nav-dropdown-menu">
                 {item.children.map((child) => (
-                  <Menu.Item
+                  <Link
                     key={child.id}
-                    component={Link}
                     href={child.url}
                     target={child.target === '_blank' ? '_blank' : undefined}
-                    className={clsx(isActive(child.url) && 'site-nav-dropdown-active')}
+                    className={clsx(
+                      'site-nav-dropdown-item',
+                      isActive(child.url) && 'site-nav-dropdown-active',
+                    )}
                   >
                     {child.title}
-                  </Menu.Item>
+                  </Link>
                 ))}
-              </Menu.Dropdown>
-            </Menu>
+              </div>
+            </div>
           ) : (
             <Link
               key={item.id}

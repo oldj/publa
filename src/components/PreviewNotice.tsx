@@ -1,26 +1,19 @@
 'use client'
 
-import { notifications } from '@mantine/notifications'
-import { IconEye } from '@tabler/icons-react'
-import { useEffect } from 'react'
+import { useState } from 'react'
 
-/** 预览页面挂载时显示一条持久 toast 提示 */
+/** 预览页面挂载时显示一条固定提示条，可关闭 */
 export default function PreviewNotice() {
-  useEffect(() => {
-    notifications.show({
-      id: 'preview-notice',
-      title: '预览模式',
-      message: '当前页面为预览，仅管理员或编辑可见。',
-      color: 'orange',
-      icon: <IconEye size={18} />,
-      autoClose: false,
-      withCloseButton: true,
-    })
+  const [visible, setVisible] = useState(true)
 
-    return () => {
-      notifications.hide('preview-notice')
-    }
-  }, [])
+  if (!visible) return null
 
-  return null
+  return (
+    <div className="preview-notice">
+      <span>预览模式 — 当前页面仅管理员或编辑可见</span>
+      <button className="preview-notice-close" onClick={() => setVisible(false)}>
+        ✕
+      </button>
+    </div>
+  )
 }

@@ -1,7 +1,6 @@
 import '@/styles/globals.scss'
+import '@/styles/themes/oj-2025.css'
 import GoBackButton from '@/components/GoBackButton'
-import { Button, Container, Group, Stack, Text, Title } from '@mantine/core'
-import '@mantine/core/styles.css'
 import { IconHome } from '@tabler/icons-react'
 
 export const metadata = {
@@ -10,22 +9,16 @@ export const metadata = {
 
 export default async function NotFound() {
   return (
-    <Container size="md" py={40}>
-      <Stack align="center" gap="xl">
-        {/*<Image src={'/images/404.svg'} alt={'404'} width={400} height={300} />*/}
-        <Title order={1} size="h3" ta="center">
-          404 - 页面没有找到
-        </Title>
-        <Text size="md" c="dimmed" ta="center" maw={580}>
-          这个页面不存在或者已过期。
-        </Text>
-        <Group>
-          <Button leftSection={<IconHome />} variant="filled" size="md" component="a" href="/">
-            首页
-          </Button>
-          <GoBackButton />
-        </Group>
-      </Stack>
-    </Container>
+    <div className="not-found">
+      <h1 className="not-found-title">404 - 页面没有找到</h1>
+      <p className="not-found-desc">这个页面不存在或者已过期。</p>
+      <div className="not-found-actions">
+        <a href="/" className="not-found-btn">
+          <IconHome size={18} />
+          首页
+        </a>
+        <GoBackButton />
+      </div>
+    </div>
   )
 }

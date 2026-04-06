@@ -1,6 +1,6 @@
 'use client'
 
-import myModal from '@/components/myModals'
+import myModal from '@/app/(admin)/_components/myModals'
 import { codeHighlightAliases, codeHighlightLanguages } from '@/lib/code-highlight'
 import { notify } from '@/lib/notify'
 import { Button, Group, Modal, Stack, Text, TextInput, Textarea, Tooltip } from '@mantine/core'

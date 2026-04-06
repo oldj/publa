@@ -1,5 +1,5 @@
 'use client'
-import myModal from '@/components/myModals'
+import myModal from '@/app/(admin)/_components/myModals'
 import { notify } from '@/lib/notify'
 import { normalizeEmail, normalizePassword, normalizeUsername } from '@/lib/user-input'
 import { useCurrentUser } from '../../_components/AdminCountsContext'

@@ -9,7 +9,7 @@ import ContentTypeSelector from '@/components/editors/ContentTypeSelector'
 import RichTextEditorWrapper, {
   type RichTextEditorHandle,
 } from '@/components/editors/RichTextEditorWrapper'
-import myModal from '@/components/myModals'
+import myModal from '@/app/(admin)/_components/myModals'
 import { notify } from '@/lib/notify'
 import {
   Alert,

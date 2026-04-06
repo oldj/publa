@@ -1,9 +1,9 @@
 'use client'
-import myModal from '@/components/myModals'
+import myModal from '@/app/(admin)/_components/myModals'
 import adminStyles from '../../_components/AdminShell.module.scss'
 
 import { notify } from '@/lib/notify'
-import { NowrapBadge } from '@/components/NowrapBadge'
+import { NowrapBadge } from '@/app/(admin)/_components/NowrapBadge'
 import { ActionIcon, Button, Group, Table, Text, Title } from '@mantine/core'
 import { IconEye, IconPencil, IconPlus, IconTrash } from '@tabler/icons-react'
 import Link from 'next/link'
