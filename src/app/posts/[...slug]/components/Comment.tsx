@@ -45,7 +45,7 @@ export default function Comment(props: ICommentProps) {
           data.username
         )}
       </div>
-      <div className="post-detail-info">
+      <div className="post-comment-detail-info">
         在 {dayjs(data.addTime).format('YYYY-MM-DD HH:mm')} 写道：
       </div>
       <div
@@ -53,7 +53,7 @@ export default function Comment(props: ICommentProps) {
         ref={refContent}
         dangerouslySetInnerHTML={{ __html: data.html }}
       />
-      <div className="post-detail-info">
+      <div className="post-comment-detail-info">
         <a href="" onClick={toggleReply}>
           {showReply ? '收起' : '回复'}
         </a>

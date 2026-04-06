@@ -1104,6 +1104,11 @@
   overflow: auto;
 }
 
+.post-comment-detail-info {
+  color: var(--color-text-tertiary);
+  font-size: 14px;
+}
+
 .post-comment-reply-form {
   border: 1px solid var(--color-border);
   padding: 16px 16px 64px 16px;
