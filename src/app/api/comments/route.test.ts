@@ -254,6 +254,34 @@ describe('/api/comments', () => {
     expect(json.code).toBe('RATE_LIMITED')
   })
 
+  it('parentId 为 "0" 时作为顶级评论正常提交', async () => {
+    await createPost({ slug: 'top-level-comment-post' })
+
+    const response = await POST(
+      new Request('http://localhost/api/comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          slug: 'top-level-comment-post',
+          parentId: '0',
+          username: '访客',
+          content: '顶级评论',
+          captchaCode: '1234',
+        }),
+      }) as any,
+    )
+    const json = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(json.success).toBe(true)
+
+    const saved = await maybeFirst(
+      testDb.select().from(schema.comments).where(eq(schema.comments.contentId, 1)).limit(1),
+    )
+    expect(saved?.parentId).toBeNull()
+    expect(saved?.content).toBe('顶级评论')
+  })
+
   it('评论列表会对危险 HTML 做转义并清洗危险链接', async () => {
     await createPost({ slug: 'unsafe-comment-post' })
     await testDb.insert(schema.comments).values({

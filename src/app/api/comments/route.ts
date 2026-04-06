@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
 
   const result = await createComment({
     contentId: access.content.id,
-    parentId: parentId || null,
+    parentId: Number(parentId) > 0 ? Number(parentId) : null,
     authorName: username,
     authorEmail: email || undefined,
     authorWebsite: url || undefined,
