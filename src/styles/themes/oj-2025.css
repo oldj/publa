@@ -420,7 +420,7 @@
 .post-list-pager .post-list-label {
   font-size: 0.875rem;
   line-height: 1.25rem;
-  color: var(--color-border-light);
+  color: var(--color-text-tertiary);
   margin-bottom: 0.5rem;
 }
 
