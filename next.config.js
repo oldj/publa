@@ -27,31 +27,6 @@ const next_configs = {
         destination: '/rss.xml',
         permanent: true,
       },
-      {
-        source: '/blog/tag/:tag(.*)/',
-        destination: '/posts/list/?tag=:tag',
-        permanent: true,
-      },
-      {
-        source: '/blog/category/:category(.*)/',
-        destination: '/posts/list/?category=:category',
-        permanent: true,
-      },
-      {
-        source: '/blog/:slug(.*)',
-        destination: '/posts/:slug',
-        permanent: true,
-      },
-      {
-        source: '/article/list',
-        destination: '/posts/list',
-        permanent: true,
-      },
-      {
-        source: '/article/:slug(.*)',
-        destination: '/posts/:slug',
-        permanent: true,
-      },
     ]
   },
 }
