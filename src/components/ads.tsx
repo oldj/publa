@@ -1,11 +1,9 @@
 /**
- * ads
  * @author: oldj
  * @homepage: https://oldj.net
  */
 
 import React, { useEffect } from 'react'
-import LizhiItem from './lizhi_ad'
 
 const GoogleAd = () => {
   useEffect(() => {
