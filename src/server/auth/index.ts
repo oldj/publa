@@ -74,11 +74,22 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
   )
   if (!user) return null
 
-  return {
+  const authUser: AuthUser = {
     id: user.id,
     username: user.username,
     role: user.role as AuthUser['role'],
   }
+
+  // 剩余有效期不足一半时自动续期
+  if (payload.exp) {
+    const remaining = payload.exp - Math.floor(Date.now() / 1000)
+    if (remaining < TOKEN_MAX_AGE / 2) {
+      const newToken = await createToken(authUser)
+      await setAuthCookie(newToken)
+    }
+  }
+
+  return authUser
 }
 
 /** 设置认证 cookie */
