@@ -1,0 +1,1 @@
+ALTER TABLE "menus" ADD COLUMN "hidden" integer DEFAULT 0 NOT NULL;

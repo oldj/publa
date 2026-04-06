@@ -32,14 +32,18 @@ import {
   Paper,
   Select,
   Stack,
+  Switch,
   Text,
   TextInput,
   Title,
+  Tooltip,
 } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import {
   IconChevronDown,
   IconChevronRight,
+  IconEye,
+  IconEyeOff,
   IconGripVertical,
   IconPencil,
   IconPlus,
@@ -62,6 +66,7 @@ interface MenuItem {
   parentId: number | null
   sortOrder: number
   target: string
+  hidden: number
 }
 
 interface MenuTreeItem extends MenuItem {
@@ -73,9 +78,10 @@ interface FormData {
   url: string
   parentId: string
   target: string
+  hidden: boolean
 }
 
-const emptyForm: FormData = { title: '', url: '', parentId: '', target: '_self' }
+const emptyForm: FormData = { title: '', url: '', parentId: '', target: '_self', hidden: false }
 
 // 拖拽结束后跳过归位动画，避免与状态更新冲突导致闪烁
 const noDropAnimation: AnimateLayoutChanges = (args) => {
@@ -88,10 +94,12 @@ function SortableChildItem({
   item,
   onEdit,
   onDelete,
+  onToggleHidden,
 }: {
   item: MenuItem
   onEdit: (item: MenuItem) => void
   onDelete: (id: number, title: string) => void
+  onToggleHidden: (item: MenuItem) => void
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.id,
@@ -108,7 +116,7 @@ function SortableChildItem({
       style={{
         transform: translateOnly(transform),
         transition,
-        opacity: isDragging ? 0.7 : 1,
+        opacity: isDragging ? 0.7 : item.hidden ? 0.5 : 1,
         backgroundColor: '#fff',
       }}
     >
@@ -140,21 +148,40 @@ function SortableChildItem({
                 新窗口
               </Badge>
             )}
+            {item.hidden === 1 && (
+              <Badge size="xs" variant="light" color="gray">
+                已隐藏
+              </Badge>
+            )}
           </Group>
         </Group>
 
         <Group gap="xs" wrap="nowrap">
-          <ActionIcon variant="subtle" size="sm" onClick={() => onEdit(item)}>
-            <IconPencil size={14} />
-          </ActionIcon>
-          <ActionIcon
-            variant="subtle"
-            color="red"
-            size="sm"
-            onClick={() => onDelete(item.id, item.title)}
-          >
-            <IconTrash size={14} />
-          </ActionIcon>
+          <Tooltip label={item.hidden ? '显示' : '隐藏'} withArrow>
+            <ActionIcon
+              variant="subtle"
+              size="sm"
+              onClick={() => onToggleHidden(item)}
+              aria-label={item.hidden ? '显示菜单' : '隐藏菜单'}
+            >
+              {item.hidden ? <IconEyeOff size={14} /> : <IconEye size={14} />}
+            </ActionIcon>
+          </Tooltip>
+          <Tooltip label="编辑" withArrow>
+            <ActionIcon variant="subtle" size="sm" onClick={() => onEdit(item)}>
+              <IconPencil size={14} />
+            </ActionIcon>
+          </Tooltip>
+          <Tooltip label="删除" withArrow>
+            <ActionIcon
+              variant="subtle"
+              color="red"
+              size="sm"
+              onClick={() => onDelete(item.id, item.title)}
+            >
+              <IconTrash size={14} />
+            </ActionIcon>
+          </Tooltip>
         </Group>
       </Group>
     </Paper>
@@ -170,6 +197,7 @@ function SortableParentItem({
   onDelete,
   onAddChild,
   onChildDragEnd,
+  onToggleHidden,
   sensors,
 }: {
   item: MenuTreeItem
@@ -179,6 +207,7 @@ function SortableParentItem({
   onDelete: (id: number, title: string, childCount: number) => void
   onAddChild: (parentId: number) => void
   onChildDragEnd: (parentId: number, event: DragEndEvent) => void
+  onToggleHidden: (item: MenuItem) => void
   sensors: ReturnType<typeof useSensors>
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -198,7 +227,7 @@ function SortableParentItem({
       style={{
         transform: translateOnly(transform),
         transition,
-        opacity: isDragging ? 0.7 : 1,
+        opacity: isDragging ? 0.7 : item.hidden ? 0.5 : 1,
         backgroundColor: '#fff',
       }}
     >
@@ -238,6 +267,11 @@ function SortableParentItem({
                 新窗口
               </Badge>
             )}
+            {item.hidden === 1 && (
+              <Badge size="xs" variant="light" color="gray">
+                已隐藏
+              </Badge>
+            )}
             {hasChildren && (
               <Badge size="xs" variant="light" color="blue">
                 {item.children.length} 个子菜单
@@ -247,19 +281,38 @@ function SortableParentItem({
         </Group>
 
         <Group gap="xs" wrap="nowrap">
-          <ActionIcon variant="subtle" onClick={() => onAddChild(item.id)} aria-label="添加子菜单">
-            <IconPlus size={14} />
-          </ActionIcon>
-          <ActionIcon variant="subtle" onClick={() => onEdit(item)}>
-            <IconPencil size={16} />
-          </ActionIcon>
-          <ActionIcon
-            variant="subtle"
-            color="red"
-            onClick={() => onDelete(item.id, item.title, item.children.length)}
-          >
-            <IconTrash size={16} />
-          </ActionIcon>
+          <Tooltip label={item.hidden ? '显示' : '隐藏'} withArrow>
+            <ActionIcon
+              variant="subtle"
+              onClick={() => onToggleHidden(item)}
+              aria-label={item.hidden ? '显示菜单' : '隐藏菜单'}
+            >
+              {item.hidden ? <IconEyeOff size={16} /> : <IconEye size={16} />}
+            </ActionIcon>
+          </Tooltip>
+          <Tooltip label="添加子菜单" withArrow>
+            <ActionIcon
+              variant="subtle"
+              onClick={() => onAddChild(item.id)}
+              aria-label="添加子菜单"
+            >
+              <IconPlus size={14} />
+            </ActionIcon>
+          </Tooltip>
+          <Tooltip label="编辑" withArrow>
+            <ActionIcon variant="subtle" onClick={() => onEdit(item)}>
+              <IconPencil size={16} />
+            </ActionIcon>
+          </Tooltip>
+          <Tooltip label="删除" withArrow>
+            <ActionIcon
+              variant="subtle"
+              color="red"
+              onClick={() => onDelete(item.id, item.title, item.children.length)}
+            >
+              <IconTrash size={16} />
+            </ActionIcon>
+          </Tooltip>
         </Group>
       </Group>
 
@@ -283,6 +336,7 @@ function SortableParentItem({
                       item={child}
                       onEdit={onEdit}
                       onDelete={(id, title) => onDelete(id, title, 0)}
+                      onToggleHidden={onToggleHidden}
                     />
                   ))}
                 </Stack>
@@ -357,6 +411,7 @@ export default function MenusPage() {
         url: menu.url,
         parentId: menu.parentId ? String(menu.parentId) : '',
         target: menu.target,
+        hidden: menu.hidden === 1,
       })
     } else {
       setEditingId(null)
@@ -387,6 +442,7 @@ export default function MenusPage() {
         url: form.url || '',
         parentId: form.parentId ? parseInt(form.parentId) : null,
         target: form.target,
+        hidden: form.hidden ? 1 : 0,
       }
 
       // 新建时自动排到对应层级末尾
@@ -444,6 +500,25 @@ export default function MenusPage() {
     if (json.success) {
       notify({ color: 'green', message: '已恢复默认菜单' })
       fetchMenus()
+    }
+  }
+
+  const handleToggleHidden = async (item: MenuItem) => {
+    const newHidden = item.hidden ? 0 : 1
+    // 先乐观更新 UI
+    setMenuList((prev) => prev.map((m) => (m.id === item.id ? { ...m, hidden: newHidden } : m)))
+    const res = await fetch(`/api/menus/${item.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ hidden: newHidden }),
+    })
+    const json = await res.json()
+    if (json.success) {
+      notify({ color: 'green', message: newHidden ? '菜单已隐藏' : '菜单已显示' })
+    } else {
+      // 回滚
+      setMenuList((prev) => prev.map((m) => (m.id === item.id ? { ...m, hidden: item.hidden } : m)))
+      notify({ color: 'red', message: '操作失败' })
     }
   }
 
@@ -580,6 +655,7 @@ export default function MenusPage() {
                   onDelete={handleDelete}
                   onAddChild={handleAddChild}
                   onChildDragEnd={handleChildDragEnd}
+                  onToggleHidden={handleToggleHidden}
                   sensors={sensors}
                 />
               ))}
@@ -622,6 +698,13 @@ export default function MenusPage() {
           ]}
           value={form.target}
           onChange={(v) => setForm({ ...form, target: v || '_self' })}
+        />
+        <Switch
+          label="隐藏"
+          description="隐藏后此菜单及其子菜单不会在前台显示"
+          mt="sm"
+          checked={form.hidden}
+          onChange={(e) => setForm({ ...form, hidden: e.currentTarget.checked })}
         />
         <Group justify="flex-end" mt="lg">
           <Button variant="default" onClick={close}>

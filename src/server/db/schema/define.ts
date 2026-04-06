@@ -120,6 +120,7 @@ export function defineSchema(kit: DialectKit) {
     parentId: integer('parent_id').references((): any => menus.id),
     sortOrder: integer('sort_order').notNull().default(0),
     target: text('target', { enum: menuTarget }).notNull().default('_self'),
+    hidden: integer('hidden').notNull().default(0),
     createdAt: text('created_at').notNull().$defaultFn(isoNow),
   })
 
