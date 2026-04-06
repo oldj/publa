@@ -6,10 +6,9 @@ import { eq } from 'drizzle-orm'
 import { SignJWT, jwtVerify, type JWTPayload } from 'jose'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
-import { getJwtSecret, isAuthConfigError } from './shared'
+import { AUTH_COOKIE_NAME, getJwtSecret, isAuthConfigError } from './shared'
 
 const SALT_ROUNDS = 10
-const COOKIE_NAME = 'blog_token'
 const TOKEN_MAX_AGE = 60 * 60 * 24 * 7 // 7 天
 
 export interface AuthUser {
@@ -63,7 +62,7 @@ export async function verifyToken(token: string): Promise<TokenPayload | null> {
 /** 从请求 cookie 中获取当前登录用户 */
 export async function getCurrentUser(): Promise<AuthUser | null> {
   const cookieStore = await cookies()
-  const token = cookieStore.get(COOKIE_NAME)?.value
+  const token = cookieStore.get(AUTH_COOKIE_NAME)?.value
   if (!token) return null
 
   const payload = await verifyToken(token)
@@ -85,7 +84,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
 /** 设置认证 cookie */
 export async function setAuthCookie(token: string) {
   const cookieStore = await cookies()
-  cookieStore.set(COOKIE_NAME, token, {
+  cookieStore.set(AUTH_COOKIE_NAME, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
@@ -97,7 +96,7 @@ export async function setAuthCookie(token: string) {
 /** 清除认证 cookie */
 export async function clearAuthCookie() {
   const cookieStore = await cookies()
-  cookieStore.delete(COOKIE_NAME)
+  cookieStore.delete(AUTH_COOKIE_NAME)
 }
 
 /** 检查系统是否已初始化（是否存在 owner） */
@@ -160,4 +159,4 @@ export async function requireRole(
   return guard
 }
 
-export { COOKIE_NAME }
+export { AUTH_COOKIE_NAME }

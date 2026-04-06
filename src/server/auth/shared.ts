@@ -1,5 +1,7 @@
 import crypto from 'crypto'
 
+export const AUTH_COOKIE_NAME = '_token'
+
 const DEFAULT_JWT_SECRET = 'blog-jwt-secret-change-me'
 
 /**
