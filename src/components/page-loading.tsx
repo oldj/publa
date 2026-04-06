@@ -5,12 +5,11 @@
  */
 
 import React from 'react'
-import styles from './page-loading.module.scss'
 
 interface Props {}
 
 const PageLoading = (props: Props) => {
-  return <div className={styles.root}>loading...</div>
+  return <div className="page-loading">loading...</div>
 }
 
 export default PageLoading

@@ -9,7 +9,6 @@ import { Menu } from '@mantine/core'
 import clsx from 'clsx'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import styles from './nav.module.scss'
 
 interface MenuItem {
   id: number
@@ -53,20 +52,22 @@ export default function Nav({
   }
 
   return (
-    <div className={styles.root}>
-      <div className={styles.header}>
-        <Link href="/" className={styles.logo}>
-          <h1 className={styles.site_title}>{siteTitle}</h1>
+    <div className="site-nav">
+      <div className="site-nav-header">
+        <Link href="/">
+          <h1 className="site-nav-title">{siteTitle}</h1>
         </Link>
-        <div className={styles.slogan}>{siteSlogan}</div>
+        <div className="site-nav-slogan">{siteSlogan}</div>
       </div>
 
-      <div className={styles.links}>
+      <div className="site-nav-links">
         {menuItems.map((item) =>
           item.children && item.children.length > 0 ? (
             <Menu key={item.id} trigger="hover" shadow="md" openDelay={100} closeDelay={200}>
               <Menu.Target>
-                <span className={clsx(styles.menuTrigger, isParentActive(item) && styles.current)}>
+                <span
+                  className={clsx('site-nav-trigger', isParentActive(item) && 'site-nav-current')}
+                >
                   {item.title}
                 </span>
               </Menu.Target>
@@ -77,7 +78,7 @@ export default function Nav({
                     component={Link}
                     href={child.url}
                     target={child.target === '_blank' ? '_blank' : undefined}
-                    className={clsx(isActive(child.url) && styles.dropdownItemActive)}
+                    className={clsx(isActive(child.url) && 'site-nav-dropdown-active')}
                   >
                     {child.title}
                   </Menu.Item>
@@ -89,7 +90,7 @@ export default function Nav({
               key={item.id}
               href={item.url || '/'}
               target={item.target === '_blank' ? '_blank' : undefined}
-              className={clsx(isActive(item.url) && styles.current)}
+              className={clsx(isActive(item.url) && 'site-nav-current')}
             >
               {item.title}
             </Link>

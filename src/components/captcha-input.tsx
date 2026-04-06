@@ -6,7 +6,6 @@
 
 import lodash from 'lodash'
 import React, { useEffect, useState } from 'react'
-import styles from './captcha-input.module.scss'
 
 interface IProps {
   setRefresh?: (refresh: () => void) => void
@@ -32,11 +31,11 @@ const CaptchaInput = React.forwardRef<HTMLInputElement, IProps>((props, ref) => 
   }, [])
 
   return (
-    <div className={styles.captcha_input}>
-      <div className={styles.image} onClick={() => refresh()}>
+    <div className="captcha-input">
+      <div className="captcha-input-image" onClick={() => refresh()}>
         {src ? <img src={src} alt="点击刷新" /> : null}
       </div>
-      <div className={styles.ipt}>
+      <div className="captcha-input-field">
         <input
           {...lodash.omit(props, ['setRefresh'])}
           maxLength={4}

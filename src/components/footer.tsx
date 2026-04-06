@@ -8,7 +8,6 @@
 import Link from 'next/link'
 import React, { useState } from 'react'
 import { ICategory, ITag } from 'typings'
-import styles from './footer.module.scss'
 
 interface IProps {
   categories: ICategory[]
@@ -24,31 +23,35 @@ export default function footer(props: IProps) {
     const hostname = window.location.hostname
     // 提取根域名：去掉 www 等子域名前缀，保留主域名部分
     const parts = hostname.split('.')
-    const rootDomain = parts.length > 2
-      ? parts.slice(-2).join('.').match(/\.(com|net|org|edu|gov|co)\.\w+$/)
-        ? parts.slice(-3).join('.')
-        : parts.slice(-2).join('.')
-      : hostname
+    const rootDomain =
+      parts.length > 2
+        ? parts
+            .slice(-2)
+            .join('.')
+            .match(/\.(com|net|org|edu|gov|co)\.\w+$/)
+          ? parts.slice(-3).join('.')
+          : parts.slice(-2).join('.')
+        : hostname
     const q = `site:${rootDomain} ${kw}`
     window.open(`https://www.google.com/search?q=${encodeURIComponent(q)}`)
   }
 
   return (
-    <footer className={styles.root}>
-      <div className={styles.content}>
-        <div className={styles.block}>
+    <footer className="site-footer">
+      <div className="site-footer-content">
+        <div className="site-footer-block">
           <h3>分类</h3>
-          <ul className={styles.categories}>
+          <ul className="site-footer-categories">
             {categories.map((i) => (
               <li key={i.id}>
                 <Link href={`/posts/list?category=${encodeURIComponent(i.name)}`}>
-                  <span>{i.name}</span> <span className={styles.num}>({i.count})</span>
+                  <span>{i.name}</span> <span className="site-footer-num">({i.count})</span>
                 </Link>
               </li>
             ))}
           </ul>
 
-          <div className={styles.search}>
+          <div className="site-footer-search">
             <input
               placeholder="Search in Google"
               // allowClear
@@ -62,19 +65,19 @@ export default function footer(props: IProps) {
             <button onClick={() => onSearch()}>搜索</button>
           </div>
 
-          <div className={styles.rss}>
+          <div className="site-footer-rss">
             <a href="/feed" target="_blank">
               可通过 <strong>RSS</strong> 订阅本站
             </a>
           </div>
         </div>
 
-        <div className={styles.block}>
+        <div className="site-footer-block">
           <h3>标签</h3>
-          <div className={styles.tags}>
+          <div className="site-footer-tags">
             {tags.map((i) => (
               <Link href={`/posts/list?tag=${encodeURIComponent(i.name)}`} key={i.id}>
-                {i.name} <span className={styles.num}>({i.count})</span>
+                {i.name} <span className="site-footer-num">({i.count})</span>
               </Link>
             ))}
           </div>
@@ -82,7 +85,10 @@ export default function footer(props: IProps) {
       </div>
 
       {footerCopyright && (
-        <div className={styles.copyright} dangerouslySetInnerHTML={{ __html: footerCopyright }} />
+        <div
+          className="site-footer-copyright"
+          dangerouslySetInnerHTML={{ __html: footerCopyright }}
+        />
       )}
     </footer>
   )

@@ -19,8 +19,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { IoChevronUp } from 'react-icons/io5'
-import { IAccount, IPost, ICategory, ITag, IComment } from 'typings'
-import styles from '../post.module.scss'
+import { IAccount, ICategory, IComment, IPost, ITag } from 'typings'
 import Comment from './Comment'
 
 for (const [name, language] of Object.entries(codeHighlightLanguages)) {
@@ -114,24 +113,24 @@ export default function Post(props: IProps) {
   }, [html, show_back_to_top, show_toc2])
 
   useEffect(() => {
-    document.querySelectorAll(`.${styles.content} table`).forEach((tb) => {
+    document.querySelectorAll('.post-detail-content table').forEach((tb) => {
       const el = document.createElement('div')
-      el.className = styles.table_wrapper
+      el.className = 'post-detail-table-wrapper'
       tb.parentNode?.insertBefore(el, tb)
       el.appendChild(tb)
     })
 
-    document.querySelectorAll(`.${styles.content} img`).forEach((img) => {
+    document.querySelectorAll('.post-detail-content img').forEach((img) => {
       const parent: HTMLElement = img.parentNode as HTMLElement
       if (!parent) return
 
       if (
         parent.tagName.toLowerCase() === 'center' ||
-        (parent.className && parent.className.indexOf(styles.content) >= 0)
+        (parent.className && parent.className.indexOf('post-detail-content') >= 0)
       ) {
         const p = document.createElement('p')
         parent.insertBefore(p, img)
-        p.className = styles.p_img
+        p.className = 'post-detail-img'
         p.appendChild(img)
       }
     })
@@ -166,28 +165,21 @@ export default function Post(props: IProps) {
   }
 
   return (
-    <div className={styles.root}>
-      <h1 className={styles.post_title}>{post.title}</h1>
-      <div className={clsx(styles.post_pub_date, styles.info)}>
+    <div className="post-detail">
+      <h1 className="post-detail-title">{post.title}</h1>
+      <div className="post-detail-date post-detail-info">
         {dayjs(post.pubTime).format('YYYY-MM-DD')}
       </div>
       <TOC headers={headers || []} ref={ref_toc1} />
       <div
-        className={`${styles.content} post-content`}
+        className="post-detail-content post-content"
         ref={ref_content}
         dangerouslySetInnerHTML={{ __html: html || '' }}
       />
-      {/*<div className={styles.post_copyright}>*/}
-      {/*  <a rel="license" href="https://creativecommons.org/licenses/by-nc/4.0/">*/}
-      {/*    <img alt="知识共享许可协议" src="https://i.creativecommons.org/l/by-nc/4.0/88x31.png"/>*/}
-      {/*  </a>*/}
-      {/*  <br/>*/}
-      {/*  本作品采用<a rel="license" href="https://creativecommons.org/licenses/by-nc/4.0/">知识共享署名-非商业性使用 4.0 国际许可协议</a>进行许可。*/}
-      {/*</div>*/}
 
       <AdPostFooter />
 
-      <div className={styles.post_props}>
+      <div className="post-detail-props">
         {post.category && (
           <span>
             <strong>分类：</strong>
@@ -217,34 +209,30 @@ export default function Post(props: IProps) {
         )}
       </div>
 
-      <div className={styles.neighbors}>
+      <div className="post-detail-neighbors">
         <div
-          className={clsx(styles.prev, !post?.previous && styles.disabled)}
+          className={clsx('post-detail-prev', !post?.previous && 'is-disabled')}
           onClick={async () => {
             if (!post?.previous) return
             router.push(post.previous.url)
           }}
         >
-          <span className={styles.label}>前一篇</span>
-          {post.previous ? (
-            <Link href={post.previous.url}>{post.previous.title}</Link>
-          ) : (
-            '无'
-          )}
+          <span className="post-detail-label">前一篇</span>
+          {post.previous ? <Link href={post.previous.url}>{post.previous.title}</Link> : '无'}
         </div>
         <div
-          className={clsx(styles.next, !post?.next && styles.disabled)}
+          className={clsx('post-detail-next', !post?.next && 'is-disabled')}
           onClick={async () => {
             if (!post?.next) return
             router.push(post.next.url)
           }}
         >
-          <span className={styles.label}>后一篇</span>
+          <span className="post-detail-label">后一篇</span>
           {post.next ? <Link href={post.next.url}>{post.next.title}</Link> : '无'}
         </div>
       </div>
 
-      <div className={styles.related}>
+      <div className="post-detail-related">
         <h2>相关文章：</h2>
         {post.related.length > 0 ? (
           <ul>
@@ -255,23 +243,23 @@ export default function Post(props: IProps) {
             ))}
           </ul>
         ) : (
-          <div className={styles.norecords}>暂无相关文章</div>
+          <div className="post-detail-no-records">暂无相关文章</div>
         )}
       </div>
 
-      <div className={styles.comments}>
+      <div className="post-comments">
         <h2>评论：</h2>
         {comments.length === 0 ? (
-          <div className={styles.norecords}>暂无评论</div>
+          <div className="post-detail-no-records">暂无评论</div>
         ) : (
           comments.map((i) => <Comment data={i} key={i.id} refreshComments={refreshComments} />)
         )}
       </div>
 
       {post.canComment ? (
-        <div className={styles.comment_form}>
+        <div className="post-comment-form">
           <h2>发表评论：</h2>
-          <div className={styles.info}>电子邮件地址不会被公开。必填项已用 * 标注。</div>
+          <div className="post-detail-info">电子邮件地址不会被公开。必填项已用 * 标注。</div>
 
           <CommentForm
             contentId={post.id}
@@ -284,24 +272,24 @@ export default function Post(props: IProps) {
           />
         </div>
       ) : (
-        <div className={styles.comment_closed}>评论已关闭。</div>
+        <div className="post-comment-closed">评论已关闭。</div>
       )}
 
       {show_toc2 && (
-        <div className={styles.toc2_wrapper}>
+        <div className="post-detail-toc-wrapper">
           <TOC
             headers={headers || []}
             ref={ref_toc2}
-            className={clsx(styles.toc2, 'animate__animated animate__fadeIn')}
+            className={clsx('post-detail-toc', 'animate__animated animate__fadeIn')}
           />
         </div>
       )}
 
       {show_back_to_top && (
-        <div className={styles.back_to_top_wrapper}>
+        <div className="back-to-top-wrapper">
           <button
             title={'回到顶部'}
-            className={clsx(styles.back_to_top, 'animate__animated animate__fadeIn')}
+            className={clsx('back-to-top', 'animate__animated animate__fadeIn')}
             onClick={() => {
               window.scrollTo(0, 0)
             }}

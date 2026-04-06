@@ -5,7 +5,6 @@ import CommentForm from '@/components/comment-form'
 import dayjs from 'dayjs'
 import React, { useEffect, useRef, useState } from 'react'
 import { IComment } from 'typings'
-import styles from '../post.module.scss'
 
 interface ICommentProps {
   data: IComment
@@ -14,8 +13,8 @@ interface ICommentProps {
 
 export default function Comment(props: ICommentProps) {
   let { data, refreshComments } = props
-  const [show_reply, setShowReply] = useState(false)
-  const ref_content = useRef<HTMLDivElement>(null)
+  const [showReply, setShowReply] = useState(false)
+  const refContent = useRef<HTMLDivElement>(null)
 
   const toggleReply = (e?: React.MouseEvent) => {
     if (e) {
@@ -23,11 +22,11 @@ export default function Comment(props: ICommentProps) {
       e.stopPropagation()
     }
 
-    setShowReply(!show_reply)
+    setShowReply(!showReply)
   }
 
   useEffect(() => {
-    let el = ref_content.current
+    let el = refContent.current
     if (!el) {
       return
     }
@@ -36,8 +35,8 @@ export default function Comment(props: ICommentProps) {
   }, [data.id])
 
   return (
-    <div className={styles.comment}>
-      <div className={styles.username}>
+    <div className="post-comment">
+      <div className="post-comment-username">
         {data.url ? (
           <a href={data.url} target="_blank" rel="noopener noreferrer">
             {data.username}
@@ -46,20 +45,22 @@ export default function Comment(props: ICommentProps) {
           data.username
         )}
       </div>
-      <div className={styles.info}>在 {dayjs(data.addTime).format('YYYY-MM-DD HH:mm')} 写道：</div>
+      <div className="post-detail-info">
+        在 {dayjs(data.addTime).format('YYYY-MM-DD HH:mm')} 写道：
+      </div>
       <div
-        className={styles.comment_content}
-        ref={ref_content}
+        className="post-comment-content"
+        ref={refContent}
         dangerouslySetInnerHTML={{ __html: data.html }}
       />
-      <div className={styles.info}>
+      <div className="post-detail-info">
         <a href="" onClick={toggleReply}>
-          {show_reply ? '收起' : '回复'}
+          {showReply ? '收起' : '回复'}
         </a>
       </div>
 
-      {show_reply ? (
-        <div className={styles.comment_reply_form}>
+      {showReply ? (
+        <div className="post-comment-reply-form">
           <CommentForm
             contentId={data.contentId}
             parentId={data.id}
@@ -75,7 +76,7 @@ export default function Comment(props: ICommentProps) {
       ) : null}
 
       {data.children && data.children.length > 0 ? (
-        <div className={styles.children}>
+        <div className="post-comment-children">
           {data.children.map((i) => (
             <Comment data={i} key={i.id} refreshComments={refreshComments} />
           ))}

@@ -6,7 +6,6 @@ import { IconChevronLeft } from '@tabler/icons-react'
 import { Metadata } from 'next'
 import Link from 'next/link'
 import { IPost, IItemPage } from 'typings'
-import styles from './page.module.scss'
 
 export const metadata: Metadata = {
   title: '文章列表',
@@ -40,7 +39,7 @@ export default async function Page({
     // title = `${filter_by}：${filter_key}`
     r_title = (
       <>
-        <span className={styles.filter_by}>{filter_by}：</span>
+        <span className="posts-filter-by">{filter_by}：</span>
         <span>{filter_key}</span>
       </>
     )
@@ -48,11 +47,11 @@ export default async function Page({
 
   return (
     <BasicLayout>
-      <div className={styles.root}>
+      <div className="posts-filter">
         {filter_by ? (
-          <div className={styles.filter}>
-            <h1 className={styles.page_title}>{r_title}</h1>
-            <div className={styles.back}>
+          <div className="posts-filter-bar">
+            <h1 className="page_title">{r_title}</h1>
+            <div className="posts-filter-back">
               <Link href="/posts/list">
                 <IconChevronLeft size={16} />
                 返回所有文章列表

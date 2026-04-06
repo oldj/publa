@@ -3,7 +3,6 @@ import BasicLayout from '@/layouts/basic'
 import { redirectOrNotFound } from '@/server/lib/frontend-404'
 import { getSetting } from '@/server/services/settings'
 import { Metadata } from 'next'
-import styles from './page.module.scss'
 
 export const metadata: Metadata = {
   title: '留言板',
@@ -17,11 +16,11 @@ export default async function GuestbookPage() {
 
   return (
     <BasicLayout>
-      <div className={styles.root}>
-        <h1 className={styles.page_title}>留言板</h1>
+      <div className="guestbook">
+        <h1 className="guestbook-title">留言板</h1>
         {guestbookWelcome && <p>{guestbookWelcome}</p>}
 
-        <div className={styles.form}>
+        <div className="guestbook-form">
           <FeedbackForm />
         </div>
       </div>

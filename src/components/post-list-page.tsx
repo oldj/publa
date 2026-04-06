@@ -6,7 +6,6 @@
 'use client'
 
 import { IconChevronRight } from '@tabler/icons-react'
-import clsx from 'clsx'
 import dayjs from 'dayjs'
 import lodash from 'lodash'
 import Link from 'next/link'
@@ -15,7 +14,6 @@ import qs from 'qs'
 import { Suspense } from 'react'
 import PageLoading from 'src/components/page-loading'
 import { IPost, IItemPage } from 'typings'
-import styles from './post-list-page.module.scss'
 
 interface Props {
   data: IItemPage<IPost>
@@ -35,20 +33,20 @@ const PostCard = (props: { post: IPost }) => {
 
   return (
     <div
-      className={styles.post}
+      className="post-list-item"
       onClick={async () => {
         // location.href = post.url
         await router.push(post.url)
       }}
     >
-      <h2 className={styles.post_title}>
+      <h2 className="post-list-title">
         <Link href={post.url}>{post.title}</Link>
       </h2>
-      <div className={clsx(styles.pub_time, styles.info)}>{pubTime}</div>
-      <div className={styles.summary}>{post.html}</div>
-      <Link href={post.url} className={styles.read_more}>
+      <div className="post-list-time post-list-info">{pubTime}</div>
+      <div className="post-list-summary">{post.html}</div>
+      <Link href={post.url} className="post-list-read-more">
         <span>阅读全文</span>
-        <span className={styles.icon}>
+        <span className="post-list-icon">
           <IconChevronRight size={16} />
         </span>
       </Link>
@@ -77,9 +75,9 @@ const Pager = (props: PageProps) => {
   }
 
   return (
-    <div className={styles.pager}>
-      <div className={styles.label}>页码：</div>
-      <div className={styles.pagination}>{pages}</div>
+    <div className="post-list-pager">
+      <div className="post-list-label">页码：</div>
+      <div className="post-list-pagination">{pages}</div>
     </div>
   )
 }
@@ -92,11 +90,11 @@ const PostListPage = (props: Props) => {
   }
 
   if (data.itemCount === 0) {
-    return <div className={styles.norecord}>没有记录</div>
+    return <div className="post-list-empty">没有记录</div>
   }
 
   return (
-    <div className={styles.root}>
+    <div className="post-list">
       {data.items.map((post, idx) => {
         return <PostCard post={post} key={idx} />
       })}

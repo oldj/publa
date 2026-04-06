@@ -7,7 +7,6 @@ import Link from 'next/link'
 import React, { useEffect, useState } from 'react'
 import { IoRefresh } from 'react-icons/io5'
 import { IAdItem, items } from './data'
-import styles from './index.module.scss'
 
 interface IProps {}
 
@@ -40,24 +39,24 @@ const LizhiItem = (props: IProps) => {
   }
 
   return (
-    <div className={styles.root}>
-      <div className={styles.top}>
-        <span className={styles.help_text}>推荐的软件</span>
-        <button className={styles.btn_refresh} onClick={refresh}>
+    <div className="lizhi-ad">
+      <div className="lizhi-ad-top">
+        <span className="lizhi-ad-help">推荐的软件</span>
+        <button className="lizhi-ad-refresh" onClick={refresh}>
           <IoRefresh />
         </button>
       </div>
       <Link
         href={item.url}
         target="_blank"
-        className={clsx(styles.container, 'umami--click--lizhi-item')}
+        className={clsx('lizhi-ad-container', 'umami--click--lizhi-item')}
       >
-        <div className={styles.icon}>
+        <div className="lizhi-ad-icon">
           <img src={item.icon} alt={item.title} />
         </div>
-        <div className={styles.content}>
-          <div className={styles.title}>{item.title}</div>
-          <div className={styles.desc}>{item.desc}</div>
+        <div>
+          <div className="lizhi-ad-title">{item.title}</div>
+          <div className="lizhi-ad-desc">{item.desc}</div>
         </div>
       </Link>
     </div>

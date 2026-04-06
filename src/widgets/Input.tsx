@@ -3,7 +3,6 @@
  */
 
 import React from 'react'
-import styles from './Input.module.scss'
 
 interface CommonProps {
   placeholder?: string
@@ -20,10 +19,10 @@ const Input = (props: InputProps) => {
   const { type, maxLength, placeholder, autoComplete, onFocus } = props
 
   return (
-    <div className={styles.root}>
+    <div className="w-input">
       <input
         type={type}
-        className={styles.input}
+        className="w-input-field"
         maxLength={maxLength}
         placeholder={placeholder}
         autoComplete={autoComplete}
@@ -41,8 +40,8 @@ Input.TextArea = (props: TextAreaProps) => {
   const { rows, maxLength } = props
 
   return (
-    <div className={styles.root}>
-      <textarea className={styles.input} rows={rows} maxLength={maxLength} />
+    <div className="w-input">
+      <textarea className="w-input-field" rows={rows} maxLength={maxLength} />
     </div>
   )
 }
@@ -55,8 +54,8 @@ interface SearchProps extends CommonProps {
 
 Input.Search = (props: SearchProps) => {
   return (
-    <div className={styles.root}>
-      <input type="search" className={styles.input} />
+    <div className="w-input">
+      <input type="search" className="w-input-field" />
     </div>
   )
 }

@@ -13,7 +13,6 @@ import React, { useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import Button from 'src/widgets/Button'
 import dialog from 'src/widgets/dialog'
-import styles from './feedback-form.module.scss'
 
 interface Props {
   onSuccess?: () => void
@@ -119,7 +118,7 @@ const FeedbackForm = (props: Props) => {
   }
 
   return (
-    <div className={styles.root}>
+    <div className="feedback-form">
       <form
         name="feedback"
         // initialValues={{
@@ -162,14 +161,14 @@ const FeedbackForm = (props: Props) => {
         {/*<Form.Item*/}
         {/*  label={*/}
         {/*    <>*/}
-        {/*      站点<span className={styles.info}>（选填）</span>*/}
+        {/*      站点<span className="feedback-form-info">（选填）</span>*/}
         {/*    </>*/}
         {/*  }*/}
         {/*  name="url"*/}
         {/*  rules={[{ required: false }, { type: 'url', message: '请输入一个合法的 URL 地址。' }]}*/}
         {/*>*/}
         <label>
-          站点<span className={styles.info}>（选填）</span>
+          站点<span className="feedback-form-info">（选填）</span>
         </label>
         <input defaultValue={_init_values['url']} maxLength={200} {...register('url')} />
 
@@ -194,14 +193,14 @@ const FeedbackForm = (props: Props) => {
           required={true}
           {...register('content')}
         />
-        <span className={styles.info}>
-          {(contentValue?.length || 0)} / {GUESTBOOK_MAX_LENGTH}
+        <span className="feedback-form-info">
+          {contentValue?.length || 0} / {GUESTBOOK_MAX_LENGTH}
         </span>
 
         {/*<Form.Item*/}
         {/*  label={*/}
         {/*    <>*/}
-        {/*      验证码<span className={styles.info}>（不区分大小写）</span>*/}
+        {/*      验证码<span className="feedback-form-info">（不区分大小写）</span>*/}
         {/*    </>*/}
         {/*  }*/}
         {/*  name="captchaCode"*/}
@@ -211,7 +210,7 @@ const FeedbackForm = (props: Props) => {
         {/*</Form.Item>*/}
         <label>
           验证码 <span>*</span>
-          <span className={styles.info}>（不区分大小写）</span>
+          <span className="feedback-form-info">（不区分大小写）</span>
         </label>
         <CaptchaInput
           setRefresh={(fn: () => void) => (refreshCaptcha = fn)}

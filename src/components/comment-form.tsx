@@ -12,7 +12,6 @@ import React, { useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import Button from 'src/widgets/Button'
 import dialog from '../widgets/dialog'
-import styles from './comment-form.module.scss'
 
 interface Props {
   contentId: number
@@ -78,7 +77,9 @@ const CommentForm = (props: Props) => {
         // console.log(r)
         if (r && r.success) {
           let message: string =
-            r.data && r.data.status === 'approved' ? '评论成功，感谢你的评论！' : '评论成功，将在审核后展示！'
+            r.data && r.data.status === 'approved'
+              ? '评论成功，感谢你的评论！'
+              : '评论成功，将在审核后展示！'
 
           // alert(msg)
           dialog.Alert({
@@ -141,7 +142,7 @@ const CommentForm = (props: Props) => {
   }
 
   return (
-    <div className={styles.root}>
+    <div className="comment-form">
       <form
         name="comment"
         // form={form}
@@ -188,8 +189,8 @@ const CommentForm = (props: Props) => {
           rows={8}
           {...register('content')}
         />
-        <span className={styles.info}>
-          {(contentValue?.length || 0)} / {COMMENT_MAX_LENGTH}
+        <span className="comment-form-info">
+          {contentValue?.length || 0} / {COMMENT_MAX_LENGTH}
         </span>
 
         {/*<Form.Item*/}
@@ -233,7 +234,7 @@ const CommentForm = (props: Props) => {
         {/*<Form.Item*/}
         {/*  label={*/}
         {/*    <>*/}
-        {/*      站点<span className={styles.info}>（选填）</span>*/}
+        {/*      站点<span className="comment-form-info">（选填）</span>*/}
         {/*    </>*/}
         {/*  }*/}
         {/*  name="url"*/}
@@ -242,14 +243,14 @@ const CommentForm = (props: Props) => {
         {/*  <Input maxLength={200} />*/}
         {/*</Form.Item>*/}
         <label>
-          站点<span className={styles.info}>（选填）</span>
+          站点<span className="comment-form-info">（选填）</span>
         </label>
         <input type={'url'} maxLength={200} defaultValue={_init_values.url} {...register('url')} />
 
         {/*<Form.Item*/}
         {/*  label={*/}
         {/*    <>*/}
-        {/*      验证码<span className={styles.info}>（不区分大小写）</span>*/}
+        {/*      验证码<span className="comment-form-info">（不区分大小写）</span>*/}
         {/*    </>*/}
         {/*  }*/}
         {/*  name="captchaCode"*/}
@@ -259,7 +260,7 @@ const CommentForm = (props: Props) => {
         {/*</Form.Item>*/}
         <label>
           验证码 <span>*</span>
-          <span className={styles.info}>（不区分大小写）</span>
+          <span className="comment-form-info">（不区分大小写）</span>
         </label>
         <CaptchaInput
           setRefresh={(fn: () => void) => (refreshCaptcha = fn)}

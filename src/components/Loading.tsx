@@ -3,7 +3,6 @@
 
 import clsx from 'clsx'
 import React from 'react'
-import styles from './Loading.module.scss'
 
 interface IProps {
   className?: string
@@ -11,7 +10,7 @@ interface IProps {
 
 const Loading = (props: IProps) => {
   const { className } = props
-  return <div className={clsx(styles.root, className)}>Loading...</div>
+  return <div className={clsx('loading', className)}>Loading...</div>
 }
 
 export default Loading
