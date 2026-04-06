@@ -38,6 +38,7 @@ export interface IPost {
   html: string
   url: string
   slug?: string
+  coverImage?: string
   pubTime?: string
   category: ICategory | null
   tags: ITag[]

@@ -110,6 +110,7 @@ export async function POST(request: NextRequest) {
               slug: body.slug,
               categoryId: body.categoryId,
               tagNames: body.tagNames,
+              coverImage: body.coverImage,
               seoTitle: body.seoTitle,
               seoDescription: body.seoDescription,
               publishedAt: post.publishedAt,

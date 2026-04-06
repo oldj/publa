@@ -166,6 +166,9 @@ export default function Post(props: IProps) {
 
   return (
     <div className="post-detail">
+      {post.coverImage && (
+        <img className="post-detail-cover" src={post.coverImage} alt={post.title} />
+      )}
       <h1 className="post-detail-title">{post.title}</h1>
       <div className="post-detail-date post-detail-info">
         {dayjs(post.pubTime).format('YYYY-MM-DD')}

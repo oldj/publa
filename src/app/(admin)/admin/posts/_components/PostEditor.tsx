@@ -73,6 +73,7 @@ interface PostData {
   allowComment: boolean
   showComments: boolean
   pinned: boolean
+  coverImage: string | null
   seoTitle: string | null
   seoDescription: string | null
   canonicalUrl: string | null
@@ -89,6 +90,7 @@ interface PostDraftContent {
   contentText: string
   categoryId: number | null
   tagNames: string[]
+  coverImage: string
   seoTitle: string
   seoDescription: string
   publishedAt: string | null
@@ -106,6 +108,7 @@ interface FormState {
   allowComment: boolean
   showComments: boolean
   pinned: boolean
+  coverImage: string
   publishedAt: string | null
   seoTitle: string
   seoDescription: string
@@ -178,6 +181,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
     allowComment: true,
     showComments: true,
     pinned: false,
+    coverImage: '',
     publishedAt: null,
     seoTitle: '',
     seoDescription: '',
@@ -193,6 +197,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
         excerpt: f.excerpt,
         categoryId: f.categoryId,
         tagNames: f.tagNames,
+        coverImage: f.coverImage,
         seoTitle: f.seoTitle,
         seoDescription: f.seoDescription,
         publishedAt: f.publishedAt,
@@ -261,6 +266,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
           allowComment: postData.allowComment,
           showComments: postData.showComments,
           pinned: postData.pinned,
+          coverImage: postData.coverImage || '',
           publishedAt: postData.publishedAt,
           seoTitle: postData.seoTitle || '',
           seoDescription: postData.seoDescription || '',
@@ -283,6 +289,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
               allowComment: postData.allowComment,
               showComments: postData.showComments,
               pinned: postData.pinned,
+              coverImage: draft.coverImage || '',
               publishedAt: draft.publishedAt,
               seoTitle: draft.seoTitle,
               seoDescription: draft.seoDescription,
@@ -503,7 +510,8 @@ export default function PostEditor({ postId }: { postId?: number }) {
       }
 
       const currentMeta = getMetaSnapshot(formRef.current)
-      const contentChanged = content.contentRaw && content.contentRaw !== lastAutoSaveContent.current
+      const contentChanged =
+        content.contentRaw && content.contentRaw !== lastAutoSaveContent.current
       const metaChanged = currentMeta !== lastAutoSaveMetaRef.current
       if (!contentChanged && !metaChanged) return
 
@@ -763,6 +771,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
                     allowComment: postData.allowComment,
                     showComments: postData.showComments,
                     pinned: postData.pinned,
+                    coverImage: postData.coverImage || '',
                     publishedAt: postData.publishedAt,
                     seoTitle: postData.seoTitle || '',
                     seoDescription: postData.seoDescription || '',
@@ -1075,8 +1084,15 @@ export default function PostEditor({ postId }: { postId?: number }) {
               <Text fw={500} mb="sm">
                 其他设置
               </Text>
+              <TextInput
+                label="头图"
+                placeholder="输入图片 URL"
+                value={form.coverImage}
+                onChange={(e) => setField('coverImage', e.target.value)}
+              />
               <Checkbox
                 label="置顶"
+                mt="sm"
                 checked={form.pinned}
                 onChange={(e) => setField('pinned', e.currentTarget.checked)}
               />

@@ -11,6 +11,7 @@ export interface PostSaveFormValues {
   showComments: boolean
   pinned: boolean
   publishedAt: string | null
+  coverImage: string
   seoTitle: string
   seoDescription: string
 }
@@ -43,6 +44,7 @@ export function buildPostDraftPayload(
       slug: form.slug,
       categoryId: form.categoryId ? parseInt(form.categoryId, 10) : null,
       tagNames: form.tagNames,
+      coverImage: form.coverImage,
       seoTitle: form.seoTitle,
       seoDescription: form.seoDescription,
       publishedAt: form.publishedAt,
@@ -66,6 +68,7 @@ export function buildPostSaveBody(
     contentText: content.contentText,
     contentType: content.contentType,
     excerpt: form.excerpt || undefined,
+    coverImage: form.coverImage || null,
     status,
     categoryId: form.categoryId ? parseInt(form.categoryId, 10) : null,
     tagIds,

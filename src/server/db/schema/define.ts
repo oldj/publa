@@ -137,7 +137,7 @@ export function defineSchema(kit: DialectKit) {
       excerpt: text('excerpt'),
       excerptAuto: text('excerpt_auto'),
       categoryId: integer('category_id').references(() => categories.id),
-      coverImageId: integer('cover_image_id').references(() => attachments.id),
+      coverImage: text('cover_image'),
       allowComment: bool('allow_comment').notNull().default(true),
       showComments: bool('show_comments').notNull().default(true),
       viewCount: integer('view_count').notNull().default(0),

@@ -142,7 +142,7 @@
 | excerptAuto    | string  | 否   | 自动摘要                                                  |
 | status         | string  | 是   | 状态：`draft`、`scheduled`、`published`                   |
 | categoryId     | number  | 否   | 所属分类 ID                                               |
-| coverImageId   | number  | 否   | 封面图片附件 ID                                           |
+| coverImage     | string  | 否   | 封面图片 URL                                              |
 | allowComment   | boolean | 否   | 是否允许评论，默认 `true`                                 |
 | showComments   | boolean | 否   | 是否显示评论，默认 `true`                                 |
 | viewCount      | number  | 否   | 浏览量，默认 `0`                                          |
@@ -165,30 +165,30 @@
 
 ### contentRevisions（历史记录）
 
-| 字段        | 类型   | 必填 | 说明                                                    |
-| ----------- | ------ | ---- | ------------------------------------------------------- |
-| id          | number | 是   | 历史记录 ID                                             |
-| targetType  | string | 是   | 目标类型：`post`、`page`                                |
-| targetId    | number | 是   | 目标内容 ID                                             |
-| title       | string | 否   | 标题                                                    |
-| excerpt     | string | 否   | 摘要                                                    |
-| contentType | string | 否   | 内容类型：`richtext`、`markdown`、`html`                |
-| contentRaw  | string | 否   | 原始内容                                                |
-| contentHtml | string | 否   | 渲染后的 HTML                                           |
-| contentText | string | 否   | 纯文本内容                                              |
-| status      | string | 否   | 状态：`draft`、`published`                              |
-| createdAt   | string | 是   | 创建时间                                                |
-| updatedAt   | string | 否   | 更新时间                                                |
-| createdBy   | number | 是   | 创建者用户 ID；引用不存在用户时，回填为当前导入用户     |
+| 字段        | 类型   | 必填 | 说明                                                |
+| ----------- | ------ | ---- | --------------------------------------------------- |
+| id          | number | 是   | 历史记录 ID                                         |
+| targetType  | string | 是   | 目标类型：`post`、`page`                            |
+| targetId    | number | 是   | 目标内容 ID                                         |
+| title       | string | 否   | 标题                                                |
+| excerpt     | string | 否   | 摘要                                                |
+| contentType | string | 否   | 内容类型：`richtext`、`markdown`、`html`            |
+| contentRaw  | string | 否   | 原始内容                                            |
+| contentHtml | string | 否   | 渲染后的 HTML                                       |
+| contentText | string | 否   | 纯文本内容                                          |
+| status      | string | 否   | 状态：`draft`、`published`                          |
+| createdAt   | string | 是   | 创建时间                                            |
+| updatedAt   | string | 否   | 更新时间                                            |
+| createdBy   | number | 是   | 创建者用户 ID；引用不存在用户时，回填为当前导入用户 |
 
 ### slugHistories（Slug 变更历史）
 
-| 字段      | 类型   | 必填 | 说明    |
-| --------- | ------ | ---- | ------- |
-| id        | number | 是   | 记录 ID |
-| contentId | number | 是   | 内容 ID |
-| slug      | string | 是   | 旧 slug |
-| createdAt | string | 是   | 创建时间|
+| 字段      | 类型   | 必填 | 说明     |
+| --------- | ------ | ---- | -------- |
+| id        | number | 是   | 记录 ID  |
+| contentId | number | 是   | 内容 ID  |
+| slug      | string | 是   | 旧 slug  |
+| createdAt | string | 是   | 创建时间 |
 
 ### comments（评论）
 
@@ -212,37 +212,37 @@
 
 ### guestbookMessages（留言）
 
-| 字段          | 类型   | 必填 | 说明                   |
-| ------------- | ------ | ---- | ---------------------- |
-| id            | number | 是   | 留言 ID                |
-| authorName    | string | 是   | 留言者名称             |
-| authorEmail   | string | 否   | 留言者邮箱             |
-| authorWebsite | string | 否   | 留言者网站             |
-| content       | string | 是   | 留言内容               |
-| ipAddress     | string | 否   | IP 地址                |
-| userAgent     | string | 否   | 浏览器 UA              |
-| status        | string | 是   | 状态：`unread`、`read` |
-| createdAt     | string | 是   | 创建时间               |
+| 字段          | 类型   | 必填 | 说明                          |
+| ------------- | ------ | ---- | ----------------------------- |
+| id            | number | 是   | 留言 ID                       |
+| authorName    | string | 是   | 留言者名称                    |
+| authorEmail   | string | 否   | 留言者邮箱                    |
+| authorWebsite | string | 否   | 留言者网站                    |
+| content       | string | 是   | 留言内容                      |
+| ipAddress     | string | 否   | IP 地址                       |
+| userAgent     | string | 否   | 浏览器 UA                     |
+| status        | string | 是   | 状态：`unread`、`read`        |
+| createdAt     | string | 是   | 创建时间                      |
 | deletedAt     | string | 否   | 软删除时间；未删除时为 `null` |
 
 ### attachments（附件记录）
 
 > 注意：仅导出附件的元数据记录，不包含附件文件本身。
 
-| 字段             | 类型   | 必填 | 说明                                |
-| ---------------- | ------ | ---- | ----------------------------------- |
-| id               | number | 是   | 附件 ID                             |
-| filename         | string | 是   | 文件名                              |
-| originalFilename | string | 是   | 原始文件名                          |
-| mimeType         | string | 是   | MIME 类型                           |
-| size             | number | 是   | 文件大小（字节）                    |
-| width            | number | 否   | 图片宽度                            |
-| height           | number | 否   | 图片高度                            |
-| storageProvider  | string | 是   | 存储服务商：`s3`、`r2`、`oss`、`cos`|
-| storageKey       | string | 是   | 存储路径                            |
-| uploadedBy       | number | 否   | 上传者用户 ID                       |
-| createdAt        | string | 是   | 创建时间                            |
-| deletedAt        | string | 否   | 软删除时间；未删除时为 `null`       |
+| 字段             | 类型   | 必填 | 说明                                 |
+| ---------------- | ------ | ---- | ------------------------------------ |
+| id               | number | 是   | 附件 ID                              |
+| filename         | string | 是   | 文件名                               |
+| originalFilename | string | 是   | 原始文件名                           |
+| mimeType         | string | 是   | MIME 类型                            |
+| size             | number | 是   | 文件大小（字节）                     |
+| width            | number | 否   | 图片宽度                             |
+| height           | number | 否   | 图片高度                             |
+| storageProvider  | string | 是   | 存储服务商：`s3`、`r2`、`oss`、`cos` |
+| storageKey       | string | 是   | 存储路径                             |
+| uploadedBy       | number | 否   | 上传者用户 ID                        |
+| createdAt        | string | 是   | 创建时间                             |
+| deletedAt        | string | 否   | 软删除时间；未删除时为 `null`        |
 
 ---
 

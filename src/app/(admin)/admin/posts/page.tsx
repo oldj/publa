@@ -2,8 +2,8 @@
 import myModal from '@/app/(admin)/_components/myModals'
 import adminStyles from '../../_components/AdminShell.module.scss'
 
-import { notify } from '@/lib/notify'
 import { NowrapBadge } from '@/app/(admin)/_components/NowrapBadge'
+import { notify } from '@/lib/notify'
 import {
   ActionIcon,
   Badge,
@@ -29,6 +29,7 @@ interface PostItem {
   categoryName: string | null
   viewCount: number
   pinned: boolean
+  hasDraft: boolean
   publishedAt: string | null
   createdAt: string
 }
@@ -169,6 +170,11 @@ export default function PostsPage() {
                           </Text>
                         )}
                       </Link>
+                      {post.status === 'published' && post.hasDraft && (
+                        <Badge color="orange" variant="light" size="xs">
+                          已修改
+                        </Badge>
+                      )}
                     </Group>
                   </Table.Td>
                   <Table.Td className={adminStyles.cellFit}>

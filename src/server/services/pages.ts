@@ -100,7 +100,7 @@ export async function listPages(options: { page?: number; pageSize?: number } = 
   const draftMap = new Map(drafts.map((draft) => [draft.targetId, draft]))
   const items = rows.map((row) => {
     const draft = draftMap.get(row.id)
-    if (!draft) return row
+    if (!draft) return { ...row, hasDraft: false }
 
     const metadata = parsePageDraftMetadata(draft.metadata)
 
@@ -110,6 +110,7 @@ export async function listPages(options: { page?: number; pageSize?: number } = 
       path: metadata.path || null,
       template: metadata.template,
       contentType: draft.contentType,
+      hasDraft: true,
     }
   })
 

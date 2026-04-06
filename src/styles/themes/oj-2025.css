@@ -751,6 +751,13 @@
   scroll-margin: 16px;
 }
 
+.post-detail-cover {
+  width: 100%;
+  height: auto;
+  margin-bottom: 20px;
+  border-radius: 4px;
+}
+
 .post-detail-title {
   margin-bottom: 20px;
 }

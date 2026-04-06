@@ -19,6 +19,7 @@ export function buildPostRestoreInput(
     contentText: content.contentText,
     categoryId: metadata.categoryId,
     tagIds,
+    coverImage: metadata.coverImage || undefined,
     seoTitle: metadata.seoTitle || undefined,
     seoDescription: metadata.seoDescription || undefined,
     status: 'published',

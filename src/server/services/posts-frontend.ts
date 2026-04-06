@@ -156,6 +156,7 @@ async function buildFrontendPost(
     slug: post.slug,
     pubTime: post.publishedAt || post.createdAt,
     category: category ? { id: category.id, name: category.name, count: 0 } : null,
+    coverImage: post.coverImage || undefined,
     tags: postTagRows.map((t) => ({ id: t.id, name: t.name, count: 0 })),
     previous: { title: '', url: '' },
     next: { title: '', url: '' },

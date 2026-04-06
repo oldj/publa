@@ -50,6 +50,13 @@
       "when": 1775456199995,
       "tag": "0006_right_namorita",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1775500000000,
+      "tag": "0007_add_cover_image",
+      "breakpoints": true
     }
   ]
 }
