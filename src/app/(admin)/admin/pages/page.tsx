@@ -4,8 +4,19 @@ import adminStyles from '../../_components/AdminShell.module.scss'
 
 import { NowrapBadge } from '@/app/(admin)/_components/NowrapBadge'
 import { notify } from '@/lib/notify'
-import { ActionIcon, Badge, Button, Group, Table, Text, Title } from '@mantine/core'
-import { IconEye, IconPencil, IconPlus, IconTrash } from '@tabler/icons-react'
+import {
+  ActionIcon,
+  Badge,
+  Button,
+  Group,
+  Pagination,
+  SegmentedControl,
+  Table,
+  Text,
+  TextInput,
+  Title,
+} from '@mantine/core'
+import { IconEye, IconPencil, IconPlus, IconSearch, IconTrash } from '@tabler/icons-react'
 import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 
@@ -19,6 +30,15 @@ interface PageItem {
   hasDraft: boolean
 }
 
+interface PageListResult {
+  items: PageItem[]
+  page: number
+  pageSize: number
+  pageCount: number
+  itemCount: number
+  statusCounts: Record<string, number>
+}
+
 const statusMap: Record<string, { label: string; color: string }> = {
   draft: { label: '草稿', color: 'gray' },
   scheduled: { label: '定时', color: 'blue' },
@@ -26,13 +46,20 @@ const statusMap: Record<string, { label: string; color: string }> = {
 }
 
 export default function PagesAdminPage() {
-  const [pageList, setPageList] = useState<PageItem[]>([])
+  const [data, setData] = useState<PageListResult | null>(null)
+  const [page, setPage] = useState(1)
+  const [status, setStatus] = useState('')
+  const [search, setSearch] = useState('')
 
   const fetchPages = useCallback(async () => {
-    const res = await fetch('/api/pages')
+    const params = new URLSearchParams({ page: String(page) })
+    if (status) params.set('status', status)
+    if (search) params.set('search', search)
+
+    const res = await fetch(`/api/pages?${params}`)
     const json = await res.json()
-    if (json.success) setPageList(json.data.items)
-  }, [])
+    if (json.success) setData(json.data)
+  }, [page, status, search])
 
   useEffect(() => {
     fetchPages()
@@ -44,7 +71,11 @@ export default function PagesAdminPage() {
     const json = await res.json()
     if (json.success) {
       notify({ color: 'green', message: '删除成功' })
-      fetchPages()
+      if (data && data.items.length <= 1 && page > 1) {
+        setPage(page - 1)
+      } else {
+        fetchPages()
+      }
     }
   }
 
@@ -55,6 +86,36 @@ export default function PagesAdminPage() {
         <Button component={Link} href="/admin/pages/new" leftSection={<IconPlus size={16} />}>
           新建页面
         </Button>
+      </Group>
+
+      <Group mb="md" justify="space-between">
+        <SegmentedControl
+          value={status}
+          onChange={(v) => {
+            setStatus(v)
+            setPage(1)
+          }}
+          data={(() => {
+            const c = data?.statusCounts ?? { draft: 0, scheduled: 0, published: 0 }
+            const total = Object.values(c).reduce((a, b) => a + b, 0)
+            return [
+              { value: '', label: `全部 (${total})` },
+              { value: 'draft', label: `草稿 (${c.draft})` },
+              { value: 'scheduled', label: `定时 (${c.scheduled})` },
+              { value: 'published', label: `已发布 (${c.published})` },
+            ]
+          })()}
+        />
+        <TextInput
+          placeholder="搜索标题或路径..."
+          leftSection={<IconSearch size={16} />}
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value)
+            setPage(1)
+          }}
+          style={{ maxWidth: 300 }}
+        />
       </Group>
 
       <Table.ScrollContainer minWidth={500} className={adminStyles.tableContainer}>
@@ -69,7 +130,7 @@ export default function PagesAdminPage() {
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
-            {pageList.map((p) => {
+            {data?.items.map((p) => {
               const st = statusMap[p.status] || { label: p.status, color: 'gray' }
               return (
                 <Table.Tr key={p.id}>
@@ -147,7 +208,7 @@ export default function PagesAdminPage() {
                 </Table.Tr>
               )
             })}
-            {pageList.length === 0 && (
+            {data?.items.length === 0 && (
               <Table.Tr>
                 <Table.Td colSpan={5}>
                   <Text ta="center" c="dimmed" py="md">
@@ -159,6 +220,12 @@ export default function PagesAdminPage() {
           </Table.Tbody>
         </Table>
       </Table.ScrollContainer>
+
+      {data && data.pageCount > 1 && (
+        <Group justify="center" mt="md">
+          <Pagination total={data.pageCount} value={page} onChange={setPage} />
+        </Group>
+      )}
     </div>
   )
 }

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { setupTestDb } from './__test__/setup'
 
 const { createEmptyPost, listPostsAdmin, updatePost } = await import('./posts')
-const { createEmptyPage, listPages } = await import('./pages')
+const { createEmptyPage, createPage, listPages } = await import('./pages')
 const { saveDraft, getDraft, publishDraft, listPublishedRevisions } = await import('./revisions')
 
 beforeEach(async () => {
@@ -339,5 +339,136 @@ describe('转为草稿（下线）', () => {
     // 历史版本不受影响
     const revisions = await listPublishedRevisions('post', post.id)
     expect(revisions).toHaveLength(1)
+  })
+})
+
+describe('statusCounts', () => {
+  it('文章列表返回各状态计数', async () => {
+    // 创建不同状态的文章
+    const draft1 = await createEmptyPost(1)
+    const draft2 = await createEmptyPost(1)
+    const pub = await createEmptyPost(1)
+    await updatePost(pub.id, { title: '已发布', slug: 'pub-1', status: 'published' })
+
+    const result = await listPostsAdmin()
+    expect(result.statusCounts).toEqual({ draft: 2, scheduled: 0, published: 1 })
+  })
+
+  it('文章状态筛选不影响 statusCounts', async () => {
+    const draft = await createEmptyPost(1)
+    const pub = await createEmptyPost(1)
+    await updatePost(pub.id, { title: '已发布', slug: 'pub-2', status: 'published' })
+
+    const result = await listPostsAdmin({ status: 'draft' })
+    expect(result.items).toHaveLength(1)
+    expect(result.statusCounts).toEqual({ draft: 1, scheduled: 0, published: 1 })
+  })
+
+  it('页面列表返回各状态计数', async () => {
+    await createEmptyPage()
+    await createPage({
+      title: '已发布页面',
+      path: 'about',
+      contentRaw: '',
+      contentHtml: '',
+      status: 'published',
+    })
+
+    const result = await listPages()
+    expect(result.statusCounts).toEqual({ draft: 1, scheduled: 0, published: 1 })
+  })
+
+  it('页面状态筛选不影响 statusCounts', async () => {
+    await createEmptyPage()
+    await createPage({
+      title: '已发布页面',
+      path: 'about-2',
+      contentRaw: '',
+      contentHtml: '',
+      status: 'published',
+    })
+
+    const result = await listPages({ status: 'published' })
+    expect(result.items).toHaveLength(1)
+    expect(result.statusCounts).toEqual({ draft: 1, scheduled: 0, published: 1 })
+  })
+})
+
+describe('文章搜索 slug', () => {
+  it('搜索 slug 能命中文章', async () => {
+    const post = await createEmptyPost(1)
+    await updatePost(post.id, { title: '标题', slug: 'my-unique-slug', status: 'published' })
+
+    const result = await listPostsAdmin({ search: 'unique-slug' })
+    expect(result.items).toHaveLength(1)
+    expect(result.items[0]?.slug).toBe('my-unique-slug')
+  })
+
+  it('slug 搜索不影响 statusCounts', async () => {
+    const post = await createEmptyPost(1)
+    await updatePost(post.id, { title: '标题', slug: 'slug-x', status: 'published' })
+    await createEmptyPost(1) // 一篇草稿，不会被搜索命中
+
+    const result = await listPostsAdmin({ search: 'slug-x' })
+    expect(result.items).toHaveLength(1)
+    // statusCounts 只反映搜索结果范围内的计数
+    expect(result.statusCounts.published).toBe(1)
+    expect(result.statusCounts.draft).toBe(0)
+  })
+})
+
+describe('页面搜索', () => {
+  it('搜索标题能命中页面', async () => {
+    await createPage({
+      title: '关于我们',
+      path: 'about',
+      contentRaw: '',
+      contentHtml: '',
+      status: 'published',
+    })
+
+    const result = await listPages({ search: '关于' })
+    expect(result.items).toHaveLength(1)
+    expect(result.items[0]?.title).toBe('关于我们')
+  })
+
+  it('搜索路径能命中页面', async () => {
+    await createPage({
+      title: '联系方式',
+      path: 'contact-us',
+      contentRaw: '',
+      contentHtml: '',
+      status: 'published',
+    })
+
+    const result = await listPages({ search: 'contact' })
+    expect(result.items).toHaveLength(1)
+    expect(result.items[0]?.path).toBe('contact-us')
+  })
+
+  it('无匹配时返回空列表', async () => {
+    await createEmptyPage()
+    const result = await listPages({ search: '不存在的关键词' })
+    expect(result.items).toHaveLength(0)
+  })
+
+  it('搜索草稿标题能命中页面', async () => {
+    const page = await createEmptyPage()
+    await saveDraft(
+      'page',
+      page.id,
+      {
+        title: '草稿页面标题',
+        excerpt: '',
+        contentRaw: '<p>内容</p>',
+        contentHtml: '<p>内容</p>',
+        contentText: '内容',
+        metadata: { path: 'draft-page', template: 'default' },
+      },
+      1,
+    )
+
+    const result = await listPages({ search: '草稿页面' })
+    expect(result.items).toHaveLength(1)
   })
 })

@@ -10,7 +10,7 @@ import {
   Button,
   Group,
   Pagination,
-  Select,
+  SegmentedControl,
   Table,
   Text,
   TextInput,
@@ -40,6 +40,7 @@ interface PostListResult {
   pageSize: number
   pageCount: number
   itemCount: number
+  statusCounts: Record<string, number>
 }
 
 const statusMap: Record<string, { label: string; color: string }> = {
@@ -51,7 +52,7 @@ const statusMap: Record<string, { label: string; color: string }> = {
 export default function PostsPage() {
   const [data, setData] = useState<PostListResult | null>(null)
   const [page, setPage] = useState(1)
-  const [status, setStatus] = useState<string | null>(null)
+  const [status, setStatus] = useState('')
   const [search, setSearch] = useState('')
 
   const fetchPosts = useCallback(async () => {
@@ -103,31 +104,33 @@ export default function PostsPage() {
         </Button>
       </Group>
 
-      <Group mb="md">
+      <Group mb="md" justify="space-between">
+        <SegmentedControl
+          value={status}
+          onChange={(v) => {
+            setStatus(v)
+            setPage(1)
+          }}
+          data={(() => {
+            const c = data?.statusCounts ?? { draft: 0, scheduled: 0, published: 0 }
+            const total = Object.values(c).reduce((a, b) => a + b, 0)
+            return [
+              { value: '', label: `全部 (${total})` },
+              { value: 'draft', label: `草稿 (${c.draft})` },
+              { value: 'scheduled', label: `定时 (${c.scheduled})` },
+              { value: 'published', label: `已发布 (${c.published})` },
+            ]
+          })()}
+        />
         <TextInput
-          placeholder="搜索标题..."
+          placeholder="搜索标题或 slug..."
           leftSection={<IconSearch size={16} />}
           value={search}
           onChange={(e) => {
             setSearch(e.target.value)
             setPage(1)
           }}
-          style={{ flex: 1, maxWidth: 300 }}
-        />
-        <Select
-          placeholder="全部状态"
-          clearable
-          data={[
-            { value: 'draft', label: '草稿' },
-            { value: 'scheduled', label: '定时' },
-            { value: 'published', label: '已发布' },
-          ]}
-          value={status}
-          onChange={(v) => {
-            setStatus(v)
-            setPage(1)
-          }}
-          style={{ width: 140 }}
+          style={{ maxWidth: 300 }}
         />
       </Group>
 

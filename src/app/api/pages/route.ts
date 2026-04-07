@@ -1,7 +1,7 @@
 import { getCurrentUser } from '@/server/auth'
 import { db } from '@/server/db'
 import { renderMarkdown, htmlToText } from '@/server/lib/markdown'
-import { isUniqueConstraintError, safeParseJson } from '@/server/lib/request'
+import { isUniqueConstraintError, parseIntParam, safeParseJson } from '@/server/lib/request'
 import {
   createEmptyPage,
   createPage,
@@ -23,7 +23,13 @@ export async function GET(request: NextRequest) {
     )
   }
 
-  const result = await listPages()
+  const { searchParams } = new URL(request.url)
+  const page = parseIntParam(searchParams.get('page'), 1, 1)
+  const pageSize = parseIntParam(searchParams.get('pageSize'), 50, 1, 100)
+  const status = searchParams.get('status') || undefined
+  const search = searchParams.get('search') || undefined
+
+  const result = await listPages({ page, pageSize, status, search })
   return NextResponse.json({ success: true, data: result })
 }
 
