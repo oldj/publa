@@ -3,6 +3,7 @@
  * @homepage: https://oldj.net
  */
 
+import HeadElements from '@/components/HeadElements'
 import { getMenuTree } from '@/server/services/menus'
 import { getFrontendCategories, getFrontendTags } from '@/server/services/posts-frontend'
 import { getSetting } from '@/server/services/settings'
@@ -17,16 +18,30 @@ interface IProps {
 
 export default async function BasicLayout(props: IProps) {
   const { children } = props
-  const { categories, tags, menus, siteTitle, siteSlogan, footerCopyright } = await getData()
+  const {
+    categories,
+    tags,
+    menus,
+    siteTitle,
+    siteSlogan,
+    footerCopyright,
+    customHeadHtml,
+    customBodyStartHtml,
+    customBodyEndHtml,
+  } = await getData()
 
   return (
     <>
+      {customHeadHtml && <HeadElements html={customHeadHtml} />}
+      {customBodyStartHtml && <div dangerouslySetInnerHTML={{ __html: customBodyStartHtml }} />}
+
       <div className="basic-layout">
         <Nav menus={menus} siteTitle={siteTitle} siteSlogan={siteSlogan} />
         <main className="basic-layout-body">{children}</main>
       </div>
 
       <Footer categories={categories || []} tags={tags || []} footerCopyright={footerCopyright} />
+      {customBodyEndHtml && <div dangerouslySetInnerHTML={{ __html: customBodyEndHtml }} />}
     </>
   )
 }
@@ -43,6 +58,10 @@ async function getData() {
     .replace(/\{SITE_NAME}/g, siteTitle)
     .replace(/\{FULL_YEAR}/g, year)
 
+  const customHeadHtml = (await getSetting('customHeadHtml')) || ''
+  const customBodyStartHtml = (await getSetting('customBodyStartHtml')) || ''
+  const customBodyEndHtml = (await getSetting('customBodyEndHtml')) || ''
+
   return {
     categories: categories || [],
     tags: tags || [],
@@ -50,5 +69,8 @@ async function getData() {
     siteTitle,
     siteSlogan,
     footerCopyright,
+    customHeadHtml,
+    customBodyStartHtml,
+    customBodyEndHtml,
   }
 }

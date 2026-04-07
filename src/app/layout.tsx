@@ -1,4 +1,3 @@
-import HeadElements from '@/components/HeadElements'
 import NProgressBar from '@/components/NProgress'
 import { buildFaviconHref, getFaviconConfigFromSettings } from '@/server/services/favicon'
 import { getAllSettings } from '@/server/services/settings'
@@ -51,9 +50,6 @@ export default async function RootLayout({ children }: { children: any }) {
     // 数据库可能尚未初始化
   }
 
-  const customHeadHtml = siteSettings.customHeadHtml || ''
-  const customBodyStartHtml = siteSettings.customBodyStartHtml || ''
-  const customBodyEndHtml = siteSettings.customBodyEndHtml || ''
   const siteTitle = siteSettings.siteTitle || 'Publa'
   const rssTitle = siteSettings.rssTitle || siteTitle
 
@@ -61,15 +57,12 @@ export default async function RootLayout({ children }: { children: any }) {
     <html lang="zh">
       <head>
         <link rel="alternate" type="application/rss+xml" title={rssTitle} href="/rss.xml" />
-        {customHeadHtml && <HeadElements html={customHeadHtml} />}
       </head>
       <body data-role="body">
-        {customBodyStartHtml && <div dangerouslySetInnerHTML={{ __html: customBodyStartHtml }} />}
         <Suspense fallback={null}>
           <NProgressBar />
         </Suspense>
         {children}
-        {customBodyEndHtml && <div dangerouslySetInnerHTML={{ __html: customBodyEndHtml }} />}
       </body>
     </html>
   )
