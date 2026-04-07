@@ -1,5 +1,6 @@
 import { requireRole } from '@/server/auth'
 import { safeParseJson } from '@/server/lib/request'
+import { logActivity } from '@/server/services/activity-logs'
 import { createMenu, listMenus, reorderMenus, resetMenus } from '@/server/services/menus'
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -38,5 +39,6 @@ export async function POST(request: NextRequest) {
   }
 
   const menu = await createMenu(body)
+  await logActivity(request, guard.user.id, 'create_menu')
   return NextResponse.json({ success: true, data: menu })
 }

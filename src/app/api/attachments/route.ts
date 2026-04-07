@@ -1,6 +1,12 @@
 import { getCurrentUser } from '@/server/auth'
 import { parseIdParam, parseIntParam } from '@/server/lib/request'
-import { deleteAttachment, getAttachmentUrl, listAttachments, uploadAttachment } from '@/server/services/attachments'
+import { logActivity } from '@/server/services/activity-logs'
+import {
+  deleteAttachment,
+  getAttachmentUrl,
+  listAttachments,
+  uploadAttachment,
+} from '@/server/services/attachments'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(request: NextRequest) {
@@ -48,6 +54,7 @@ export async function POST(request: NextRequest) {
       uploadedBy: user.id,
     })
     const publicUrl = await getAttachmentUrl(attachment.storageKey)
+    await logActivity(request, user.id, 'upload_attachment')
     return NextResponse.json({ success: true, data: { ...attachment, publicUrl } })
   } catch (err: any) {
     return NextResponse.json(
@@ -84,5 +91,6 @@ export async function DELETE(request: NextRequest) {
       { status: 400 },
     )
   }
+  await logActivity(request, user.id, 'delete_attachment')
   return NextResponse.json({ success: true })
 }

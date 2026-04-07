@@ -1,5 +1,6 @@
 import { requireRole } from '@/server/auth'
 import { safeParseJson } from '@/server/lib/request'
+import { logActivity } from '@/server/services/activity-logs'
 import {
   ADMIN_SETTINGS_KEYS,
   getAllSettings,
@@ -37,5 +38,6 @@ export async function PUT(request: NextRequest) {
   }
 
   await updateSettings(body)
+  await logActivity(request, guard.user.id, 'update_settings')
   return NextResponse.json({ success: true })
 }

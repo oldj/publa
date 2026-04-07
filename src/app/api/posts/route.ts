@@ -11,6 +11,7 @@ import {
 } from '@/server/services/posts'
 import { publishDraft, saveDraft } from '@/server/services/revisions'
 import { parsePostDraftMetadata } from '@/shared/revision-metadata'
+import { logActivity } from '@/server/services/activity-logs'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(request: NextRequest) {
@@ -60,6 +61,14 @@ export async function POST(request: NextRequest) {
     )
   }
 
+  // 定时发布必须提供发布时间
+  if (body.status === 'scheduled' && !body.publishedAt) {
+    return NextResponse.json(
+      { success: false, code: 'VALIDATION_ERROR', message: '定时发布必须指定发布时间' },
+      { status: 400 },
+    )
+  }
+
   const slugCheck = validateSlug(body.slug)
   if (!slugCheck.valid) {
     return NextResponse.json(
@@ -94,7 +103,7 @@ export async function POST(request: NextRequest) {
     const post = await createPost({ ...body, authorId: user.id })
 
     // 首次发布时冻结一份历史版本，与 PUT 链路对齐
-    if (body.status === 'published') {
+    if (body.status === 'published' || body.status === 'scheduled') {
       await db.transaction(async (tx) => {
         await saveDraft(
           'post',
@@ -122,6 +131,8 @@ export async function POST(request: NextRequest) {
         await publishDraft('post', post.id, user.id, tx)
       })
     }
+
+    await logActivity(request, user.id, 'create_post')
 
     return NextResponse.json({ success: true, data: post })
   } catch (err) {

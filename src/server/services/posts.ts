@@ -47,14 +47,18 @@ export interface PostListOptions {
 export async function listPostsAdmin(options: PostListOptions = {}) {
   const { page = 1, pageSize = 20, status, categoryId, search } = options
 
-  const conditions = [eq(contents.type, 'post'), isNull(contents.deletedAt)]
-  if (status) conditions.push(eq(contents.status, status as any))
-  if (categoryId) conditions.push(eq(contents.categoryId, categoryId))
+  // 基础条件（不含 status 筛选，用于计算各状态计数）
+  const baseConditions: ReturnType<typeof eq>[] = [
+    eq(contents.type, 'post'),
+    isNull(contents.deletedAt),
+  ]
+  if (categoryId) baseConditions.push(eq(contents.categoryId, categoryId))
   if (search) {
-    // 同时匹配主表标题和草稿标题，保持列表显示与搜索结果一致
-    conditions.push(
+    // 同时匹配标题、slug 和草稿标题
+    baseConditions.push(
       or(
         like(contents.title, `%${search}%`),
+        like(contents.slug, `%${search}%`),
         exists(
           db
             .select({ id: contentRevisions.id })
@@ -72,6 +76,21 @@ export async function listPostsAdmin(options: PostListOptions = {}) {
     )
   }
 
+  // 各状态计数（不受当前 status 筛选影响）
+  const countRows = await db
+    .select({ status: contents.status, count: count() })
+    .from(contents)
+    .where(and(...baseConditions))
+    .groupBy(contents.status)
+
+  const statusCounts: Record<string, number> = { draft: 0, scheduled: 0, published: 0 }
+  for (const row of countRows) {
+    if (row.status in statusCounts) statusCounts[row.status] = row.count
+  }
+
+  // 加上 status 筛选条件
+  const conditions = [...baseConditions]
+  if (status) conditions.push(eq(contents.status, status as any))
   const where = and(...conditions)
 
   const [{ total }] = await db.select({ total: count() }).from(contents).where(where)
@@ -127,6 +146,7 @@ export async function listPostsAdmin(options: PostListOptions = {}) {
     pageSize,
     pageCount: Math.ceil(total / pageSize),
     itemCount: total,
+    statusCounts,
   }
 }
 

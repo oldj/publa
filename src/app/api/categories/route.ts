@@ -1,6 +1,7 @@
 import { requireCurrentUser } from '@/server/auth'
 import { isUniqueConstraintError, safeParseJson } from '@/server/lib/request'
 import { createCategory, getCategoryBySlug, listCategories } from '@/server/services/categories'
+import { logActivity } from '@/server/services/activity-logs'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET() {
@@ -36,6 +37,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const category = await createCategory(body)
+    await logActivity(request, guard.user.id, 'create_category')
     return NextResponse.json({ success: true, data: category })
   } catch (err) {
     if (isUniqueConstraintError(err)) {

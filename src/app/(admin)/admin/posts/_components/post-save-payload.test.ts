@@ -49,6 +49,99 @@ describe('buildPostSaveBody', () => {
       publishedAt: null,
     })
   })
+
+  it('草稿状态下 publishedAt 应置空', () => {
+    const body = buildPostSaveBody(
+      {
+        title: '测试',
+        slug: 'test',
+        excerpt: '',
+        categoryId: '',
+        tagNames: [],
+        allowComment: true,
+        showComments: true,
+        pinned: false,
+        publishedAt: '2026-01-01T00:00:00.000Z',
+        coverImage: '',
+        seoTitle: '',
+        seoDescription: '',
+      },
+      {
+        contentType: 'richtext',
+        contentRaw: '<p>test</p>',
+        contentHtml: '<p>test</p>',
+        contentText: 'test',
+      },
+      [],
+      'draft',
+    )
+
+    expect(body.publishedAt).toBeNull()
+    expect(body.status).toBe('draft')
+  })
+
+  it('定时发布时应使用 options.publishedAt', () => {
+    const scheduledTime = '2026-06-01T10:00:00.000Z'
+    const body = buildPostSaveBody(
+      {
+        title: '定时文章',
+        slug: 'scheduled-post',
+        excerpt: '',
+        categoryId: '',
+        tagNames: [],
+        allowComment: true,
+        showComments: true,
+        pinned: false,
+        publishedAt: null,
+        coverImage: '',
+        seoTitle: '',
+        seoDescription: '',
+      },
+      {
+        contentType: 'richtext',
+        contentRaw: '<p>content</p>',
+        contentHtml: '<p>content</p>',
+        contentText: 'content',
+      },
+      [],
+      'scheduled',
+      { publishedAt: scheduledTime },
+    )
+
+    expect(body.publishedAt).toBe(scheduledTime)
+    expect(body.status).toBe('scheduled')
+  })
+
+  it('发布时如果没有 publishedAt 应使用 now', () => {
+    const now = '2026-04-07T12:00:00.000Z'
+    const body = buildPostSaveBody(
+      {
+        title: '发布文章',
+        slug: 'pub-post',
+        excerpt: '',
+        categoryId: '',
+        tagNames: [],
+        allowComment: true,
+        showComments: true,
+        pinned: false,
+        publishedAt: null,
+        coverImage: '',
+        seoTitle: '',
+        seoDescription: '',
+      },
+      {
+        contentType: 'richtext',
+        contentRaw: '<p>content</p>',
+        contentHtml: '<p>content</p>',
+        contentText: 'content',
+      },
+      [],
+      'published',
+      { now },
+    )
+
+    expect(body.publishedAt).toBe(now)
+  })
 })
 
 describe('buildPostDraftPayload', () => {

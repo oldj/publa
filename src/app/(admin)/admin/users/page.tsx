@@ -13,6 +13,7 @@ import {
   Drawer,
   Group,
   Modal,
+  Pagination,
   PasswordInput,
   Select,
   Stack,
@@ -20,9 +21,10 @@ import {
   Text,
   TextInput,
   Title,
+  Tooltip,
 } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
-import { IconEdit, IconPlus, IconTrash } from '@tabler/icons-react'
+import { IconEdit, IconHistory, IconPlus, IconTrash } from '@tabler/icons-react'
 import dayjs from 'dayjs'
 import { useCallback, useEffect, useState } from 'react'
 
@@ -32,6 +34,50 @@ interface User {
   email: string | null
   role: string
   createdAt: string
+  lastActiveAt: string | null
+}
+
+interface ActivityLog {
+  id: number
+  action: string
+  ipAddress: string | null
+  userAgent: string | null
+  createdAt: string
+}
+
+const ACTION_LABELS: Record<string, string> = {
+  login: '登录',
+  logout: '登出',
+  create_post: '创建文章',
+  update_post: '更新文章',
+  delete_post: '删除文章',
+  create_page: '创建页面',
+  update_page: '更新页面',
+  delete_page: '删除页面',
+  create_user: '创建用户',
+  update_user: '更新用户',
+  delete_user: '删除用户',
+  create_category: '创建分类',
+  update_category: '更新分类',
+  delete_category: '删除分类',
+  create_tag: '创建标签',
+  update_tag: '更新标签',
+  delete_tag: '删除标签',
+  create_menu: '创建菜单',
+  update_menu: '更新菜单',
+  delete_menu: '删除菜单',
+  moderate_comment: '审核评论',
+  delete_comment: '删除评论',
+  moderate_guestbook: '审核留言',
+  delete_guestbook: '删除留言',
+  upload_attachment: '上传附件',
+  delete_attachment: '删除附件',
+  update_settings: '更新设置',
+  create_redirect: '创建重定向',
+  update_redirect: '更新重定向',
+  delete_redirect: '删除重定向',
+  import_data: '导入数据',
+  export_data: '导出数据',
 }
 
 const roleMap: Record<string, { label: string; color: string }> = {
@@ -57,12 +103,39 @@ export default function UsersPage() {
   })
   const [editOpened, setEditOpened] = useState(false)
 
+  // 活动日志 Drawer
+  const [logsUser, setLogsUser] = useState<User | null>(null)
+  const [logsOpened, setLogsOpened] = useState(false)
+  const [logs, setLogs] = useState<ActivityLog[]>([])
+  const [logsTotal, setLogsTotal] = useState(0)
+  const [logsPage, setLogsPage] = useState(1)
+  const logsPageSize = 30
+
   const isEditor = currentUser?.role === 'editor'
+  const isAdmin = currentUser?.role === 'admin'
+
+  /** 当前用户是否可查看目标用户的活动日志 */
+  const canViewLogs = (target: { role: string }) => {
+    if (isEditor) return false
+    if (isAdmin && target.role === 'owner') return false
+    return true
+  }
 
   const fetchUsers = useCallback(async () => {
     const res = await fetch('/api/users')
     const json = await res.json()
     if (json.success) setUserList(json.data)
+  }, [])
+
+  const fetchActivityLogs = useCallback(async (userId: number, page: number) => {
+    const res = await fetch(
+      `/api/users/${userId}/activity-logs?page=${page}&pageSize=${logsPageSize}`,
+    )
+    const json = await res.json()
+    if (json.success) {
+      setLogs(json.data.items)
+      setLogsTotal(json.data.total)
+    }
   }, [])
 
   useEffect(() => {
@@ -218,7 +291,7 @@ export default function UsersPage() {
               <Table.Th>用户名</Table.Th>
               <Table.Th>邮箱</Table.Th>
               <Table.Th>角色</Table.Th>
-              <Table.Th>创建时间</Table.Th>
+              <Table.Th>最后活跃</Table.Th>
               <Table.Th>操作</Table.Th>
             </Table.Tr>
           </Table.Thead>
@@ -241,26 +314,40 @@ export default function UsersPage() {
                   </Table.Td>
                   <Table.Td>
                     <Text size="sm" c="dimmed">
-                      {dayjs(u.createdAt).format('YYYY-MM-DD')}
+                      {u.lastActiveAt ? dayjs(u.lastActiveAt).format('YYYY-MM-DD HH:mm') : '-'}
                     </Text>
                   </Table.Td>
                   <Table.Td>
-                    {operable && (
-                      <Group gap="xs">
+                    <Group gap="xs">
+                      {canViewLogs(u) && (
+                        <ActionIcon
+                          variant="subtle"
+                          color="gray"
+                          onClick={() => {
+                            setLogsUser(u)
+                            setLogsPage(1)
+                            fetchActivityLogs(u.id, 1)
+                            setLogsOpened(true)
+                          }}
+                        >
+                          <IconHistory size={16} />
+                        </ActionIcon>
+                      )}
+                      {operable && (
                         <ActionIcon variant="subtle" color="blue" onClick={() => openEdit(u)}>
                           <IconEdit size={16} />
                         </ActionIcon>
-                        {canDelete(u) && (
-                          <ActionIcon
-                            variant="subtle"
-                            color="red"
-                            onClick={() => handleDelete(u.id, u.username)}
-                          >
-                            <IconTrash size={16} />
-                          </ActionIcon>
-                        )}
-                      </Group>
-                    )}
+                      )}
+                      {canDelete(u) && (
+                        <ActionIcon
+                          variant="subtle"
+                          color="red"
+                          onClick={() => handleDelete(u.id, u.username)}
+                        >
+                          <IconTrash size={16} />
+                        </ActionIcon>
+                      )}
+                    </Group>
                   </Table.Td>
                 </Table.Tr>
               )
@@ -372,6 +459,69 @@ export default function UsersPage() {
                 </Button>
               )}
             </Group>
+          </Stack>
+        )}
+      </Drawer>
+
+      {/* 活动日志 Drawer */}
+      <Drawer
+        opened={logsOpened}
+        onClose={() => setLogsOpened(false)}
+        title={`活动日志 — ${logsUser?.username || ''}`}
+        position="right"
+        size="lg"
+      >
+        {logs.length === 0 ? (
+          <Text c="dimmed" ta="center" py="xl">
+            暂无活动记录
+          </Text>
+        ) : (
+          <Stack gap="md">
+            <Table highlightOnHover>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>操作</Table.Th>
+                  <Table.Th>IP</Table.Th>
+                  <Table.Th>时间</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {logs.map((log) => (
+                  <Table.Tr key={log.id}>
+                    <Table.Td>
+                      <Badge variant="light" size="sm">
+                        {ACTION_LABELS[log.action] || log.action}
+                      </Badge>
+                    </Table.Td>
+                    <Table.Td>
+                      <Tooltip label={log.userAgent || '-'} multiline maw={400}>
+                        <Text size="sm" c="dimmed" style={{ cursor: 'help' }}>
+                          {log.ipAddress || '-'}
+                        </Text>
+                      </Tooltip>
+                    </Table.Td>
+                    <Table.Td>
+                      <Text size="sm" c="dimmed">
+                        {dayjs(log.createdAt).format('YYYY-MM-DD HH:mm')}
+                      </Text>
+                    </Table.Td>
+                  </Table.Tr>
+                ))}
+              </Table.Tbody>
+            </Table>
+
+            {Math.ceil(logsTotal / logsPageSize) > 1 && (
+              <Group justify="center">
+                <Pagination
+                  total={Math.ceil(logsTotal / logsPageSize)}
+                  value={logsPage}
+                  onChange={(p) => {
+                    setLogsPage(p)
+                    if (logsUser) fetchActivityLogs(logsUser.id, p)
+                  }}
+                />
+              </Group>
+            )}
           </Stack>
         )}
       </Drawer>

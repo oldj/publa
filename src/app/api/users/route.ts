@@ -1,6 +1,7 @@
 import { requireCurrentUser, requireRole } from '@/server/auth'
 import { normalizeEmail, normalizePassword, normalizeUsername } from '@/lib/user-input'
 import { safeParseJson } from '@/server/lib/request'
+import { getLastActiveMap, logActivity } from '@/server/services/activity-logs'
 import { createUser, getUserById, listUsers } from '@/server/services/users'
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -8,13 +9,20 @@ export async function GET() {
   const guard = await requireCurrentUser()
   if (!guard.ok) return guard.response
 
+  const lastActiveMap = await getLastActiveMap()
+
   // 编辑只能看到自己
   if (guard.user.role === 'editor') {
     const self = await getUserById(guard.user.id)
-    return NextResponse.json({ success: true, data: self ? [self] : [] })
+    const data = self ? [{ ...self, lastActiveAt: lastActiveMap.get(self.id) || null }] : []
+    return NextResponse.json({ success: true, data })
   }
 
-  const data = await listUsers()
+  const users = await listUsers()
+  const data = users.map((u) => ({
+    ...u,
+    lastActiveAt: lastActiveMap.get(u.id) || null,
+  }))
   return NextResponse.json({ success: true, data })
 }
 
@@ -51,6 +59,7 @@ export async function POST(request: NextRequest) {
   }
 
   const newUser = await createUser({ username, password, email: email ?? undefined, role })
+  await logActivity(request, guard.user.id, 'create_user')
   return NextResponse.json({
     success: true,
     data: { id: newUser.id, username: newUser.username, role: newUser.role },

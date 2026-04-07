@@ -1,5 +1,6 @@
 import { requireRole } from '@/server/auth'
 import { safeParseJson } from '@/server/lib/request'
+import { logActivity } from '@/server/services/activity-logs'
 import {
   createRedirectRule,
   listRedirectRules,
@@ -47,6 +48,7 @@ export async function POST(request: NextRequest) {
       redirectType: body.redirectType,
       memo: body.memo,
     })
+    await logActivity(request, guard.user.id, 'create_redirect')
     return NextResponse.json({ success: true, data: item })
   } catch (caughtError) {
     if (caughtError instanceof RedirectRuleValidationError) {

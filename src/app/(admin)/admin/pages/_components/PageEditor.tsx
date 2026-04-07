@@ -10,7 +10,9 @@ import RichTextEditorWrapper, {
   type RichTextEditorHandle,
 } from '@/components/editors/RichTextEditorWrapper'
 import myModal from '@/app/(admin)/_components/myModals'
+import PublishSettings from '@/app/(admin)/_components/PublishSettings'
 import { notify } from '@/lib/notify'
+import { notifications } from '@mantine/notifications'
 import {
   Badge,
   Button,
@@ -33,6 +35,8 @@ import { shouldCreateDraftRecord } from '../../_lib/draft-persistence'
 import RevisionHistory from '../../posts/_components/RevisionHistory'
 import { buildPageDraftPayload, buildPageSaveBody } from './page-save-payload'
 
+const AUTO_SAVE_FAIL_ID = 'auto-save-fail'
+
 const RESERVED_PATHS = ['admin', 'api', 'setup', 'rss.xml', 'sitemap.xml', 'uploads']
 
 function validatePath(path: string): string | null {
@@ -50,6 +54,7 @@ interface PageDraftContent {
   template: string
   seoTitle: string
   seoDescription: string
+  publishedAt: string | null
   contentType: ContentType
   contentRaw: string
   contentHtml: string
@@ -65,10 +70,32 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
   const editorDirty = useRef(false)
   const [autoSaveTime, setAutoSaveTime] = useState<string | null>(null)
   const [historyOpen, setHistoryOpen] = useState(false)
+
+  // 发布设置面板
+  const [scheduledTime, setScheduledTime] = useState<Date | null>(null)
+  const [publishTab, setPublishTab] = useState<string>('draft')
   const lastAutoSaveContent = useRef<string>('')
   const lastAutoSaveMetaRef = useRef<string>('')
   const creatingRef = useRef(false)
   const pendingCreatedPageIdRef = useRef<number | null>(null)
+
+  // 自动保存失败计数
+  const autoSaveFailCountRef = useRef(0)
+  const onAutoSaveFail = useCallback(() => {
+    autoSaveFailCountRef.current += 1
+    if (autoSaveFailCountRef.current >= 3) {
+      notify({
+        id: AUTO_SAVE_FAIL_ID,
+        color: 'red',
+        message: '自动保存连续失败，请检查网络连接',
+        autoClose: false,
+      })
+    }
+  }, [])
+  const clearAutoSaveFail = useCallback(() => {
+    autoSaveFailCountRef.current = 0
+    notifications.hide(AUTO_SAVE_FAIL_ID)
+  }, [])
   const autoSavingRef = useRef(false)
   const [contentType, setContentType] = useState<ContentType>('richtext')
   const contentTypeRef = useRef<ContentType>('richtext')
@@ -82,6 +109,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
     path: '',
     template: 'default',
     status: 'draft',
+    publishedAt: null as string | null,
     seoTitle: '',
     seoDescription: '',
   })
@@ -96,6 +124,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
         title: f.title,
         path: f.path,
         template: f.template,
+        publishedAt: f.publishedAt,
         seoTitle: f.seoTitle,
         seoDescription: f.seoDescription,
       }),
@@ -164,15 +193,29 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
           const contentHtml = draft ? draft.contentHtml : p.contentHtml
           const initialPath = draft ? draft.path : p.path || ''
 
+          const initialPublishedAt = draft?.publishedAt ?? p.publishedAt ?? null
           setForm({
             title: draft ? draft.title : p.title,
             path: initialPath,
             template: draft ? draft.template : p.template,
             status: p.status,
+            publishedAt: initialPublishedAt,
             seoTitle: draft ? draft.seoTitle : p.seoTitle || '',
             seoDescription: draft ? draft.seoDescription : p.seoDescription || '',
           })
           setPathError(initialPath ? validatePath(initialPath) : null)
+          setPublishTab(
+            p.status === 'published'
+              ? 'published'
+              : p.status === 'scheduled'
+                ? 'scheduled'
+                : 'draft',
+          )
+          if (p.status === 'scheduled' && p.publishedAt) {
+            setScheduledTime(new Date(p.publishedAt))
+          } else {
+            setScheduledTime(null)
+          }
 
           const ct = (draft?.contentType || p.contentType || 'richtext') as ContentType
           setContentType(ct)
@@ -196,6 +239,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
             path: initialPath,
             template: draft ? draft.template : p.template,
             status: p.status,
+            publishedAt: initialPublishedAt,
             seoTitle: draft ? draft.seoTitle : p.seoTitle || '',
             seoDescription: draft ? draft.seoDescription : p.seoDescription || '',
           })
@@ -209,6 +253,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
             path: initialPath,
             template: draft ? draft.template : p.template,
             status: p.status,
+            publishedAt: initialPublishedAt,
             seoTitle: draft ? draft.seoTitle : p.seoTitle || '',
             seoDescription: draft ? draft.seoDescription : p.seoDescription || '',
           }
@@ -304,6 +349,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
       try {
         const newId = await ensurePendingPageId(silent)
         if (!newId) {
+          if (silent) onAutoSaveFail()
           return
         }
         const formState = formRef.current
@@ -312,17 +358,22 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
         // 保存完整草稿快照，允许 path 暂时非法或重复
         const draftSave = await saveDraftRevision(newId, formState, content)
         if (!draftSave.json.success) {
-          if (!silent) {
+          if (silent) {
+            onAutoSaveFail()
+          } else {
             notify({ color: 'red', message: draftSave.json.message || '保存草稿失败' })
           }
           return
         }
 
+        clearAutoSaveFail()
         redirected = true
         pendingCreatedPageIdRef.current = null
         router.replace(`/admin/pages/${newId}`)
       } catch {
-        if (!silent) {
+        if (silent) {
+          onAutoSaveFail()
+        } else {
           notify({ color: 'red', message: '网络错误' })
         }
       }
@@ -331,7 +382,14 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
         creatingRef.current = false
       }
     },
-    [ensurePendingPageId, getCurrentContent, router, saveDraftRevision],
+    [
+      ensurePendingPageId,
+      getCurrentContent,
+      router,
+      saveDraftRevision,
+      onAutoSaveFail,
+      clearAutoSaveFail,
+    ],
   )
 
   // 自动保存定时器
@@ -365,19 +423,32 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
       saveDraftRevision(pageId, formRef.current, content)
         .then(({ json }) => {
           if (json.success) {
+            clearAutoSaveFail()
             lastAutoSaveContent.current = content.contentRaw
             lastAutoSaveMetaRef.current = currentMeta
             setAutoSaveTime(json.data.updatedAt)
+          } else {
+            onAutoSaveFail()
           }
         })
-        .catch(() => {})
+        .catch(() => {
+          onAutoSaveFail()
+        })
         .finally(() => {
           autoSavingRef.current = false
         })
     }, 5000)
 
     return () => clearInterval(timer)
-  }, [pageId, createAndRedirect, getCurrentContent, getMetaSnapshot, saveDraftRevision])
+  }, [
+    pageId,
+    createAndRedirect,
+    getCurrentContent,
+    getMetaSnapshot,
+    saveDraftRevision,
+    clearAutoSaveFail,
+    onAutoSaveFail,
+  ])
 
   const handlePathChange = (value: string) => {
     setField('path', value)
@@ -422,6 +493,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
       const formState = formRef.current
       const draftSave = await saveDraftRevision(pageId, formState)
       if (draftSave.json.success) {
+        clearAutoSaveFail()
         lastAutoSaveContent.current = draftSave.content.contentRaw
         lastAutoSaveMetaRef.current = getMetaSnapshot(formState)
         setAutoSaveTime(draftSave.json.data.updatedAt)
@@ -436,9 +508,11 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
     }
   }
 
-  const handleSave = async (status?: string) => {
-    // 仅发布时校验必填字段
-    if (status === 'published') {
+  const handleSave = async (saveStatus?: string, overrides?: { publishedAt?: string | null }) => {
+    const status = saveStatus || 'published'
+
+    // 发布/定时发布时校验必填字段
+    if (status !== 'draft') {
       if (!form.title) {
         notify({ color: 'red', message: '标题不能为空' })
         return
@@ -459,33 +533,49 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
       const url = targetPageId ? `/api/pages/${targetPageId}` : '/api/pages'
       const method = targetPageId ? 'PUT' : 'POST'
 
+      const body = buildPageSaveBody(form, content, status, {
+        ...overrides,
+        now: new Date().toISOString(),
+      })
+
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(buildPageSaveBody(form, content, status)),
+        body: JSON.stringify(body),
       })
       const json = await res.json()
       if (json.success) {
+        clearAutoSaveFail()
         if (!pageId) {
           const nextId = targetPageId ?? json.data.id
           pendingCreatedPageIdRef.current = null
           notify({ color: 'green', message: '创建成功' })
           router.push(`/admin/pages/${nextId}`)
         } else {
-          const newStatus = status || form.status
-          setForm((prev) => ({ ...prev, status: newStatus }))
-          let msg = '保存成功'
-          if (status === 'published') msg = '发布成功'
-          else if (status === 'draft' && form.status !== 'draft') msg = '已转为草稿'
+          const newPublishedAt =
+            overrides?.publishedAt !== undefined
+              ? overrides.publishedAt
+              : json.data?.publishedAt ?? form.publishedAt
+          setForm((prev) => ({ ...prev, status, publishedAt: newPublishedAt }))
+          setPublishTab(
+            status === 'published' ? 'published' : status === 'scheduled' ? 'scheduled' : 'draft',
+          )
+          let msg = '发布成功'
+          if (status === 'draft') msg = '已转为草稿'
+          else if (status === 'scheduled') msg = '定时发布已设置'
           notify({ color: 'green', message: msg })
+          savedSnapshot.current = makeSnapshot(
+            { ...form, status, publishedAt: newPublishedAt },
+            content.contentRaw,
+          )
+          editorDirty.current = false
+          setDirty(false)
           lastAutoSaveContent.current = content.contentRaw
           lastAutoSaveMetaRef.current = getMetaSnapshot({
             ...form,
-            status: status || form.status,
+            status,
+            publishedAt: newPublishedAt,
           })
-          savedSnapshot.current = makeSnapshot({ ...form, status: newStatus }, content.contentRaw)
-          editorDirty.current = false
-          setDirty(false)
           setAutoSaveTime(null)
         }
       } else {
@@ -536,122 +626,143 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
   const isEdit = !!pageId
 
   return (
-    <div>
-      <Group justify="space-between" mb="lg">
-        <Group>
+    <div style={{ position: 'relative' }}>
+      {/* 固定在右上角的保存/发布按钮 */}
+      <Group
+        gap="xs"
+        style={{
+          position: 'sticky',
+          top: 'var(--mantine-spacing-sm)',
+          float: 'right',
+          zIndex: 100,
+          padding: 'var(--mantine-spacing-xs)',
+          borderRadius: 'var(--mantine-radius-md)',
+          backdropFilter: 'blur(8px)',
+        }}
+      >
+        {pageId && (
           <Button
             variant="subtle"
-            component={Link}
-            href="/admin/pages"
-            leftSection={<IconArrowLeft size={16} />}
+            leftSection={<IconEye size={16} />}
+            onClick={handlePreview}
+            loading={loading}
           >
-            返回
+            预览
           </Button>
-          <Title order={3}>{isEdit ? '编辑页面' : '新建页面'}</Title>
-          {isEdit && (
-            <Badge color={form.status === 'published' ? 'green' : 'gray'} variant="light" size="lg">
-              {form.status === 'published' ? '已发布' : '草稿'}
+        )}
+        <Button
+          variant="default"
+          leftSection={<IconDeviceFloppy size={16} />}
+          onClick={handleSaveDraft}
+          loading={loading}
+        >
+          保存
+        </Button>
+        <Button
+          leftSection={<IconSend size={16} />}
+          onClick={async () => {
+            if (form.status !== 'published') {
+              if (!(await myModal.confirm({ message: '确定要发布这个页面吗？' }))) return
+            }
+            await handleSave()
+          }}
+          loading={loading}
+        >
+          发布
+        </Button>
+      </Group>
+
+      <Group mb="lg">
+        <Button
+          variant="subtle"
+          component={Link}
+          href="/admin/pages"
+          leftSection={<IconArrowLeft size={16} />}
+        >
+          返回
+        </Button>
+        <Title order={3}>{isEdit ? '编辑页面' : '新建页面'}</Title>
+        {isEdit && (
+          <Badge
+            color={
+              form.status === 'published' ? 'green' : form.status === 'scheduled' ? 'blue' : 'gray'
+            }
+            variant="light"
+            size="lg"
+          >
+            {form.status === 'published'
+              ? '已发布'
+              : form.status === 'scheduled'
+                ? '定时发布'
+                : '草稿'}
+          </Badge>
+        )}
+        {dirty && (
+          <Group gap={4}>
+            <Badge color="orange" variant="light" size="lg">
+              已修改
             </Badge>
-          )}
-          {dirty && (
-            <Group gap={4}>
-              <Badge color="orange" variant="light" size="lg">
-                已修改
-              </Badge>
-              {pageId && form.status === 'published' && (
-                <IconX
-                  size={16}
-                  color="var(--mantine-color-orange-6)"
-                  style={{ cursor: 'pointer' }}
-                  onClick={async () => {
-                    if (!(await myModal.confirm({ message: '是否要放弃所有未发布的修改？' })))
-                      return
-                    // 先删除草稿，再重新加载已发布内容
-                    await fetch(`/api/pages/${pageId}/draft`, { method: 'DELETE' })
-                    const res = await fetch(`/api/pages/${pageId}`)
-                    const json = await res.json()
-                    if (!json.success) return
-                    const pageData = json.data
-                    const restoredForm: FormState = {
-                      title: pageData.title,
-                      path: pageData.path || '',
-                      template: pageData.template || 'default',
-                      status: pageData.status,
-                      seoTitle: pageData.seoTitle || '',
-                      seoDescription: pageData.seoDescription || '',
-                    }
-                    const restoreCT = (pageData.contentType || 'richtext') as ContentType
-                    setForm(restoredForm)
-                    setPathError(restoredForm.path ? validatePath(restoredForm.path) : null)
-                    setContentType(restoreCT)
-                    contentTypeRef.current = restoreCT
-                    if (restoreCT === 'richtext') {
-                      const ed = getEditor()
-                      if (ed) ed.commands.setContent(pageData.contentHtml)
-                    }
-                    setTextContent(pageData.contentRaw)
-                    textContentRef.current = pageData.contentRaw
-                    lastAutoSaveContent.current = pageData.contentRaw
-                    lastAutoSaveMetaRef.current = getMetaSnapshot(restoredForm)
-                    savedSnapshot.current = makeSnapshot(restoredForm, pageData.contentRaw)
-                    editorDirty.current = false
-                    setDirty(false)
-                    setAutoSaveTime(null)
-                  }}
-                />
-              )}
-            </Group>
-          )}
-          {autoSaveTime && (
-            <Text size="sm" c="dimmed">
-              自动保存：{dayjs(autoSaveTime).format('YYYY-MM-DD HH:mm:ss')}
-            </Text>
-          )}
-        </Group>
-        <Group>
-          {isEdit && (
-            <Button
-              variant="subtle"
-              leftSection={<IconEye size={16} />}
-              onClick={handlePreview}
-              loading={loading}
-            >
-              预览
-            </Button>
-          )}
-          {isEdit && form.status === 'published' ? (
-            <>
-              <Button variant="default" onClick={() => handleSave('draft')} loading={loading}>
-                转为草稿（下线）
-              </Button>
-              <Button
-                leftSection={<IconDeviceFloppy size={16} />}
-                onClick={() => handleSave('published')}
-                loading={loading}
-              >
-                保存并发布
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button
-                variant="default"
-                leftSection={<IconDeviceFloppy size={16} />}
-                onClick={handleSaveDraft}
-                loading={loading}
-              >
-                {isEdit ? '保存' : '保存草稿'}
-              </Button>
-              <Button
-                leftSection={<IconSend size={16} />}
-                onClick={() => handleSave('published')}
-                loading={loading}
-              >
-                发布
-              </Button>
-            </>
-          )}
-        </Group>
+            {pageId && form.status === 'published' && (
+              <IconX
+                size={16}
+                color="var(--mantine-color-orange-6)"
+                style={{ cursor: 'pointer' }}
+                onClick={async () => {
+                  if (!(await myModal.confirm({ message: '是否要放弃所有未发布的修改？' }))) return
+                  // 先删除草稿，再重新加载已发布内容
+                  await fetch(`/api/pages/${pageId}/draft`, { method: 'DELETE' })
+                  const res = await fetch(`/api/pages/${pageId}`)
+                  const json = await res.json()
+                  if (!json.success) return
+                  const pageData = json.data
+                  const restoredForm: FormState = {
+                    title: pageData.title,
+                    path: pageData.path || '',
+                    template: pageData.template || 'default',
+                    status: pageData.status,
+                    publishedAt: pageData.publishedAt ?? null,
+                    seoTitle: pageData.seoTitle || '',
+                    seoDescription: pageData.seoDescription || '',
+                  }
+                  const restoreCT = (pageData.contentType || 'richtext') as ContentType
+                  setForm(restoredForm)
+                  setPathError(restoredForm.path ? validatePath(restoredForm.path) : null)
+                  setContentType(restoreCT)
+                  contentTypeRef.current = restoreCT
+                  if (restoreCT === 'richtext') {
+                    const ed = getEditor()
+                    if (ed) ed.commands.setContent(pageData.contentHtml)
+                  }
+                  setTextContent(pageData.contentRaw)
+                  textContentRef.current = pageData.contentRaw
+                  lastAutoSaveContent.current = pageData.contentRaw
+                  lastAutoSaveMetaRef.current = getMetaSnapshot(restoredForm)
+                  savedSnapshot.current = makeSnapshot(restoredForm, pageData.contentRaw)
+                  editorDirty.current = false
+                  setDirty(false)
+                  setAutoSaveTime(null)
+                  setPublishTab(
+                    pageData.status === 'published'
+                      ? 'published'
+                      : pageData.status === 'scheduled'
+                        ? 'scheduled'
+                        : 'draft',
+                  )
+                  if (pageData.status === 'scheduled' && pageData.publishedAt) {
+                    setScheduledTime(new Date(pageData.publishedAt))
+                  } else {
+                    setScheduledTime(null)
+                  }
+                }}
+              />
+            )}
+          </Group>
+        )}
+        {autoSaveTime && (
+          <Text size="sm" c="dimmed">
+            自动保存：{dayjs(autoSaveTime).format('YYYY-MM-DD HH:mm:ss')}
+          </Text>
+        )}
       </Group>
 
       <Grid>
@@ -719,6 +830,33 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
         {/* 侧边栏设置 */}
         <Grid.Col span={{ base: 12, md: 4 }}>
           <Stack>
+            <PublishSettings
+              currentStatus={form.status}
+              publishTab={publishTab}
+              onPublishTabChange={setPublishTab}
+              scheduledTime={scheduledTime}
+              onScheduledTimeChange={setScheduledTime}
+              publishedAt={form.publishedAt}
+              dirty={dirty}
+              loading={loading}
+              onConvertToDraft={async () => {
+                setScheduledTime(null)
+                await handleSave('draft', { publishedAt: null })
+              }}
+              onSetScheduled={async (publishedAt) => {
+                await handleSave('scheduled', { publishedAt })
+              }}
+              entityLabel="页面"
+            />
+
+            {isEdit && (
+              <Paper withBorder p="md">
+                <Button variant="subtle" fullWidth onClick={() => setHistoryOpen(true)}>
+                  查看历史版本
+                </Button>
+              </Paper>
+            )}
+
             <Paper withBorder p="md">
               <Text fw={500} mb="sm">
                 页面设置
@@ -733,11 +871,6 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
                   value={form.template}
                   onChange={(v) => setField('template', v || 'default')}
                 />
-                {isEdit && (
-                  <Button variant="subtle" fullWidth onClick={() => setHistoryOpen(true)}>
-                    查看历史版本
-                  </Button>
-                )}
               </Stack>
             </Paper>
 

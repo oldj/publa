@@ -1,5 +1,6 @@
 import { getCurrentUser } from '@/server/auth'
 import { isUniqueConstraintError, parseIdParam, safeParseJson } from '@/server/lib/request'
+import { logActivity } from '@/server/services/activity-logs'
 import { deleteTag, getTagBySlug, updateTag } from '@/server/services/tags'
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -37,6 +38,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       )
     }
 
+    await logActivity(request, user.id, 'update_tag')
     return NextResponse.json({ success: true, data: tag })
   } catch (err) {
     if (isUniqueConstraintError(err)) {
@@ -50,7 +52,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 }
 
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const user = await getCurrentUser()
@@ -65,5 +67,6 @@ export async function DELETE(
   const { id: tagId, error: idError } = parseIdParam(idStr)
   if (idError) return idError
   await deleteTag(tagId)
+  await logActivity(request, user.id, 'delete_tag')
   return NextResponse.json({ success: true })
 }

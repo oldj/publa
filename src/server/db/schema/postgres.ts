@@ -13,6 +13,7 @@ const schema = defineSchema({
 } as unknown as DialectKit)
 
 export const {
+  activityLogs,
   attachments,
   captchas,
   categories,

@@ -15,6 +15,7 @@ export interface PageDraftMetadata {
   template: string
   seoTitle: string
   seoDescription: string
+  publishedAt: string | null
 }
 
 export interface RevisionDraftPayload<TMetadata extends object> {
@@ -74,5 +75,6 @@ export function parsePageDraftMetadata(input: unknown): PageDraftMetadata {
     template: readString(data.template, 'default'),
     seoTitle: readString(data.seoTitle),
     seoDescription: readString(data.seoDescription),
+    publishedAt: readNullableString(data.publishedAt),
   }
 }

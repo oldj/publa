@@ -2,7 +2,7 @@ import { db } from '@/server/db'
 import { maybeFirst } from '@/server/db/query'
 import { contentRevisions, contents } from '@/server/db/schema'
 import type { DraftContentType } from '@/shared/revision-metadata'
-import { and, desc, eq, inArray, notExists } from 'drizzle-orm'
+import { and, desc, eq, inArray, notExists, sql } from 'drizzle-orm'
 
 type TargetType = 'post' | 'page'
 /** 事务或数据库实例，供函数内部统一使用 */
@@ -59,7 +59,44 @@ function normalizeRevisionRow<TMetadata extends DraftMetadata = DraftMetadata>(
   }
 }
 
-/** 保存草稿（upsert） */
+/** 判断是否应将当前草稿冻结为快照 */
+async function shouldCreateSnapshot(
+  targetType: TargetType,
+  targetId: number,
+  newContentRaw: string,
+  tx: DbOrTx,
+): Promise<boolean> {
+  const latest = await maybeFirst(
+    tx
+      .select({
+        updatedAt: contentRevisions.updatedAt,
+        contentRaw: contentRevisions.contentRaw,
+      })
+      .from(contentRevisions)
+      .where(
+        and(
+          eq(contentRevisions.targetType, targetType),
+          eq(contentRevisions.targetId, targetId),
+          inArray(contentRevisions.status, ['snapshot', 'published']),
+        ),
+      )
+      .orderBy(desc(contentRevisions.updatedAt))
+      .limit(1),
+  )
+
+  // 从未有过版本
+  if (!latest) return true
+
+  // 距上个版本超过 10 分钟
+  if (Date.now() - new Date(latest.updatedAt).getTime() > 10 * 60 * 1000) return true
+
+  // 内容长度变化超过 500 字符
+  if (Math.abs(newContentRaw.length - latest.contentRaw.length) > 500) return true
+
+  return false
+}
+
+/** 保存草稿（upsert），满足条件时自动创建快照 */
 export async function saveDraft<TMetadata extends DraftMetadata = DraftMetadata>(
   targetType: TargetType,
   targetId: number,
@@ -93,14 +130,44 @@ export async function saveDraft<TMetadata extends DraftMetadata = DraftMetadata>
   )
 
   if (existingRow) {
-    await tx
-      .update(contentRevisions)
-      .set({
-        ...payload,
-        updatedAt: now,
-        updatedBy: userId,
-      })
-      .where(eq(contentRevisions.id, existingRow.id))
+    const needSnapshot = await shouldCreateSnapshot(targetType, targetId, content.contentRaw, tx)
+
+    if (needSnapshot) {
+      // 冻结旧草稿 + 插入新草稿必须原子执行，防止中间态丢失 draft
+      const doSnapshot = async (t: DbOrTx) => {
+        await t
+          .update(contentRevisions)
+          .set({ status: 'snapshot', updatedAt: now })
+          .where(eq(contentRevisions.id, existingRow.id))
+
+        await t.insert(contentRevisions).values({
+          targetType,
+          targetId,
+          ...payload,
+          status: 'draft',
+          createdAt: now,
+          updatedAt: now,
+          createdBy: userId,
+          updatedBy: userId,
+        })
+      }
+
+      // 调用方已提供事务则直接执行，否则自行包裹事务
+      if (tx === db) {
+        await db.transaction((t) => doSnapshot(t))
+      } else {
+        await doSnapshot(tx)
+      }
+    } else {
+      await tx
+        .update(contentRevisions)
+        .set({
+          ...payload,
+          updatedAt: now,
+          updatedBy: userId,
+        })
+        .where(eq(contentRevisions.id, existingRow.id))
+    }
 
     return { updatedAt: now }
   }
@@ -202,12 +269,14 @@ export async function publishDraft<TMetadata extends DraftMetadata = DraftMetada
   return { ...draft, status: 'published', updatedAt: now }
 }
 
-/** 列出历史版本（不含内容，仅元数据） */
+/** 列出历史版本（不含内容，仅元数据；包含发布版本和草稿快照） */
 export async function listPublishedRevisions(targetType: TargetType, targetId: number) {
   return db
     .select({
       id: contentRevisions.id,
       title: contentRevisions.title,
+      status: contentRevisions.status,
+      contentRawSize: sql<number>`length(${contentRevisions.contentRaw})`.as('content_raw_size'),
       updatedAt: contentRevisions.updatedAt,
       createdBy: contentRevisions.createdBy,
     })
@@ -216,7 +285,7 @@ export async function listPublishedRevisions(targetType: TargetType, targetId: n
       and(
         eq(contentRevisions.targetType, targetType),
         eq(contentRevisions.targetId, targetId),
-        eq(contentRevisions.status, 'published'),
+        inArray(contentRevisions.status, ['published', 'snapshot']),
       ),
     )
     .orderBy(desc(contentRevisions.updatedAt))
@@ -234,7 +303,7 @@ export async function getRevisionById<TMetadata extends DraftMetadata = DraftMet
   return normalizeRevisionRow<TMetadata>(row)
 }
 
-/** 批量删除已发布版本（限定 target 范围） */
+/** 批量删除已发布版本或快照（限定 target 范围，不允许删除当前草稿） */
 export async function deleteRevisions(targetType: TargetType, targetId: number, ids: number[]) {
   if (ids.length === 0) return 0
 
@@ -246,7 +315,7 @@ export async function deleteRevisions(targetType: TargetType, targetId: number, 
         inArray(contentRevisions.id, ids),
         eq(contentRevisions.targetType, targetType),
         eq(contentRevisions.targetId, targetId),
-        eq(contentRevisions.status, 'published'),
+        inArray(contentRevisions.status, ['published', 'snapshot']),
       ),
     )
 

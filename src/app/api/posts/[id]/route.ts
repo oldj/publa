@@ -11,6 +11,7 @@ import {
 } from '@/server/services/posts'
 import { getDraft, publishDraft, saveDraft } from '@/server/services/revisions'
 import { parsePostDraftMetadata } from '@/shared/revision-metadata'
+import { logActivity } from '@/server/services/activity-logs'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -86,6 +87,14 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
   }
 
+  // 定时发布必须提供发布时间
+  if (body.status === 'scheduled' && !body.publishedAt) {
+    return NextResponse.json(
+      { success: false, code: 'VALIDATION_ERROR', message: '定时发布必须指定发布时间' },
+      { status: 400 },
+    )
+  }
+
   if (body.slug) {
     const slugCheck = validateSlug(body.slug)
     if (!slugCheck.valid) {
@@ -118,8 +127,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   }
 
   try {
-    if (body.status === 'published') {
-      // 发布时将主表更新和版本冻结包进事务
+    if (body.status === 'published' || body.status === 'scheduled') {
+      // 发布/定时发布时将主表更新和版本冻结包进事务
       const post = await db.transaction(async (tx) => {
         const result = await updatePost(postId, body, tx)
         if (!result) return null
@@ -141,7 +150,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
               coverImage: body.coverImage,
               seoTitle: body.seoTitle,
               seoDescription: body.seoDescription,
-              publishedAt: body.publishedAt,
+              publishedAt: result.publishedAt,
             }),
           },
           user.id,
@@ -158,6 +167,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
           { status: 404 },
         )
       }
+      await logActivity(request, user.id, 'update_post')
+
       return NextResponse.json({ success: true, data: post })
     }
 
@@ -169,6 +180,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         { status: 404 },
       )
     }
+
+    await logActivity(request, user.id, 'update_post')
 
     return NextResponse.json({ success: true, data: post })
   } catch (err) {
@@ -183,7 +196,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 }
 
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const user = await getCurrentUser()
@@ -198,5 +211,8 @@ export async function DELETE(
   const { id: postId, error: idError } = parseIdParam(idStr)
   if (idError) return idError
   await deletePost(postId)
+
+  await logActivity(request, user.id, 'delete_post')
+
   return NextResponse.json({ success: true })
 }

@@ -1,8 +1,8 @@
 import { db } from '@/server/db'
 import { insertOne, maybeFirst, updateOne } from '@/server/db/query'
-import { contents } from '@/server/db/schema'
+import { contentRevisions, contents } from '@/server/db/schema'
 import { parsePageDraftMetadata } from '@/shared/revision-metadata'
-import { and, count, desc, eq, isNull, lte, ne, sql } from 'drizzle-orm'
+import { and, count, desc, eq, exists, isNull, like, lte, ne, or, sql } from 'drizzle-orm'
 import { listDraftsByTargetIds } from './revisions'
 
 /** 保留路径，页面不能使用 */
@@ -74,10 +74,55 @@ export interface PageInput {
 }
 
 /** 列出所有页面（后台） */
-export async function listPages(options: { page?: number; pageSize?: number } = {}) {
-  const { page = 1, pageSize = 50 } = options
+export async function listPages(
+  options: { page?: number; pageSize?: number; status?: string; search?: string } = {},
+) {
+  const { page = 1, pageSize = 50, status, search } = options
 
-  const where = and(eq(contents.type, 'page'), isNull(contents.deletedAt))
+  // 基础条件（不含 status 筛选，用于计算各状态计数）
+  const baseConditions: ReturnType<typeof eq>[] = [
+    eq(contents.type, 'page'),
+    isNull(contents.deletedAt),
+  ]
+  if (search) {
+    baseConditions.push(
+      or(
+        like(contents.title, `%${search}%`),
+        like(contents.path, `%${search}%`),
+        exists(
+          db
+            .select({ id: contentRevisions.id })
+            .from(contentRevisions)
+            .where(
+              and(
+                eq(contentRevisions.targetType, 'page'),
+                eq(contentRevisions.targetId, contents.id),
+                eq(contentRevisions.status, 'draft'),
+                like(contentRevisions.title, `%${search}%`),
+              ),
+            ),
+        ),
+      )!,
+    )
+  }
+
+  // 各状态计数
+  const countRows = await db
+    .select({ status: contents.status, count: count() })
+    .from(contents)
+    .where(and(...baseConditions))
+    .groupBy(contents.status)
+
+  const statusCounts: Record<string, number> = { draft: 0, scheduled: 0, published: 0 }
+  for (const row of countRows) {
+    if (row.status in statusCounts) statusCounts[row.status] = row.count
+  }
+
+  // 加上 status 筛选条件
+  const conditions = [...baseConditions]
+  if (status) conditions.push(eq(contents.status, status as any))
+  const where = and(...conditions)
+
   const [{ total }] = await db.select({ total: count() }).from(contents).where(where)
 
   const rows = await db
@@ -114,7 +159,14 @@ export async function listPages(options: { page?: number; pageSize?: number } = 
     }
   })
 
-  return { items, page, pageSize, pageCount: Math.ceil(total / pageSize), itemCount: total }
+  return {
+    items,
+    page,
+    pageSize,
+    pageCount: Math.ceil(total / pageSize),
+    itemCount: total,
+    statusCounts,
+  }
 }
 
 /** 将到期的定时发布页面自动转为已发布 */
