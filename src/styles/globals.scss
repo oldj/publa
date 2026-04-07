@@ -1,6 +1,5 @@
 @use "fns";
 @use "vars";
-//@use "animate.css/animate.min.css'";
 
 * {
   box-sizing: border-box;
@@ -10,6 +9,8 @@
   --animate-duration: 300ms;
   --animate-delay: 0s;
 }
+
+// ---- 文档基础 ----
 
 html,
 body {
@@ -21,31 +22,19 @@ body {
   font-size: 14px;
   line-height: 1.5em;
   color: var(--color-text);
-  //font-weight: 400;
-  //background: #f7f7f7;
-  //scroll-behavior: smooth;
 
   --mantine-font-family: $fm;
 }
 
-//html {
-//  scroll-behavior: smooth;
-//}
-
 body[data-role="body"] {
-  // padding-top: 40px;
   background: #f7f7f7;
 }
 
-a {
-  color: var(--color-link);
-  text-decoration: none;
-  transition: 0.3s;
-
-  &:hover {
-    color: var(--color-link-hover);
-  }
+main {
+  min-height: calc(100vh - 120px);
 }
+
+// ---- 排版 ----
 
 h1,
 h2,
@@ -60,6 +49,10 @@ h1 {
   font-size: 2em;
 }
 
+h1.page_title {
+  margin-bottom: 1em;
+}
+
 h2 {
   font-size: 1.5em;
   padding: 0.5em 0;
@@ -70,34 +63,99 @@ h3 {
   padding: 0.5em 0;
 }
 
-main {
-  min-height: calc(100vh - 120px);
-  //background: $bg-color-1;
+p {
+  margin: 0 0 1em 0;
+
+  &:last-child {
+    margin: 0;
+  }
 }
 
-figure {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  text-align: center;
-  margin: 2em 0;
+a {
+  color: var(--color-link);
+  text-decoration: none;
+  transition: 0.3s;
 
-  img {
-    display: block;
-    vertical-align: middle;
+  &:hover {
+    color: var(--color-link-hover);
   }
+}
 
-  figcaption {
-    margin-top: 1em;
-    color: var(--color-text-tertiary);
+a,
+area {
+  transition-duration: 300ms;
+
+  &:focus-visible {
+    box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.3);
+    border-radius: 2px;
+  }
+}
+
+del {
+  text-decoration: line-through;
+}
+
+// ---- 列表 ----
+
+ul,
+ol {
+  margin: 0 0 1em 0;
+  padding-left: 2em;
+}
+
+// ---- 代码 ----
+
+pre {
+  @include fns.code;
+  tab-size: 4;
+  white-space: pre;
+  margin-bottom: 1em;
+
+  code {
+    @include fns.code;
     font-size: 14px;
+    line-height: 1.6em;
 
-    &:empty {
-      display: none;
+    &.hljs {
+      padding: 16px;
+      background: var(--bg-gray);
+    }
+
+    &.language-txt,
+    &.language-text,
+    &.language-plaintext {
+      display: block;
+      background: var(--bg-gray);
+      padding: 16px;
+      overflow-x: auto;
+      white-space: pre-wrap;
     }
   }
 }
+
+p,
+li {
+  code {
+    @include fns.code;
+    background: var(--bg-gray);
+    padding: 0.1em 0.3em;
+    margin: 0 0.3em;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
+  }
+}
+
+kbd {
+  background: var(--bg-paper);
+  padding: 0.1em 0.4em;
+  margin: 0 0.1em;
+  border-radius: 4px;
+  border: 1px solid var(--color-border);
+  border-right-width: 2px;
+  border-bottom-width: 2px;
+}
+
+// ---- 块级内容 ----
 
 blockquote {
   background: var(--bg-gray);
@@ -126,64 +184,37 @@ blockquote {
   }
 }
 
-pre {
-  @include fns.code;
-  tab-size: 4;
-  white-space: pre;
-  margin-bottom: 1em;
+figure {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  text-align: center;
+  margin: 2em 0;
 
-  code {
-    @include fns.code;
+  img {
+    display: block;
+    vertical-align: middle;
+  }
+
+  figcaption {
+    margin-top: 1em;
+    color: var(--color-text-tertiary);
     font-size: 14px;
-    line-height: 1.6em;
 
-    &.hljs {
-      padding: 16px;
-      background: var(--bg-gray);
-    }
-
-    &.language-txt,
-    &.language-text,
-    &.language-plaintext {
-      display: block;
-      background: var(--bg-gray);
-      padding: 16px;
-      overflow-x: auto;
-      //text-wrap: wrap;
-      white-space: pre-wrap;
+    &:empty {
+      display: none;
     }
   }
 }
 
-p {
-  margin: 0 0 1em 0;
-
-  &:last-child {
-    margin: 0;
-  }
+hr {
+  border: 0;
+  border-top: 1px solid var(--color-border);
+  margin: 2em 0;
 }
 
-ul,
-ol {
-  margin: 0 0 1em 0;
-  padding-left: 2em;
-}
-
-li {
-}
-
-p,
-li {
-  code {
-    @include fns.code;
-    background: var(--bg-gray);
-    padding: 0.1em 0.3em;
-    margin: 0 0.3em;
-    border-radius: var(--radius-md);
-    border: 1px solid var(--color-border);
-    //word-break: break-all;
-  }
-}
+// ---- 表单控件 ----
 
 input,
 button,
@@ -215,7 +246,6 @@ button {
   align-items: center;
   justify-content: center;
   text-align: center;
-  transition: var(--anim-duration);
   cursor: pointer;
   border: none;
 
@@ -229,23 +259,21 @@ button {
     color: var(--color-text-reverse);
   }
 
+  &.btn_primary {
+    height: 42px;
+    padding: 0 1.5em;
+    min-width: 120px;
+    font-size: 16px;
+  }
+
   &:focus-visible {
     box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.3);
     border-radius: 2px;
   }
 }
 
-a,
-area {
-  transition-duration: 300ms;
+// ---- 文章内容 ----
 
-  &:focus-visible {
-    box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.3);
-    border-radius: 2px;
-  }
-}
-
-// 文章内容中的图片对齐
 .post-content img[data-align="center"] {
   display: block;
   margin-left: auto;
@@ -257,7 +285,7 @@ area {
   margin-left: auto;
 }
 
-// 文章内容中的表格样式，限定在 .post-content 内以避免影响后台
+// 表格样式限定在 .post-content 内以避免影响后台
 .post-content table {
   border-spacing: 0;
   border-top: 2px solid var(--color-primary);
@@ -293,44 +321,7 @@ area {
   }
 }
 
-hr {
-  border: 0;
-  border-top: 1px solid var(--color-border);
-  margin: 2em 0;
-}
-
-kbd {
-  //@include code;
-  background: var(--bg-paper);
-  padding: 0.1em 0.4em;
-  margin: 0 0.1em;
-  border-radius: 4px;
-  border: 1px solid var(--color-border);
-  border-right-width: 2px;
-  border-bottom-width: 2px;
-}
-
-del {
-  text-decoration: line-through;
-}
-
-
-h1.page_title {
-  margin-bottom: 1em;
-  //line-height: 2em;
-  //margin: 0;
-  //padding: 0;
-  //font-weight: 500;
-}
-
-button {
-  &.btn_primary {
-    height: 42px;
-    padding: 0 1.5em;
-    min-width: 120px;
-    font-size: 16px;
-  }
-}
+// ---- 响应式 ----
 
 @media screen and (max-width: vars.$mobile-width) {
   body {
