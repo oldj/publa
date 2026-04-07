@@ -1,6 +1,6 @@
 const next_configs = {
   output: 'standalone',
-  allowedDevOrigins: ['127.0.0.1', 'local.oldj.net'],
+  allowedDevOrigins: ['127.0.0.1', '*.oldj.net', '*.tominlab.com'],
   serverExternalPackages: [
     'svg-captcha',
     'ali-oss',

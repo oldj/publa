@@ -36,7 +36,7 @@ export function PageHeader({
         position: 'sticky',
         top: 0,
         zIndex: 10,
-        backgroundColor: 'var(--mantine-color-body)',
+        backgroundColor: '#f7f7f7',
       }}
     >
       <Title order={3}>{title}</Title>
