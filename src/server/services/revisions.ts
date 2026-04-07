@@ -2,7 +2,7 @@ import { db } from '@/server/db'
 import { maybeFirst } from '@/server/db/query'
 import { contentRevisions, contents } from '@/server/db/schema'
 import type { DraftContentType } from '@/shared/revision-metadata'
-import { and, desc, eq, inArray, notExists } from 'drizzle-orm'
+import { and, desc, eq, inArray, notExists, sql } from 'drizzle-orm'
 
 type TargetType = 'post' | 'page'
 /** 事务或数据库实例，供函数内部统一使用 */
@@ -276,6 +276,7 @@ export async function listPublishedRevisions(targetType: TargetType, targetId: n
       id: contentRevisions.id,
       title: contentRevisions.title,
       status: contentRevisions.status,
+      contentRawSize: sql<number>`length(${contentRevisions.contentRaw})`.as('content_raw_size'),
       updatedAt: contentRevisions.updatedAt,
       createdBy: contentRevisions.createdBy,
     })

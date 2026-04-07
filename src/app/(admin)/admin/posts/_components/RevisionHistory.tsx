@@ -20,8 +20,16 @@ interface Revision {
   id: number
   title: string
   status: string
+  contentRawSize: number
   updatedAt: string
   createdBy: number
+}
+
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  const kb = bytes / 1024
+  if (kb < 1024) return `${kb.toFixed(1)} KB`
+  return `${(kb / 1024).toFixed(1)} MB`
 }
 
 interface RevisionDetail {
@@ -205,7 +213,7 @@ export default function RevisionHistory({ targetType, targetId, opened, onClose,
                             {rev.status === 'published' ? '发布' : '草稿快照'}
                           </Badge>
                         </Group>
-                        <Text size="xs" c="dimmed">{dayjs(rev.updatedAt).format('YYYY-MM-DD HH:mm:ss')}</Text>
+                        <Text size="xs" c="dimmed">{dayjs(rev.updatedAt).format('YYYY-MM-DD HH:mm:ss')} · {formatSize(rev.contentRawSize)}</Text>
                       </div>
                     </Group>
                     <Button
