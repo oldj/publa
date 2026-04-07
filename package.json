@@ -20,7 +20,7 @@
     "db:check-migrations": "node scripts/check-migration-chain.mjs",
     "db:seed": "tsx src/server/db/seed.ts",
     "db:studio": "drizzle-kit studio --config=drizzle.sqlite.config.ts",
-    "version-up": "node scripts/version-up.mjs"
+    "up-version": "node scripts/up-version.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1023.0",
