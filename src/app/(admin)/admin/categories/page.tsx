@@ -1,11 +1,11 @@
 'use client'
 import myModal from '@/app/(admin)/_components/myModals'
+import { NowrapBadge } from '../../_components/NowrapBadge'
 import adminStyles from '../../_components/AdminShell.module.scss'
 
 import { notify } from '@/lib/notify'
 import {
   ActionIcon,
-  Badge,
   Button,
   Group,
   Modal,
@@ -164,7 +164,7 @@ export default function CategoriesPage() {
                   </Text>
                 </Table.Td>
                 <Table.Td>
-                  <Badge variant="light">{cat.postCount}</Badge>
+                  <NowrapBadge variant="light">{cat.postCount}</NowrapBadge>
                 </Table.Td>
                 <Table.Td>
                   <Group gap="xs">

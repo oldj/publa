@@ -1,19 +1,10 @@
 'use client'
 import myModal from '@/app/(admin)/_components/myModals'
+import { NowrapBadge } from '../../_components/NowrapBadge'
 import adminStyles from '../../_components/AdminShell.module.scss'
 
 import { notify } from '@/lib/notify'
-import {
-  ActionIcon,
-  Badge,
-  Button,
-  Group,
-  Modal,
-  Table,
-  Text,
-  TextInput,
-  Title,
-} from '@mantine/core'
+import { ActionIcon, Button, Group, Modal, Table, Text, TextInput, Title } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import { IconPencil, IconPlus, IconTrash } from '@tabler/icons-react'
 import { useCallback, useEffect, useState } from 'react'
@@ -154,7 +145,7 @@ export default function TagsPage() {
                   </Text>
                 </Table.Td>
                 <Table.Td>
-                  <Badge variant="light">{tag.postCount}</Badge>
+                  <NowrapBadge variant="light">{tag.postCount}</NowrapBadge>
                 </Table.Td>
                 <Table.Td>
                   <Group gap="xs">

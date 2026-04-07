@@ -2,11 +2,11 @@
 import myModal from '@/app/(admin)/_components/myModals'
 import { useAdminCounts } from '../../_components/AdminCountsContext'
 import adminStyles from '../../_components/AdminShell.module.scss'
+import { NowrapBadge } from '../../_components/NowrapBadge'
 
 import { notify } from '@/lib/notify'
 import {
   ActionIcon,
-  Badge,
   Button,
   Divider,
   Drawer,
@@ -209,9 +209,14 @@ export default function CommentsPage() {
                         {c.content}
                       </Text>
                       {c.childCount > 0 && (
-                        <Badge variant="light" color="blue" size="sm" style={{ flexShrink: 0 }}>
+                        <NowrapBadge
+                          variant="light"
+                          color="blue"
+                          size="sm"
+                          style={{ flexShrink: 0 }}
+                        >
                           {c.childCount} 回复
-                        </Badge>
+                        </NowrapBadge>
                       )}
                     </Group>
                   </Table.Td>
@@ -239,9 +244,9 @@ export default function CommentsPage() {
                     )}
                   </Table.Td>
                   <Table.Td style={{ whiteSpace: 'nowrap' }}>
-                    <Badge color={st.color} variant="light">
+                    <NowrapBadge color={st.color} variant="light">
                       {st.label}
-                    </Badge>
+                    </NowrapBadge>
                   </Table.Td>
                   <Table.Td>
                     <Text size="sm" c="dimmed">
@@ -381,9 +386,9 @@ export default function CommentsPage() {
                 <Text size="sm" fw={500}>
                   {detail.authorName}
                 </Text>
-                <Badge color={statusMap[detail.status]?.color || 'gray'} variant="light">
+                <NowrapBadge color={statusMap[detail.status]?.color || 'gray'} variant="light">
                   {statusMap[detail.status]?.label || detail.status}
-                </Badge>
+                </NowrapBadge>
               </Group>
               <Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>
                 {detail.content}
@@ -419,9 +424,9 @@ export default function CommentsPage() {
                               <Text size="sm" fw={500}>
                                 {child.authorName}
                               </Text>
-                              <Badge color={childSt.color} variant="light" size="xs">
+                              <NowrapBadge color={childSt.color} variant="light" size="xs">
                                 {childSt.label}
-                              </Badge>
+                              </NowrapBadge>
                             </Group>
                             <Text size="xs" c="dimmed">
                               {dayjs(child.createdAt).format('YYYY-MM-DD HH:mm')}

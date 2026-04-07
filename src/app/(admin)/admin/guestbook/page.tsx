@@ -2,11 +2,11 @@
 import myModal from '@/app/(admin)/_components/myModals'
 import { useAdminCounts } from '../../_components/AdminCountsContext'
 import adminStyles from '../../_components/AdminShell.module.scss'
+import { NowrapBadge } from '../../_components/NowrapBadge'
 
 import { notify } from '@/lib/notify'
 import {
   ActionIcon,
-  Badge,
   Button,
   Divider,
   Drawer,
@@ -199,9 +199,9 @@ export default function GuestbookAdminPage() {
                     </Text>
                   </Table.Td>
                   <Table.Td>
-                    <Badge color={st.color} variant="light">
+                    <NowrapBadge color={st.color} variant="light">
                       {st.label}
-                    </Badge>
+                    </NowrapBadge>
                   </Table.Td>
                   <Table.Td>
                     <Text size="sm" c="dimmed">
@@ -268,9 +268,9 @@ export default function GuestbookAdminPage() {
                 <Text size="sm" fw={500}>
                   {detail.authorName}
                 </Text>
-                <Badge color={statusMap[detail.status]?.color || 'gray'} variant="light">
+                <NowrapBadge color={statusMap[detail.status]?.color || 'gray'} variant="light">
                   {statusMap[detail.status]?.label || detail.status}
-                </Badge>
+                </NowrapBadge>
               </Group>
               <Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>
                 {detail.content}

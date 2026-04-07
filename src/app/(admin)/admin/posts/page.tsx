@@ -6,7 +6,6 @@ import { NowrapBadge } from '@/app/(admin)/_components/NowrapBadge'
 import { notify } from '@/lib/notify'
 import {
   ActionIcon,
-  Badge,
   Button,
   Group,
   Pagination,
@@ -154,9 +153,9 @@ export default function PostsPage() {
                   <Table.Td>
                     <Group gap="xs">
                       {post.pinned && (
-                        <Badge size="xs" color="red">
+                        <NowrapBadge size="xs" color="red">
                           置顶
-                        </Badge>
+                        </NowrapBadge>
                       )}
                       <Link
                         href={`/admin/posts/${post.id}`}
@@ -174,9 +173,9 @@ export default function PostsPage() {
                         )}
                       </Link>
                       {post.status === 'published' && post.hasDraft && (
-                        <Badge color="orange" variant="light" size="xs">
+                        <NowrapBadge color="orange" variant="light" size="xs">
                           已修改
-                        </Badge>
+                        </NowrapBadge>
                       )}
                     </Group>
                   </Table.Td>

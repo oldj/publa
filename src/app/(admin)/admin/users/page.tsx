@@ -4,6 +4,7 @@ import { notify } from '@/lib/notify'
 import { normalizeEmail, normalizePassword, normalizeUsername } from '@/lib/user-input'
 import { useCurrentUser } from '../../_components/AdminCountsContext'
 import adminStyles from '../../_components/AdminShell.module.scss'
+import { NowrapBadge } from '../../_components/NowrapBadge'
 
 import {
   ActionIcon,
@@ -308,9 +309,9 @@ export default function UsersPage() {
                     </Text>
                   </Table.Td>
                   <Table.Td>
-                    <Badge color={r.color} variant="light">
+                    <NowrapBadge color={r.color} variant="light">
                       {r.label}
-                    </Badge>
+                    </NowrapBadge>
                   </Table.Td>
                   <Table.Td>
                     <Text size="sm" c="dimmed">
@@ -489,9 +490,9 @@ export default function UsersPage() {
                 {logs.map((log) => (
                   <Table.Tr key={log.id}>
                     <Table.Td>
-                      <Badge variant="light" size="sm">
+                      <NowrapBadge variant="light" size="sm">
                         {ACTION_LABELS[log.action] || log.action}
-                      </Badge>
+                      </NowrapBadge>
                     </Table.Td>
                     <Table.Td>
                       <Tooltip label={log.userAgent || '-'} multiline maw={400}>

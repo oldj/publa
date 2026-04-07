@@ -1,11 +1,11 @@
 'use client'
 
 import myModal from '@/app/(admin)/_components/myModals'
+import { NowrapBadge } from '@/app/(admin)/_components/NowrapBadge'
 import { notify } from '@/lib/notify'
 import {
   ActionIcon,
   Alert,
-  Badge,
   Group,
   Pagination,
   Stack,
@@ -127,9 +127,9 @@ export default function EmailLogsPage() {
                 {logs.map((log) => (
                   <Table.Tr key={log.id}>
                     <Table.Td>
-                      <Badge variant="light" size="sm">
+                      <NowrapBadge variant="light" size="sm">
                         {EVENT_LABELS[log.eventType] || log.eventType}
-                      </Badge>
+                      </NowrapBadge>
                     </Table.Td>
                     <Table.Td>
                       <Text size="sm" lineClamp={1}>
@@ -143,14 +143,19 @@ export default function EmailLogsPage() {
                     </Table.Td>
                     <Table.Td>
                       {log.status === 'success' ? (
-                        <Badge color="green" variant="light" size="sm">
+                        <NowrapBadge color="green" variant="light" size="sm">
                           成功
-                        </Badge>
+                        </NowrapBadge>
                       ) : (
                         <Tooltip label={log.errorMessage || '发送失败'} multiline maw={300}>
-                          <Badge color="red" variant="light" size="sm" style={{ cursor: 'help' }}>
+                          <NowrapBadge
+                            color="red"
+                            variant="light"
+                            size="sm"
+                            style={{ cursor: 'help' }}
+                          >
                             失败
-                          </Badge>
+                          </NowrapBadge>
                         </Tooltip>
                       )}
                     </Table.Td>

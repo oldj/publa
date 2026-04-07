@@ -6,7 +6,6 @@ import { NowrapBadge } from '@/app/(admin)/_components/NowrapBadge'
 import { notify } from '@/lib/notify'
 import {
   ActionIcon,
-  Badge,
   Button,
   Group,
   Pagination,
@@ -152,9 +151,9 @@ export default function PagesAdminPage() {
                         )}
                       </Link>
                       {p.status === 'published' && p.hasDraft && (
-                        <Badge color="orange" variant="light" size="xs">
+                        <NowrapBadge color="orange" variant="light" size="xs">
                           已修改
-                        </Badge>
+                        </NowrapBadge>
                       )}
                     </Group>
                   </Table.Td>
