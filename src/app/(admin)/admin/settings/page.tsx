@@ -13,6 +13,7 @@ import {
   TextInput,
   Textarea,
 } from '@mantine/core'
+import { IconExclamationMark } from '@tabler/icons-react'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { useCurrentUser } from '../../_components/AdminCountsContext'
@@ -90,6 +91,23 @@ export default function SettingsPage() {
   }
 
   const handleSave = async () => {
+    // 检查 customHeadHtml 中是否存在不支持的标签
+    if (settings.customHeadHtml) {
+      const supportedTags = new Set(['script', 'meta', 'link', 'style'])
+      const allTags = settings.customHeadHtml.match(/<([a-zA-Z][\w-]*)/g) || []
+      const unsupported = allTags
+        .map((t) => t.slice(1))
+        .filter((name) => !supportedTags.has(name.toLowerCase()))
+      if (unsupported.length > 0) {
+        const names = [...new Set(unsupported)].join('、')
+        notify({
+          color: 'yellow',
+          icon: <IconExclamationMark />,
+          message: `自定义 Head HTML 中包含不支持的标签：${names}，这些标签不会被渲染`,
+        })
+      }
+    }
+
     setLoading(true)
     try {
       const res = await fetch('/api/settings', {
@@ -384,7 +402,7 @@ export default function SettingsPage() {
         />
         <Textarea
           label="自定义 Head HTML"
-          description="在 </head> 标签前方插入 HTML"
+          description="在 </head> 标签前方插入 HTML，仅支持 <script>、<meta>、<link>、<style> 标签"
           placeholder="<script>...</script>"
           autosize
           minRows={3}

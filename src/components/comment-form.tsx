@@ -4,11 +4,10 @@
  */
 
 import lodash from 'lodash'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import CaptchaInput from 'src/components/captcha-input'
 import { COMMENT_MAX_LENGTH } from 'src/lib/constants'
-import { isBrowser } from 'src/lib/where'
 import Button from 'src/widgets/Button'
 import dialog from '../widgets/dialog'
 
@@ -33,30 +32,26 @@ const CommentForm = (props: Props) => {
 
   let refreshCaptcha = () => {}
 
-  let _initValues: any = {}
-  if (isBrowser()) {
-    let c = localStorage.getItem('_cmt_cfg')
-    if (c) {
-      try {
-        let d = JSON.parse(c)
-        _initValues = { ...d }
-      } catch (e) {
-        console.error(e)
+  // 从 localStorage 恢复用户信息，放在 useEffect 中避免水合不匹配
+  useEffect(() => {
+    try {
+      const c = localStorage.getItem('_cmt_cfg')
+      if (c) {
+        const d = JSON.parse(c)
+        reset({ contentId, parentId, ...d })
       }
+    } catch (e) {
+      console.error(e)
     }
-  }
-
-  // useEffect(() => {
-  // form.setFieldsValue({ contentId, parentId })
-  // }, [contentId, parentId])
+  }, [])
 
   const onSubmit = async (values: { [x: string]: any }) => {
     // console.log(values)
     if (loading) return
     setLoading(true)
 
-    _initValues = lodash.pick(values, ['username', 'email', 'url'])
-    localStorage.setItem('_cmt_cfg', JSON.stringify(_initValues))
+    const cached = lodash.pick(values, ['username', 'email', 'url'])
+    localStorage.setItem('_cmt_cfg', JSON.stringify(cached))
 
     fetch('/api/comments', {
       method: 'POST',
@@ -81,7 +76,8 @@ const CommentForm = (props: Props) => {
 
           // form.setFieldsValue({ content: '', captchaCode: '' })
           refreshCaptcha()
-          reset({ contentId, parentId, content: '', captchaCode: '', ..._initValues })
+          const cached = lodash.pick(values, ['username', 'email', 'url'])
+          reset({ contentId, parentId, content: '', captchaCode: '', ...cached })
           if (typeof onSuccess === 'function') {
             onSuccess(r.data)
           }
@@ -194,12 +190,7 @@ const CommentForm = (props: Props) => {
         <label>
           你的称呼 <span>*</span>
         </label>
-        <input
-          required={true}
-          maxLength={50}
-          defaultValue={_initValues.username}
-          {...register('username')}
-        />
+        <input required={true} maxLength={50} {...register('username')} />
 
         {/*<Form.Item*/}
         {/*  label="电子邮件"*/}
@@ -214,13 +205,7 @@ const CommentForm = (props: Props) => {
         <label>
           电子邮件 <span>*</span>
         </label>
-        <input
-          required={true}
-          type={'email'}
-          maxLength={100}
-          defaultValue={_initValues.email}
-          {...register('email')}
-        />
+        <input required={true} type={'email'} maxLength={100} {...register('email')} />
 
         {/*<Form.Item*/}
         {/*  label={*/}
@@ -236,7 +221,7 @@ const CommentForm = (props: Props) => {
         <label>
           站点<span className="comment-form-info">（选填）</span>
         </label>
-        <input type={'url'} maxLength={200} defaultValue={_initValues.url} {...register('url')} />
+        <input type={'url'} maxLength={200} {...register('url')} />
 
         {/*<Form.Item*/}
         {/*  label={*/}
