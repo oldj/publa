@@ -2,6 +2,7 @@
 
 import myModal from '@/app/(admin)/_components/myModals'
 import {
+  Badge,
   Button,
   Checkbox,
   Drawer,
@@ -18,6 +19,7 @@ import { useCallback, useEffect, useState } from 'react'
 interface Revision {
   id: number
   title: string
+  status: string
   updatedAt: string
   createdBy: number
 }
@@ -193,7 +195,16 @@ export default function RevisionHistory({ targetType, targetId, opened, onClose,
                         size="xs"
                       />
                       <div>
-                        {rev.title && <Text size="sm" fw={500}>{rev.title}</Text>}
+                        <Group gap={4}>
+                          {rev.title && <Text size="sm" fw={500}>{rev.title}</Text>}
+                          <Badge
+                            size="xs"
+                            variant="light"
+                            color={rev.status === 'published' ? 'green' : 'blue'}
+                          >
+                            {rev.status === 'published' ? '发布' : '草稿快照'}
+                          </Badge>
+                        </Group>
                         <Text size="xs" c="dimmed">{dayjs(rev.updatedAt).format('YYYY-MM-DD HH:mm:ss')}</Text>
                       </div>
                     </Group>

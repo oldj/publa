@@ -78,7 +78,7 @@ describe('saveDraft', () => {
     })
   })
 
-  it('更新已有草稿（upsert）', async () => {
+  it('更新已有草稿（upsert），首次覆盖时自动创建快照', async () => {
     await saveDraft(
       'post',
       1,
@@ -105,11 +105,17 @@ describe('saveDraft', () => {
       2,
     )
 
+    // 当前草稿应为 v2
     const draft = await getDraft('post', 1)
     expect(draft!.contentRaw).toBe('v2')
-    // 更新时 createdBy 保持不变，updatedBy 更新为最新操作者
-    expect(draft!.createdBy).toBe(1)
+    // 快照创建后草稿是新行，createdBy 为触发者
+    expect(draft!.createdBy).toBe(2)
     expect(draft!.updatedBy).toBe(2)
+
+    // v1 应被冻结为快照
+    const versions = await listPublishedRevisions('post', 1)
+    expect(versions).toHaveLength(1)
+    expect(versions[0].status).toBe('snapshot')
   })
 
   it('不同 target 的草稿互不干扰', async () => {
@@ -724,5 +730,189 @@ describe('cleanOrphanRevisions', () => {
     // 孤儿已清除
     expect(await getDraft('post', 88888)).toBeNull()
     expect(await getDraft('page', 77777)).toBeNull()
+  })
+})
+
+describe('snapshot versioning', () => {
+  it('首次 insert 不产生快照，第二次 upsert 产生快照', async () => {
+    // 第一次：插入新草稿，无已有草稿，不会产生快照
+    await saveDraft(
+      'post',
+      1,
+      { title: '', excerpt: '', contentRaw: 'first', contentHtml: '', contentText: '' },
+      1,
+    )
+    expect(await listPublishedRevisions('post', 1)).toHaveLength(0)
+
+    // 第二次：已有草稿且无历史版本 → 条件1触发快照
+    await saveDraft(
+      'post',
+      1,
+      { title: '', excerpt: '', contentRaw: 'second', contentHtml: '', contentText: '' },
+      1,
+    )
+    const versions = await listPublishedRevisions('post', 1)
+    expect(versions).toHaveLength(1)
+    expect(versions[0].status).toBe('snapshot')
+
+    // 当前草稿应为最新内容
+    const draft = await getDraft('post', 1)
+    expect(draft!.contentRaw).toBe('second')
+  })
+
+  it('连续快速保存不重复产生快照（时间 < 10min 且长度差 < 500）', async () => {
+    await saveDraft(
+      'post',
+      1,
+      { title: '', excerpt: '', contentRaw: 'initial', contentHtml: '', contentText: '' },
+      1,
+    )
+    // 第二次触发快照（条件1：无历史版本）
+    await saveDraft(
+      'post',
+      1,
+      { title: '', excerpt: '', contentRaw: 'second', contentHtml: '', contentText: '' },
+      1,
+    )
+    expect(await listPublishedRevisions('post', 1)).toHaveLength(1)
+
+    // 第三次：已有快照且时间 < 10min 且长度差 < 500 → 不产生新快照
+    await saveDraft(
+      'post',
+      1,
+      { title: '', excerpt: '', contentRaw: 'third', contentHtml: '', contentText: '' },
+      1,
+    )
+    expect(await listPublishedRevisions('post', 1)).toHaveLength(1)
+
+    // 第四次：同样不产生
+    await saveDraft(
+      'post',
+      1,
+      { title: '', excerpt: '', contentRaw: 'fourth', contentHtml: '', contentText: '' },
+      1,
+    )
+    expect(await listPublishedRevisions('post', 1)).toHaveLength(1)
+
+    // 当前草稿应为最新
+    const draft = await getDraft('post', 1)
+    expect(draft!.contentRaw).toBe('fourth')
+  })
+
+  it('内容长度差 > 500 触发新快照', async () => {
+    const shortContent = 'short'
+    const longContent = 'x'.repeat(600)
+
+    await saveDraft(
+      'post',
+      1,
+      { title: '', excerpt: '', contentRaw: shortContent, contentHtml: '', contentText: '' },
+      1,
+    )
+    // 第二次触发快照（条件1）
+    await saveDraft(
+      'post',
+      1,
+      { title: '', excerpt: '', contentRaw: shortContent + '!', contentHtml: '', contentText: '' },
+      1,
+    )
+    expect(await listPublishedRevisions('post', 1)).toHaveLength(1)
+
+    // 第三次：内容长度差 > 500 → 条件3触发新快照
+    await saveDraft(
+      'post',
+      1,
+      { title: '', excerpt: '', contentRaw: longContent, contentHtml: '', contentText: '' },
+      1,
+    )
+    expect(await listPublishedRevisions('post', 1)).toHaveLength(2)
+
+    const draft = await getDraft('post', 1)
+    expect(draft!.contentRaw).toBe(longContent)
+  })
+
+  it('快照可通过 deleteRevisions 删除', async () => {
+    await saveDraft(
+      'post',
+      1,
+      { title: '', excerpt: '', contentRaw: 'v1', contentHtml: '', contentText: '' },
+      1,
+    )
+    await saveDraft(
+      'post',
+      1,
+      { title: '', excerpt: '', contentRaw: 'v2', contentHtml: '', contentText: '' },
+      1,
+    )
+
+    const versions = await listPublishedRevisions('post', 1)
+    expect(versions).toHaveLength(1)
+
+    await deleteRevisions('post', 1, [versions[0].id])
+    expect(await listPublishedRevisions('post', 1)).toHaveLength(0)
+
+    // 当前草稿不受影响
+    expect(await getDraft('post', 1)).not.toBeNull()
+  })
+
+  it('快照可通过 restoreRevision 恢复', async () => {
+    await saveDraft(
+      'post',
+      1,
+      {
+        title: '原始标题',
+        excerpt: '',
+        contentRaw: 'original content',
+        contentHtml: '<p>original</p>',
+        contentText: 'original',
+      },
+      1,
+    )
+    // 触发快照
+    await saveDraft(
+      'post',
+      1,
+      {
+        title: '新标题',
+        excerpt: '',
+        contentRaw: 'new content',
+        contentHtml: '<p>new</p>',
+        contentText: 'new',
+      },
+      1,
+    )
+
+    const versions = await listPublishedRevisions('post', 1)
+    expect(versions).toHaveLength(1)
+
+    const result = await restoreRevision('post', 1, versions[0].id, 1)
+    expect(result).not.toBeNull()
+    expect(result!.content.contentRaw).toBe('original content')
+    expect(result!.content.title).toBe('原始标题')
+  })
+
+  it('快照和发布版本共存于版本列表', async () => {
+    // 创建草稿 → 快照 → 发布流程
+    await saveDraft(
+      'post',
+      1,
+      { title: '', excerpt: '', contentRaw: 'draft-v1', contentHtml: '', contentText: '' },
+      1,
+    )
+    // 第二次保存触发快照
+    await saveDraft(
+      'post',
+      1,
+      { title: '', excerpt: '', contentRaw: 'draft-v2', contentHtml: '', contentText: '' },
+      1,
+    )
+    // 发布
+    await publishDraft('post', 1, 1)
+
+    const versions = await listPublishedRevisions('post', 1)
+    expect(versions).toHaveLength(2)
+    const statuses = versions.map((v) => v.status)
+    expect(statuses).toContain('snapshot')
+    expect(statuses).toContain('published')
   })
 })

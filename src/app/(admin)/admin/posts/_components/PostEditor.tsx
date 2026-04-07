@@ -11,6 +11,7 @@ import RichTextEditorWrapper, {
 } from '@/components/editors/RichTextEditorWrapper'
 import myModal from '@/app/(admin)/_components/myModals'
 import { notify } from '@/lib/notify'
+import { notifications } from '@mantine/notifications'
 import {
   Alert,
   Badge,
@@ -45,6 +46,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { shouldCreateDraftRecord } from '../../_lib/draft-persistence'
 import { buildPostDraftPayload, buildPostSaveBody } from './post-save-payload'
 import RevisionHistory from './RevisionHistory'
+
+const AUTO_SAVE_FAIL_ID = 'auto-save-fail'
 
 interface Category {
   id: number
@@ -140,6 +143,24 @@ export default function PostEditor({ postId }: { postId?: number }) {
   const [historyOpen, setHistoryOpen] = useState(false)
   const creatingRef = useRef(false) // 防止重复创建空草稿
   const pendingCreatedPostIdRef = useRef<number | null>(null)
+
+  // 自动保存失败计数
+  const autoSaveFailCountRef = useRef(0)
+  const onAutoSaveFail = useCallback(() => {
+    autoSaveFailCountRef.current += 1
+    if (autoSaveFailCountRef.current >= 3) {
+      notify({
+        id: AUTO_SAVE_FAIL_ID,
+        color: 'red',
+        message: '自动保存连续失败，请检查网络连接',
+        autoClose: false,
+      })
+    }
+  }, [])
+  const clearAutoSaveFail = useCallback(() => {
+    autoSaveFailCountRef.current = 0
+    notifications.hide(AUTO_SAVE_FAIL_ID)
+  }, [])
 
   // 图片上传：存储配置状态
   const storageConfigured = useRef<boolean | null>(null)
@@ -458,6 +479,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
         // 1. 创建空草稿记录，失败重试时复用同一条记录
         const newId = await ensurePendingPostId(silent)
         if (!newId) {
+          if (silent) onAutoSaveFail()
           return
         }
         const formState = formRef.current
@@ -466,18 +488,23 @@ export default function PostEditor({ postId }: { postId?: number }) {
         // 2. 保存完整草稿快照，允许 slug 重复或暂时不合法
         const draftSave = await saveDraftRevision(newId, formState, content)
         if (!draftSave.json.success) {
-          if (!silent) {
+          if (silent) {
+            onAutoSaveFail()
+          } else {
             notify({ color: 'red', message: draftSave.json.message || '保存草稿失败' })
           }
           return
         }
 
         // 3. 跳转到编辑页
+        clearAutoSaveFail()
         redirected = true
         pendingCreatedPostIdRef.current = null
         router.replace(`/admin/posts/${newId}`)
       } catch {
-        if (!silent) {
+        if (silent) {
+          onAutoSaveFail()
+        } else {
           notify({ color: 'red', message: '网络错误' })
         }
       }
@@ -485,7 +512,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
         creatingRef.current = false
       }
     },
-    [ensurePendingPostId, getCurrentContent, router, saveDraftRevision],
+    [ensurePendingPostId, getCurrentContent, router, saveDraftRevision, onAutoSaveFail, clearAutoSaveFail],
   )
 
   // 自动保存定时器
@@ -519,19 +546,24 @@ export default function PostEditor({ postId }: { postId?: number }) {
       saveDraftRevision(postId, formRef.current, content)
         .then(({ json }) => {
           if (json.success) {
+            clearAutoSaveFail()
             lastAutoSaveContent.current = content.contentRaw
             lastAutoSaveMetaRef.current = currentMeta
             setAutoSaveTime(json.data.updatedAt)
+          } else {
+            onAutoSaveFail()
           }
         })
-        .catch(() => {})
+        .catch(() => {
+          onAutoSaveFail()
+        })
         .finally(() => {
           autoSavingRef.current = false
         })
     }, 5000)
 
     return () => clearInterval(timer)
-  }, [postId, createAndRedirect, getCurrentContent, getMetaSnapshot, saveDraftRevision])
+  }, [postId, createAndRedirect, getCurrentContent, getMetaSnapshot, saveDraftRevision, clearAutoSaveFail, onAutoSaveFail])
 
   // 预览：先保存草稿，再在新窗口打开预览
   const handlePreview = async () => {
@@ -572,6 +604,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
       const formState = formRef.current
       const draftSave = await saveDraftRevision(postId, formState)
       if (draftSave.json.success) {
+        clearAutoSaveFail()
         lastAutoSaveContent.current = draftSave.content.contentRaw
         lastAutoSaveMetaRef.current = getMetaSnapshot(formState)
         setAutoSaveTime(draftSave.json.data.updatedAt)
@@ -623,6 +656,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
       const json = await res.json()
 
       if (json.success) {
+        clearAutoSaveFail()
         const newPublishedAt =
           overrides?.publishedAt !== undefined ? overrides.publishedAt : form.publishedAt
         setForm((prev) => ({ ...prev, status, publishedAt: newPublishedAt }))

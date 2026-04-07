@@ -11,6 +11,7 @@ import RichTextEditorWrapper, {
 } from '@/components/editors/RichTextEditorWrapper'
 import myModal from '@/app/(admin)/_components/myModals'
 import { notify } from '@/lib/notify'
+import { notifications } from '@mantine/notifications'
 import {
   Badge,
   Button,
@@ -32,6 +33,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { shouldCreateDraftRecord } from '../../_lib/draft-persistence'
 import RevisionHistory from '../../posts/_components/RevisionHistory'
 import { buildPageDraftPayload, buildPageSaveBody } from './page-save-payload'
+
+const AUTO_SAVE_FAIL_ID = 'auto-save-fail'
 
 const RESERVED_PATHS = ['admin', 'api', 'setup', 'rss.xml', 'sitemap.xml', 'uploads']
 
@@ -69,6 +72,24 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
   const lastAutoSaveMetaRef = useRef<string>('')
   const creatingRef = useRef(false)
   const pendingCreatedPageIdRef = useRef<number | null>(null)
+
+  // 自动保存失败计数
+  const autoSaveFailCountRef = useRef(0)
+  const onAutoSaveFail = useCallback(() => {
+    autoSaveFailCountRef.current += 1
+    if (autoSaveFailCountRef.current >= 3) {
+      notify({
+        id: AUTO_SAVE_FAIL_ID,
+        color: 'red',
+        message: '自动保存连续失败，请检查网络连接',
+        autoClose: false,
+      })
+    }
+  }, [])
+  const clearAutoSaveFail = useCallback(() => {
+    autoSaveFailCountRef.current = 0
+    notifications.hide(AUTO_SAVE_FAIL_ID)
+  }, [])
   const autoSavingRef = useRef(false)
   const [contentType, setContentType] = useState<ContentType>('richtext')
   const contentTypeRef = useRef<ContentType>('richtext')
@@ -304,6 +325,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
       try {
         const newId = await ensurePendingPageId(silent)
         if (!newId) {
+          if (silent) onAutoSaveFail()
           return
         }
         const formState = formRef.current
@@ -312,17 +334,22 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
         // 保存完整草稿快照，允许 path 暂时非法或重复
         const draftSave = await saveDraftRevision(newId, formState, content)
         if (!draftSave.json.success) {
-          if (!silent) {
+          if (silent) {
+            onAutoSaveFail()
+          } else {
             notify({ color: 'red', message: draftSave.json.message || '保存草稿失败' })
           }
           return
         }
 
+        clearAutoSaveFail()
         redirected = true
         pendingCreatedPageIdRef.current = null
         router.replace(`/admin/pages/${newId}`)
       } catch {
-        if (!silent) {
+        if (silent) {
+          onAutoSaveFail()
+        } else {
           notify({ color: 'red', message: '网络错误' })
         }
       }
@@ -331,7 +358,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
         creatingRef.current = false
       }
     },
-    [ensurePendingPageId, getCurrentContent, router, saveDraftRevision],
+    [ensurePendingPageId, getCurrentContent, router, saveDraftRevision, onAutoSaveFail, clearAutoSaveFail],
   )
 
   // 自动保存定时器
@@ -365,19 +392,24 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
       saveDraftRevision(pageId, formRef.current, content)
         .then(({ json }) => {
           if (json.success) {
+            clearAutoSaveFail()
             lastAutoSaveContent.current = content.contentRaw
             lastAutoSaveMetaRef.current = currentMeta
             setAutoSaveTime(json.data.updatedAt)
+          } else {
+            onAutoSaveFail()
           }
         })
-        .catch(() => {})
+        .catch(() => {
+          onAutoSaveFail()
+        })
         .finally(() => {
           autoSavingRef.current = false
         })
     }, 5000)
 
     return () => clearInterval(timer)
-  }, [pageId, createAndRedirect, getCurrentContent, getMetaSnapshot, saveDraftRevision])
+  }, [pageId, createAndRedirect, getCurrentContent, getMetaSnapshot, saveDraftRevision, clearAutoSaveFail, onAutoSaveFail])
 
   const handlePathChange = (value: string) => {
     setField('path', value)
@@ -422,6 +454,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
       const formState = formRef.current
       const draftSave = await saveDraftRevision(pageId, formState)
       if (draftSave.json.success) {
+        clearAutoSaveFail()
         lastAutoSaveContent.current = draftSave.content.contentRaw
         lastAutoSaveMetaRef.current = getMetaSnapshot(formState)
         setAutoSaveTime(draftSave.json.data.updatedAt)
@@ -466,6 +499,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
       })
       const json = await res.json()
       if (json.success) {
+        clearAutoSaveFail()
         if (!pageId) {
           const nextId = targetPageId ?? json.data.id
           pendingCreatedPageIdRef.current = null
