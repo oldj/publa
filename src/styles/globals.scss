@@ -1,10 +1,5 @@
 $mobile-width: 800px;
 
-@mixin code {
-  font-family: Monaco, Courier, "Courier New", monospace;
-  letter-spacing: 0;
-}
-
 * {
   box-sizing: border-box;
 }
@@ -107,111 +102,6 @@ ol {
   padding-left: 2em;
 }
 
-// ---- 代码 ----
-
-pre {
-  @include code;
-  tab-size: 4;
-  white-space: pre;
-  margin-bottom: 1em;
-
-  code {
-    @include code;
-    font-size: 14px;
-    line-height: 1.6em;
-
-    &.hljs {
-      padding: 16px;
-      background: var(--bg-gray);
-    }
-
-    &.language-txt,
-    &.language-text,
-    &.language-plaintext {
-      display: block;
-      background: var(--bg-gray);
-      padding: 16px;
-      overflow-x: auto;
-      white-space: pre-wrap;
-    }
-  }
-}
-
-p,
-li {
-  code {
-    @include code;
-    background: var(--bg-gray);
-    padding: 0.1em 0.3em;
-    margin: 0 0.3em;
-    border-radius: var(--radius-md);
-    border: 1px solid var(--color-border);
-  }
-}
-
-kbd {
-  background: var(--bg-paper);
-  padding: 0.1em 0.4em;
-  margin: 0 0.1em;
-  border-radius: 4px;
-  border: 1px solid var(--color-border);
-  border-right-width: 2px;
-  border-bottom-width: 2px;
-}
-
-// ---- 块级内容 ----
-
-blockquote {
-  background: var(--bg-gray);
-  margin: 1em 0 1.2em 0;
-  padding: 32px;
-  overflow: auto;
-  box-sizing: border-box;
-  width: 100%;
-  border-left: 4px solid var(--color-border);
-
-  &:before {
-    content: "";
-    display: block;
-    background: url("/images/quote.svg") no-repeat 50% 50%;
-    width: 27px;
-    height: 20px;
-    position: absolute;
-    z-index: 1;
-    font-size: 80px;
-    margin: -37px 0 0 -25px;
-    opacity: 0.1;
-  }
-
-  p:last-child {
-    margin-bottom: 0;
-  }
-}
-
-figure {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  text-align: center;
-  margin: 2em 0;
-
-  img {
-    display: block;
-    vertical-align: middle;
-  }
-
-  figcaption {
-    margin-top: 1em;
-    color: var(--color-text-tertiary);
-    font-size: 14px;
-
-    &:empty {
-      display: none;
-    }
-  }
-}
-
 hr {
   border: 0;
   border-top: 1px solid var(--color-border);
@@ -273,55 +163,6 @@ button {
   &:focus-visible {
     box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.3);
     border-radius: 2px;
-  }
-}
-
-// ---- 文章内容 ----
-
-.post-content img[data-align="center"] {
-  display: block;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.post-content img[data-align="right"] {
-  display: block;
-  margin-left: auto;
-}
-
-// 表格样式限定在 .post-content 内以避免影响后台
-.post-content table {
-  border-spacing: 0;
-  border-top: 2px solid var(--color-primary);
-  border-bottom: 2px solid var(--color-primary);
-  margin-bottom: 1.5em;
-  font-size: 14px;
-  min-width: 100%;
-  table-layout: fixed;
-
-  thead {
-    font-weight: bold;
-    background: var(--bg-gray);
-
-    th {
-      text-align: center;
-    }
-  }
-
-  tr {
-    border-bottom: 1px solid var(--color-primary);
-  }
-
-  th,
-  td {
-    padding: 4px 8px;
-    border: 0;
-    border-bottom: 1px solid var(--color-primary);
-    border-right: 1px solid var(--color-primary);
-
-    &:last-child {
-      border-right: 0;
-    }
   }
 }
 
