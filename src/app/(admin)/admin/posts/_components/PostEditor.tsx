@@ -1114,6 +1114,14 @@ export default function PostEditor({ postId }: { postId?: number }) {
               )}
             </Paper>
 
+            {postId && (
+              <Paper withBorder p="md">
+                <Button variant="subtle" fullWidth onClick={() => setHistoryOpen(true)}>
+                  查看历史版本
+                </Button>
+              </Paper>
+            )}
+
             <Paper withBorder p="md">
               <Text fw={500} mb="sm">
                 其他设置
@@ -1130,11 +1138,6 @@ export default function PostEditor({ postId }: { postId?: number }) {
                 checked={form.pinned}
                 onChange={(e) => setField('pinned', e.currentTarget.checked)}
               />
-              {postId && (
-                <Button variant="subtle" fullWidth mt="sm" onClick={() => setHistoryOpen(true)}>
-                  查看历史版本
-                </Button>
-              )}
             </Paper>
 
             <Paper withBorder p="md">

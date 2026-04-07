@@ -753,6 +753,14 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
         {/* 侧边栏设置 */}
         <Grid.Col span={{ base: 12, md: 4 }}>
           <Stack>
+            {isEdit && (
+              <Paper withBorder p="md">
+                <Button variant="subtle" fullWidth onClick={() => setHistoryOpen(true)}>
+                  查看历史版本
+                </Button>
+              </Paper>
+            )}
+
             <Paper withBorder p="md">
               <Text fw={500} mb="sm">
                 页面设置
@@ -767,11 +775,6 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
                   value={form.template}
                   onChange={(v) => setField('template', v || 'default')}
                 />
-                {isEdit && (
-                  <Button variant="subtle" fullWidth onClick={() => setHistoryOpen(true)}>
-                    查看历史版本
-                  </Button>
-                )}
               </Stack>
             </Paper>
 
