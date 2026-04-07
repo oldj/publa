@@ -98,6 +98,7 @@ export interface PreviewPageData {
   title: string
   contentHtml: string
   template: 'default' | 'blank'
+  mimeType: string
   seoTitle: string
   seoDescription: string
 }
@@ -118,6 +119,7 @@ export async function getPreviewPage(contentId: number): Promise<PreviewPageData
   let title = row.title || ''
   let contentHtml = row.contentHtml || ''
   let template: 'default' | 'blank' = (row.template as 'default' | 'blank') || 'default'
+  let mimeType = row.mimeType || ''
   let seoTitle = row.seoTitle || ''
   let seoDescription = row.seoDescription || ''
 
@@ -127,9 +129,10 @@ export async function getPreviewPage(contentId: number): Promise<PreviewPageData
     const meta = parsePageDraftMetadata(draft.metadata)
     template =
       meta.template === 'blank' ? 'blank' : meta.template === 'default' ? 'default' : template
+    mimeType = meta.mimeType || mimeType
     seoTitle = meta.seoTitle || seoTitle
     seoDescription = meta.seoDescription || seoDescription
   }
 
-  return { id: row.id, title, contentHtml, template, seoTitle, seoDescription }
+  return { id: row.id, title, contentHtml, template, mimeType, seoTitle, seoDescription }
 }

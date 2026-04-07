@@ -1,0 +1,1 @@
+ALTER TABLE `contents` ADD `mime_type` text;

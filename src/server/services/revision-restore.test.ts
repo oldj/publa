@@ -78,6 +78,7 @@ describe('buildPageRestoreInput', () => {
       metadata: {
         path: 'old-path',
         template: 'blank',
+        mimeType: 'text/plain',
         seoTitle: '旧页面 SEO',
         seoDescription: '旧页面描述',
       },
@@ -89,10 +90,51 @@ describe('buildPageRestoreInput', () => {
       contentRaw: '<p>old</p>',
       contentHtml: '<p>old</p>',
       template: 'blank',
+      mimeType: 'text/plain',
       seoTitle: '旧页面 SEO',
       seoDescription: '旧页面描述',
       status: 'published',
     })
     expect('path' in input).toBe(false)
+  })
+
+  it('恢复页面版本时应回写 mimeType', () => {
+    const input = buildPageRestoreInput({
+      title: 'JSON 页面',
+      excerpt: '',
+      contentType: 'html',
+      contentRaw: '{"ok":true}',
+      contentHtml: '{"ok":true}',
+      contentText: '{"ok":true}',
+      metadata: {
+        path: 'api-data',
+        template: 'blank',
+        mimeType: 'application/json',
+        seoTitle: '',
+        seoDescription: '',
+      },
+    })
+
+    expect(input.mimeType).toBe('application/json')
+    expect(input.template).toBe('blank')
+  })
+
+  it('metadata 中无 mimeType 时恢复结果该字段为 undefined', () => {
+    const input = buildPageRestoreInput({
+      title: '旧页面',
+      excerpt: '',
+      contentType: 'html',
+      contentRaw: '<p>old</p>',
+      contentHtml: '<p>old</p>',
+      contentText: 'old',
+      metadata: {
+        path: 'old-path',
+        template: 'default',
+        seoTitle: '',
+        seoDescription: '',
+      },
+    })
+
+    expect(input.mimeType).toBeUndefined()
   })
 })

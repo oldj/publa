@@ -144,6 +144,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
             metadata: parsePageDraftMetadata({
               path: body.path,
               template: body.template,
+              mimeType: body.mimeType,
               seoTitle: body.seoTitle,
               seoDescription: body.seoDescription,
               publishedAt: result.publishedAt,

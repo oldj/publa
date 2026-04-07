@@ -36,6 +36,7 @@ export function buildPageRestoreInput(content: RevisionContent): Partial<PageInp
     contentHtml: content.contentHtml,
     contentType: content.contentType,
     template: metadata.template === 'blank' ? 'blank' : 'default',
+    mimeType: metadata.mimeType || undefined,
     seoTitle: metadata.seoTitle || undefined,
     seoDescription: metadata.seoDescription || undefined,
     status: 'published',

@@ -2,10 +2,10 @@
  * 递增版本号并同步到 package.json。
  *
  * 用法:
- *   node scripts/version-up.mjs          # patch: 0.1.0 → 0.1.1
- *   node scripts/version-up.mjs patch    # 同上
- *   node scripts/version-up.mjs minor    # minor: 0.1.3 → 0.2.0
- *   node scripts/version-up.mjs major    # major: 0.1.3 → 1.0.0
+ *   node scripts/up-version.mjs          # patch: 0.1.0 → 0.1.1
+ *   node scripts/up-version.mjs patch    # 同上
+ *   node scripts/up-version.mjs minor    # minor: 0.1.3 → 0.2.0
+ *   node scripts/up-version.mjs major    # major: 0.1.3 → 1.0.0
  */
 
 import { readFileSync, writeFileSync } from 'node:fs'

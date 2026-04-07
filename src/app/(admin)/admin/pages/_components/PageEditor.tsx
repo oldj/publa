@@ -18,6 +18,7 @@ import {
   Button,
   Grid,
   Group,
+  Menu,
   Paper,
   Select,
   Stack,
@@ -52,6 +53,7 @@ interface PageDraftContent {
   title: string
   path: string
   template: string
+  mimeType: string
   seoTitle: string
   seoDescription: string
   publishedAt: string | null
@@ -108,6 +110,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
     title: '',
     path: '',
     template: 'default',
+    mimeType: '',
     status: 'draft',
     publishedAt: null as string | null,
     seoTitle: '',
@@ -124,6 +127,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
         title: f.title,
         path: f.path,
         template: f.template,
+        mimeType: f.mimeType,
         publishedAt: f.publishedAt,
         seoTitle: f.seoTitle,
         seoDescription: f.seoDescription,
@@ -198,6 +202,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
             title: draft ? draft.title : p.title,
             path: initialPath,
             template: draft ? draft.template : p.template,
+            mimeType: draft ? draft.mimeType : p.mimeType || '',
             status: p.status,
             publishedAt: initialPublishedAt,
             seoTitle: draft ? draft.seoTitle : p.seoTitle || '',
@@ -238,6 +243,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
             title: draft ? draft.title : p.title,
             path: initialPath,
             template: draft ? draft.template : p.template,
+            mimeType: draft ? draft.mimeType : p.mimeType || '',
             status: p.status,
             publishedAt: initialPublishedAt,
             seoTitle: draft ? draft.seoTitle : p.seoTitle || '',
@@ -252,6 +258,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
             title: draft ? draft.title : p.title,
             path: initialPath,
             template: draft ? draft.template : p.template,
+            mimeType: draft ? draft.mimeType : p.mimeType || '',
             status: p.status,
             publishedAt: initialPublishedAt,
             seoTitle: draft ? draft.seoTitle : p.seoTitle || '',
@@ -719,6 +726,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
                     title: pageData.title,
                     path: pageData.path || '',
                     template: pageData.template || 'default',
+                    mimeType: pageData.mimeType || '',
                     status: pageData.status,
                     publishedAt: pageData.publishedAt ?? null,
                     seoTitle: pageData.seoTitle || '',
@@ -869,8 +877,40 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
                     { value: 'blank', label: '空白' },
                   ]}
                   value={form.template}
-                  onChange={(v) => setField('template', v || 'default')}
+                  onChange={(v) => {
+                    const t = v || 'default'
+                    setField('template', t)
+                    if (t !== 'blank') setField('mimeType', '')
+                  }}
                 />
+                {form.template === 'blank' && (
+                  <Menu position="bottom-start" withinPortal>
+                    <Menu.Target>
+                      <TextInput
+                        label="MIME 类型"
+                        placeholder="text/html"
+                        value={form.mimeType}
+                        onChange={(e) => setField('mimeType', e.target.value)}
+                        styles={{ input: { cursor: 'text' } }}
+                      />
+                    </Menu.Target>
+                    <Menu.Dropdown>
+                      {[
+                        'text/html',
+                        'text/plain',
+                        'text/css',
+                        'text/xml',
+                        'application/json',
+                        'application/javascript',
+                        'application/xml',
+                      ].map((t) => (
+                        <Menu.Item key={t} onClick={() => setField('mimeType', t)}>
+                          {t}
+                        </Menu.Item>
+                      ))}
+                    </Menu.Dropdown>
+                  </Menu>
+                )}
               </Stack>
             </Paper>
 
