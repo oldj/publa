@@ -114,6 +114,7 @@ export async function POST(request: NextRequest) {
             metadata: parsePageDraftMetadata({
               path: body.path,
               template: body.template,
+              mimeType: body.mimeType,
               seoTitle: body.seoTitle,
               seoDescription: body.seoDescription,
               publishedAt: page.publishedAt,

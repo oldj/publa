@@ -5,6 +5,7 @@ export interface PageSaveFormValues {
   title: string
   path: string
   template: string
+  mimeType: string
   status: string
   publishedAt: string | null
   seoTitle: string
@@ -33,6 +34,7 @@ export function buildPageDraftPayload(
     metadata: {
       path: form.path,
       template: form.template,
+      mimeType: form.mimeType,
       seoTitle: form.seoTitle,
       seoDescription: form.seoDescription,
       publishedAt: form.publishedAt,

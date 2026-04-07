@@ -164,6 +164,7 @@ export function defineSchema(kit: DialectKit) {
       // page 专用
       path: text('path').unique(),
       template: text('template', { enum: pageTemplate }),
+      mimeType: text('mime_type'),
       // 共有
       contentType: text('content_type', { enum: contentType }).notNull().default('richtext'),
       contentRaw: text('content_raw').notNull().default(''),

@@ -13,6 +13,7 @@ export interface PostDraftMetadata {
 export interface PageDraftMetadata {
   path: string
   template: string
+  mimeType: string
   seoTitle: string
   seoDescription: string
   publishedAt: string | null
@@ -73,6 +74,7 @@ export function parsePageDraftMetadata(input: unknown): PageDraftMetadata {
   return {
     path: readString(data.path),
     template: readString(data.template, 'default'),
+    mimeType: readString(data.mimeType),
     seoTitle: readString(data.seoTitle),
     seoDescription: readString(data.seoDescription),
     publishedAt: readNullableString(data.publishedAt),

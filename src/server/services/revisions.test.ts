@@ -240,6 +240,7 @@ describe('publishDraft', () => {
         metadata: {
           path: 'invalid/path/',
           template: 'blank',
+          mimeType: 'text/plain',
           seoTitle: '页面 SEO',
           seoDescription: '页面描述',
         },
@@ -252,6 +253,7 @@ describe('publishDraft', () => {
     expect(published!.metadata).toMatchObject({
       path: 'invalid/path/',
       template: 'blank',
+      mimeType: 'text/plain',
       seoTitle: '页面 SEO',
       seoDescription: '页面描述',
     })
@@ -351,6 +353,7 @@ describe('getRevisionById', () => {
         metadata: {
           path: 'about',
           template: 'blank',
+          mimeType: 'text/css',
         },
       },
       1,
@@ -363,6 +366,7 @@ describe('getRevisionById', () => {
     expect(revision!.metadata).toMatchObject({
       path: 'about',
       template: 'blank',
+      mimeType: 'text/css',
     })
   })
 
@@ -488,6 +492,7 @@ describe('restoreRevision', () => {
         metadata: {
           path: 'about-v1',
           template: 'blank',
+          mimeType: 'application/json',
           seoTitle: 'SEO V1',
           seoDescription: 'Desc V1',
         },
@@ -502,6 +507,7 @@ describe('restoreRevision', () => {
     expect(result!.content.metadata).toMatchObject({
       path: 'about-v1',
       template: 'blank',
+      mimeType: 'application/json',
       seoTitle: 'SEO V1',
       seoDescription: 'Desc V1',
     })

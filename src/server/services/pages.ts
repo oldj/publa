@@ -66,6 +66,7 @@ export interface PageInput {
   contentRaw: string
   contentHtml: string
   template?: 'default' | 'blank'
+  mimeType?: string
   status?: 'draft' | 'scheduled' | 'published'
   seoTitle?: string
   seoDescription?: string
@@ -246,6 +247,7 @@ export async function createPage(input: PageInput) {
         contentRaw: input.contentRaw,
         contentHtml: input.contentHtml,
         template: input.template || 'default',
+        mimeType: input.mimeType || null,
         status: input.status || 'draft',
         seoTitle: input.seoTitle || null,
         seoDescription: input.seoDescription || null,
@@ -271,6 +273,7 @@ export async function updatePage(
   if (input.contentRaw !== undefined) updateData.contentRaw = input.contentRaw
   if (input.contentHtml !== undefined) updateData.contentHtml = input.contentHtml
   if (input.template !== undefined) updateData.template = input.template
+  if (input.mimeType !== undefined) updateData.mimeType = input.mimeType || null
   if (input.status !== undefined) updateData.status = input.status
   if (input.seoTitle !== undefined) updateData.seoTitle = input.seoTitle || null
   if (input.seoDescription !== undefined) updateData.seoDescription = input.seoDescription || null
