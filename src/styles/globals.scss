@@ -1,5 +1,9 @@
-@use "fns";
-@use "vars";
+$mobile-width: 800px;
+
+@mixin code {
+  font-family: Monaco, Courier, "Courier New", monospace;
+  letter-spacing: 0;
+}
 
 * {
   box-sizing: border-box;
@@ -106,13 +110,13 @@ ol {
 // ---- 代码 ----
 
 pre {
-  @include fns.code;
+  @include code;
   tab-size: 4;
   white-space: pre;
   margin-bottom: 1em;
 
   code {
-    @include fns.code;
+    @include code;
     font-size: 14px;
     line-height: 1.6em;
 
@@ -136,7 +140,7 @@ pre {
 p,
 li {
   code {
-    @include fns.code;
+    @include code;
     background: var(--bg-gray);
     padding: 0.1em 0.3em;
     margin: 0 0.3em;
@@ -323,7 +327,7 @@ button {
 
 // ---- 响应式 ----
 
-@media screen and (max-width: vars.$mobile-width) {
+@media screen and (max-width: $mobile-width) {
   body {
     padding-top: 0;
     background: none;
