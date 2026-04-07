@@ -1,3 +1,7 @@
+body[data-role="body"] {
+  background: #f7f7f7;
+}
+
 .navbar {
   background-color: light-dark(#fff, var(--mantine-color-dark-7));
   display: flex;
