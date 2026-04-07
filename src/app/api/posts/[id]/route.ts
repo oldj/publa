@@ -87,6 +87,14 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
   }
 
+  // 定时发布必须提供发布时间
+  if (body.status === 'scheduled' && !body.publishedAt) {
+    return NextResponse.json(
+      { success: false, code: 'VALIDATION_ERROR', message: '定时发布必须指定发布时间' },
+      { status: 400 },
+    )
+  }
+
   if (body.slug) {
     const slugCheck = validateSlug(body.slug)
     if (!slugCheck.valid) {
@@ -119,8 +127,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   }
 
   try {
-    if (body.status === 'published') {
-      // 发布时将主表更新和版本冻结包进事务
+    if (body.status === 'published' || body.status === 'scheduled') {
+      // 发布/定时发布时将主表更新和版本冻结包进事务
       const post = await db.transaction(async (tx) => {
         const result = await updatePost(postId, body, tx)
         if (!result) return null
@@ -142,7 +150,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
               coverImage: body.coverImage,
               seoTitle: body.seoTitle,
               seoDescription: body.seoDescription,
-              publishedAt: body.publishedAt,
+              publishedAt: result.publishedAt,
             }),
           },
           user.id,

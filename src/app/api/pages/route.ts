@@ -52,6 +52,14 @@ export async function POST(request: NextRequest) {
     )
   }
 
+  // 定时发布必须提供发布时间
+  if (body.status === 'scheduled' && !body.publishedAt) {
+    return NextResponse.json(
+      { success: false, code: 'VALIDATION_ERROR', message: '定时发布必须指定发布时间' },
+      { status: 400 },
+    )
+  }
+
   const pathCheck = validatePagePath(body.path)
   if (!pathCheck.valid) {
     return NextResponse.json(
@@ -85,7 +93,7 @@ export async function POST(request: NextRequest) {
     const page = await createPage(body)
 
     // 首次发布时冻结一份历史版本，与 PUT 链路对齐
-    if (body.status === 'published') {
+    if (body.status === 'published' || body.status === 'scheduled') {
       await db.transaction(async (tx) => {
         await saveDraft(
           'page',
@@ -102,6 +110,7 @@ export async function POST(request: NextRequest) {
               template: body.template,
               seoTitle: body.seoTitle,
               seoDescription: body.seoDescription,
+              publishedAt: page.publishedAt,
             }),
           },
           user.id,

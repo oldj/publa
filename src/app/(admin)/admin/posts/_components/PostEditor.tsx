@@ -10,6 +10,7 @@ import RichTextEditorWrapper, {
   type RichTextEditorHandle,
 } from '@/components/editors/RichTextEditorWrapper'
 import myModal from '@/app/(admin)/_components/myModals'
+import PublishSettings from '@/app/(admin)/_components/PublishSettings'
 import { notify } from '@/lib/notify'
 import { notifications } from '@mantine/notifications'
 import {
@@ -20,7 +21,6 @@ import {
   Grid,
   Group,
   Paper,
-  SegmentedControl,
   Select,
   Stack,
   TagsInput,
@@ -29,8 +29,6 @@ import {
   Textarea,
   Title,
 } from '@mantine/core'
-import { DateTimePicker } from '@mantine/dates'
-import '@mantine/dates/styles.css'
 import {
   IconAlertTriangle,
   IconArrowLeft,
@@ -349,6 +347,8 @@ export default function PostEditor({ postId }: { postId?: number }) {
         )
         if (postData.publishedAt && postData.status === 'scheduled') {
           setScheduledTime(new Date(postData.publishedAt))
+        } else {
+          setScheduledTime(null)
         }
 
         if (draft) {
@@ -512,7 +512,14 @@ export default function PostEditor({ postId }: { postId?: number }) {
         creatingRef.current = false
       }
     },
-    [ensurePendingPostId, getCurrentContent, router, saveDraftRevision, onAutoSaveFail, clearAutoSaveFail],
+    [
+      ensurePendingPostId,
+      getCurrentContent,
+      router,
+      saveDraftRevision,
+      onAutoSaveFail,
+      clearAutoSaveFail,
+    ],
   )
 
   // 自动保存定时器
@@ -563,7 +570,15 @@ export default function PostEditor({ postId }: { postId?: number }) {
     }, 5000)
 
     return () => clearInterval(timer)
-  }, [postId, createAndRedirect, getCurrentContent, getMetaSnapshot, saveDraftRevision, clearAutoSaveFail, onAutoSaveFail])
+  }, [
+    postId,
+    createAndRedirect,
+    getCurrentContent,
+    getMetaSnapshot,
+    saveDraftRevision,
+    clearAutoSaveFail,
+    onAutoSaveFail,
+  ])
 
   // 预览：先保存草稿，再在新窗口打开预览
   const handlePreview = async () => {
@@ -658,7 +673,9 @@ export default function PostEditor({ postId }: { postId?: number }) {
       if (json.success) {
         clearAutoSaveFail()
         const newPublishedAt =
-          overrides?.publishedAt !== undefined ? overrides.publishedAt : form.publishedAt
+          overrides?.publishedAt !== undefined
+            ? overrides.publishedAt
+            : json.data?.publishedAt ?? form.publishedAt
         setForm((prev) => ({ ...prev, status, publishedAt: newPublishedAt }))
         setPublishTab(
           status === 'published' ? 'published' : status === 'scheduled' ? 'scheduled' : 'draft',
@@ -1010,109 +1027,24 @@ export default function PostEditor({ postId }: { postId?: number }) {
         {/* 侧边栏设置 */}
         <Grid.Col span={{ base: 12, md: 4 }}>
           <Stack>
-            <Paper withBorder p="md" mih={200}>
-              <Text fw={500} mb="sm">
-                发布设置
-              </Text>
-              <SegmentedControl
-                fullWidth
-                value={publishTab}
-                data={[
-                  { value: 'draft', label: '草稿' },
-                  { value: 'scheduled', label: '定时发布' },
-                  { value: 'published', label: '已发布' },
-                ]}
-                onChange={setPublishTab}
-              />
-
-              {/* 草稿 */}
-              {publishTab === 'draft' && (
-                <Stack mt="sm" gap="xs">
-                  {form.status === 'draft' ? (
-                    <Text size="sm" c="dimmed">
-                      当前为草稿状态
-                    </Text>
-                  ) : (
-                    <Button
-                      variant="light"
-                      color="orange"
-                      fullWidth
-                      onClick={async () => {
-                        if (
-                          !(await myModal.confirm({
-                            message:
-                              '确定要将当前文章转为草稿状态吗？这个操作将撤销文章发布，使其对外部不可见。',
-                          }))
-                        )
-                          return
-                        setScheduledTime(null)
-                        await handleSave('draft', { publishedAt: null })
-                      }}
-                      loading={loading}
-                    >
-                      转为草稿
-                    </Button>
-                  )}
-                </Stack>
-              )}
-
-              {/* 定时发布 */}
-              {publishTab === 'scheduled' && (
-                <Stack mt="sm" gap="xs">
-                  {form.status === 'published' ? (
-                    <Text size="sm" c="dimmed">
-                      文章已发布，无需定时发布。
-                    </Text>
-                  ) : (
-                    <>
-                      <DateTimePicker
-                        label="发布时间"
-                        placeholder="选择日期和时间"
-                        value={scheduledTime}
-                        onChange={(v) => setScheduledTime(v as Date | null)}
-                        minDate={new Date()}
-                      />
-                      <Button
-                        fullWidth
-                        disabled={!scheduledTime}
-                        onClick={async () => {
-                          if (!scheduledTime) return
-                          const timeStr = dayjs(scheduledTime).format('YYYY-MM-DD HH:mm:ss')
-                          if (
-                            !(await myModal.confirm({
-                              message: `确定要将文章设为定时发布吗？\n\n发布时间：${timeStr}`,
-                            }))
-                          )
-                            return
-                          await handleSave('scheduled', {
-                            publishedAt: scheduledTime.toISOString(),
-                          })
-                        }}
-                        loading={loading}
-                      >
-                        {form.status === 'scheduled' ? '更新定时发布' : '设为定时发布'}
-                      </Button>
-                    </>
-                  )}
-                </Stack>
-              )}
-
-              {/* 已发布 */}
-              {publishTab === 'published' && (
-                <Stack mt="sm" gap="xs">
-                  {form.publishedAt && (
-                    <Text size="sm" c="dimmed">
-                      发布时间：{dayjs(form.publishedAt).format('YYYY-MM-DD HH:mm:ss')}
-                    </Text>
-                  )}
-                  {form.status === 'published' && dirty && (
-                    <Text size="sm" c="orange">
-                      当前有未发布的修改，可点击顶部「发布」按钮再次发布。
-                    </Text>
-                  )}
-                </Stack>
-              )}
-            </Paper>
+            <PublishSettings
+              currentStatus={form.status}
+              publishTab={publishTab}
+              onPublishTabChange={setPublishTab}
+              scheduledTime={scheduledTime}
+              onScheduledTimeChange={setScheduledTime}
+              publishedAt={form.publishedAt}
+              dirty={dirty}
+              loading={loading}
+              onConvertToDraft={async () => {
+                setScheduledTime(null)
+                await handleSave('draft', { publishedAt: null })
+              }}
+              onSetScheduled={async (publishedAt) => {
+                await handleSave('scheduled', { publishedAt })
+              }}
+              entityLabel="文章"
+            />
 
             {postId && (
               <Paper withBorder p="md">
@@ -1124,7 +1056,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
 
             <Paper withBorder p="md">
               <Text fw={500} mb="sm">
-                其他设置
+                文章设置
               </Text>
               <TextInput
                 label="头图"

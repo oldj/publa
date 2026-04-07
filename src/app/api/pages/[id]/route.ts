@@ -69,8 +69,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   const { data: body, error } = await safeParseJson(request)
   if (error) return error
 
-  // 发布时校验必填字段
-  if (body.status === 'published') {
+  // 发布/定时发布时校验必填字段
+  if (body.status === 'published' || body.status === 'scheduled') {
     if (!body.title) {
       return NextResponse.json(
         { success: false, code: 'VALIDATION_ERROR', message: '发布时标题不能为空' },
@@ -83,6 +83,14 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         { status: 400 },
       )
     }
+  }
+
+  // 定时发布必须提供发布时间
+  if (body.status === 'scheduled' && !body.publishedAt) {
+    return NextResponse.json(
+      { success: false, code: 'VALIDATION_ERROR', message: '定时发布必须指定发布时间' },
+      { status: 400 },
+    )
   }
 
   // 校验路径（如果提供了路径）
@@ -117,8 +125,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   }
 
   try {
-    if (body.status === 'published') {
-      // 发布时将主表更新和版本冻结包进事务
+    if (body.status === 'published' || body.status === 'scheduled') {
+      // 发布/定时发布时将主表更新和版本冻结包进事务
       const page = await db.transaction(async (tx) => {
         const result = await updatePage(pageId, body, tx)
         if (!result) return null
@@ -138,6 +146,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
               template: body.template,
               seoTitle: body.seoTitle,
               seoDescription: body.seoDescription,
+              publishedAt: result.publishedAt,
             }),
           },
           user.id,

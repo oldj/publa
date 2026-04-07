@@ -21,6 +21,7 @@ interface PageItem {
 
 const statusMap: Record<string, { label: string; color: string }> = {
   draft: { label: '草稿', color: 'gray' },
+  scheduled: { label: '定时', color: 'blue' },
   published: { label: '已发布', color: 'green' },
 }
 
