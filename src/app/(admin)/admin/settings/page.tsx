@@ -361,6 +361,7 @@ export default function SettingsPage() {
           minRows={2}
           value={settings.footerCopyright || ''}
           onChange={(e) => setField('footerCopyright', e.target.value)}
+          styles={{ input: { maxHeight: 400, overflow: 'auto' } }}
         />
 
         <Divider label="主题设置" labelPosition="left" mt="md" />
@@ -379,7 +380,7 @@ export default function SettingsPage() {
           minRows={3}
           value={settings.customAfterPostHtml || ''}
           onChange={(e) => setField('customAfterPostHtml', e.target.value)}
-          styles={{ input: { fontFamily: 'monospace' } }}
+          styles={{ input: { fontFamily: 'monospace', maxHeight: 400, overflow: 'auto' } }}
         />
         <Textarea
           label="自定义 Head HTML"
@@ -389,7 +390,7 @@ export default function SettingsPage() {
           minRows={3}
           value={settings.customHeadHtml || ''}
           onChange={(e) => setField('customHeadHtml', e.target.value)}
-          styles={{ input: { fontFamily: 'monospace' } }}
+          styles={{ input: { fontFamily: 'monospace', maxHeight: 400, overflow: 'auto' } }}
         />
         <Textarea
           label="自定义 Body 头部 HTML"
@@ -399,7 +400,7 @@ export default function SettingsPage() {
           minRows={3}
           value={settings.customBodyStartHtml || ''}
           onChange={(e) => setField('customBodyStartHtml', e.target.value)}
-          styles={{ input: { fontFamily: 'monospace' } }}
+          styles={{ input: { fontFamily: 'monospace', maxHeight: 400, overflow: 'auto' } }}
         />
         <Textarea
           label="自定义 Body 底部 HTML"
@@ -409,7 +410,7 @@ export default function SettingsPage() {
           minRows={3}
           value={settings.customBodyEndHtml || ''}
           onChange={(e) => setField('customBodyEndHtml', e.target.value)}
-          styles={{ input: { fontFamily: 'monospace' } }}
+          styles={{ input: { fontFamily: 'monospace', maxHeight: 400, overflow: 'auto' } }}
         />
       </Stack>
     </div>
