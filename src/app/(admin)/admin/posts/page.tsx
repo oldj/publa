@@ -162,7 +162,7 @@ export default function PostsPage() {
                         style={{
                           color: 'inherit',
                           textDecoration: 'none',
-                          fontWeight: 500,
+                          fontWeight: 'normal',
                           fontSize: 'var(--mantine-font-size-sm)',
                         }}
                       >

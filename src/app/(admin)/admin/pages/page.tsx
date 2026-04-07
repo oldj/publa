@@ -140,7 +140,7 @@ export default function PagesAdminPage() {
                         style={{
                           color: 'inherit',
                           textDecoration: 'none',
-                          fontWeight: 500,
+                          fontWeight: 'normal',
                           fontSize: 'var(--mantine-font-size-sm)',
                         }}
                       >
