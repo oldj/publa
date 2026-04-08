@@ -11,7 +11,6 @@ export const ADMIN_SETTINGS_KEYS = [
   'language',
   'timezone',
   'defaultTheme',
-  'allowThemeToggle',
   'enableComment',
   'showCommentsGlobally',
   'defaultApprove',

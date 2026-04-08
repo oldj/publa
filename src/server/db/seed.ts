@@ -20,7 +20,6 @@ const defaultSettings: { key: string; value: string }[] = [
   { key: 'faviconMimeType', value: '' },
   { key: 'faviconVersion', value: '' },
   { key: 'defaultTheme', value: 'light' },
-  { key: 'allowThemeToggle', value: 'true' },
   { key: 'enableComment', value: 'true' },
   { key: 'showCommentsGlobally', value: 'true' },
   { key: 'defaultApprove', value: 'false' },

@@ -383,13 +383,6 @@ export default function SettingsPage() {
           styles={{ input: { maxHeight: 400, overflow: 'auto' } }}
         />
 
-        <Divider label="主题设置" labelPosition="left" mt="md" />
-        <Switch
-          label="允许主题切换"
-          checked={settings.allowThemeToggle === 'true'}
-          onChange={(e) => setField('allowThemeToggle', e.currentTarget.checked ? 'true' : 'false')}
-        />
-
         <Divider label="自定义 HTML" labelPosition="left" mt="md" />
         <Textarea
           label="文章末尾自定义 HTML"

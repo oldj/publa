@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
     return new NextResponse(JSON.stringify(data, null, 2), {
       headers: {
         'Content-Type': 'application/json',
-        'Content-Disposition': `attachment; filename="blog-settings-${ts}.json"`,
+        'Content-Disposition': `attachment; filename="publa-settings-${ts}.json"`,
       },
     })
   }
@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
   return new NextResponse(JSON.stringify(data, null, 2), {
     headers: {
       'Content-Type': 'application/json',
-      'Content-Disposition': `attachment; filename="blog-content-${ts}.json"`,
+      'Content-Disposition': `attachment; filename="publa-content-${ts}.json"`,
     },
   })
 }
