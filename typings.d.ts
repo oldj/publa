@@ -40,6 +40,8 @@ export interface IPost {
   slug?: string
   coverImage?: string
   pubTime?: string
+  seoTitle?: string
+  seoDescription?: string
   category: ICategory | null
   tags: ITag[]
   previous: {

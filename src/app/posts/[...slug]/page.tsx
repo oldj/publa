@@ -149,10 +149,9 @@ export const generateMetadata = async ({
     viewer,
   })
 
-  const title = data.post?.title || ''
-
   return {
-    title,
+    title: data.post?.seoTitle || data.post?.title || '',
+    description: data.post?.seoDescription || undefined,
   }
 }
 

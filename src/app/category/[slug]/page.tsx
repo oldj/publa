@@ -17,7 +17,8 @@ export async function generateMetadata({
   const { slug } = await params
   const category = await getCategoryBySlug(slug)
   return {
-    title: category ? `分类：${category.name}` : '分类不存在',
+    title: category ? `分类：${category.seoTitle || category.name}` : '分类不存在',
+    description: category?.seoDescription || undefined,
   }
 }
 

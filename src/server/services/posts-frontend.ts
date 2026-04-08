@@ -163,6 +163,8 @@ async function buildFrontendPost(
     comments: commentList,
     canComment: preview ? false : canComment,
     canShowComments: preview ? false : canShowComments,
+    seoTitle: post.seoTitle || undefined,
+    seoDescription: post.seoDescription || undefined,
     related: [],
   }
 }

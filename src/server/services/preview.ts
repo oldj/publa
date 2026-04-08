@@ -39,6 +39,8 @@ export async function getPreviewPost(contentId: number): Promise<IPost | null> {
   let categoryId = row.categoryId
   let tagNames: string[] = []
   let pubTime = row.publishedAt || row.createdAt
+  let seoTitle = row.seoTitle || ''
+  let seoDescription = row.seoDescription || ''
 
   if (draft) {
     title = draft.title || title
@@ -49,6 +51,8 @@ export async function getPreviewPost(contentId: number): Promise<IPost | null> {
     categoryId = meta.categoryId ?? categoryId
     tagNames = meta.tagNames || []
     if (meta.publishedAt) pubTime = meta.publishedAt
+    if (meta.seoTitle) seoTitle = meta.seoTitle
+    if (meta.seoDescription) seoDescription = meta.seoDescription
   }
 
   // 解析分类
@@ -88,6 +92,8 @@ export async function getPreviewPost(contentId: number): Promise<IPost | null> {
     previous: { title: '', url: '' },
     next: { title: '', url: '' },
     comments: [],
+    seoTitle: seoTitle || undefined,
+    seoDescription: seoDescription || undefined,
     canComment: false,
     canShowComments: false,
     related: [],

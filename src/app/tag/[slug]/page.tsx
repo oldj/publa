@@ -17,7 +17,8 @@ export async function generateMetadata({
   const { slug } = await params
   const tag = await getTagBySlug(slug)
   return {
-    title: tag ? `标签：${tag.name}` : '标签不存在',
+    title: tag ? `标签：${tag.seoTitle || tag.name}` : '标签不存在',
+    description: tag?.seoDescription || undefined,
   }
 }
 
