@@ -22,9 +22,19 @@ describe('根布局自定义 HTML 约束', () => {
     expect(layoutSource).not.toContain('dangerouslySetInnerHTML')
   })
 
+  it('HeadElements 渲染在 <head> 标签内部', () => {
+    const headStart = layoutSource.indexOf('<head>')
+    const headEnd = layoutSource.indexOf('</head>')
+    const headElementsPos = layoutSource.indexOf('<HeadElements')
+
+    expect(headStart).toBeGreaterThan(-1)
+    expect(headEnd).toBeGreaterThan(-1)
+    expect(headElementsPos).toBeGreaterThan(headStart)
+    expect(headElementsPos).toBeLessThan(headEnd)
+  })
+
   it('customHeadHtml 受 isFrontend 条件守卫保护', () => {
-    expect(layoutSource).toContain('isFrontend')
-    expect(layoutSource).toContain('customHeadHtml')
-    expect(layoutSource).toContain('HeadElements')
+    // 确保三者在同一表达式中，而非散落在不同位置
+    expect(layoutSource).toContain('isFrontend && customHeadHtml && <HeadElements')
   })
 })
