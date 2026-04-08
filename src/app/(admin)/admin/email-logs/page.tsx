@@ -96,7 +96,7 @@ export default function EmailLogsPage() {
   const totalPages = Math.ceil(total / PAGE_SIZE)
 
   return (
-    <Stack gap="lg">
+    <Stack gap="lg" mt="md">
       <Group justify="space-between">
         <Title order={3}>邮件日志</Title>
       </Group>

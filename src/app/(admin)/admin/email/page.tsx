@@ -23,6 +23,7 @@ import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useCurrentUser } from '../../_components/AdminCountsContext'
 import { PageHeader } from '../../_components/PageHeader'
+import { RoleLabel } from '../../_components/RoleLabel'
 
 interface User {
   id: number
@@ -210,53 +211,65 @@ export default function EmailSettingsPage() {
   }
 
   const renderUserCheckboxes = (config: NotifyConfig, setConfig: (c: NotifyConfig) => void) => (
-    <Stack gap="xs" mt="xs">
-      {users.map((user) => {
-        const noEmail = !user.email
-        const checkbox = (
-          <Checkbox
-            label={
-              <Group gap="xs">
-                <span>{user.username}</span>
-                {user.email && (
-                  <Text size="xs" c="dimmed">
-                    {user.email}
-                  </Text>
-                )}
-                {noEmail && (
-                  <Badge size="xs" color="yellow" variant="light">
-                    未设置邮箱
-                  </Badge>
-                )}
-              </Group>
-            }
-            checked={config.userIds.includes(user.id)}
-            onChange={() => toggleNotifyUser(config, setConfig, user.id)}
-            styles={
-              noEmail
-                ? {
-                    body: {
-                      backgroundColor: 'var(--mantine-color-yellow-0)',
-                      border: '1px solid var(--mantine-color-yellow-4)',
-                      borderRadius: 'var(--mantine-radius-sm)',
-                      padding: '4px 8px',
-                    },
-                  }
-                : undefined
-            }
-          />
-        )
-
-        if (noEmail) {
-          return (
-            <Tooltip key={user.id} label="该用户未设置邮箱，无法接收邮件通知" position="right">
-              {checkbox}
-            </Tooltip>
+    <Box
+      mt="xs"
+      ml="md"
+      p="sm"
+      style={{
+        border: '1px solid var(--mantine-color-gray-3)',
+        borderRadius: 'var(--mantine-radius-md)',
+        backgroundColor: 'var(--mantine-color-white)',
+      }}
+    >
+      <Stack gap="xs">
+        {users.map((user) => {
+          const noEmail = !user.email
+          const checkbox = (
+            <Checkbox
+              label={
+                <Group gap="xs">
+                  <span>{user.username}</span>
+                  <RoleLabel role={user.role} />
+                  {user.email && (
+                    <Text size="xs" c="dimmed">
+                      {user.email}
+                    </Text>
+                  )}
+                  {noEmail && (
+                    <Badge size="xs" color="yellow" variant="light">
+                      未设置邮箱
+                    </Badge>
+                  )}
+                </Group>
+              }
+              checked={config.userIds.includes(user.id)}
+              onChange={() => toggleNotifyUser(config, setConfig, user.id)}
+              styles={
+                noEmail
+                  ? {
+                      body: {
+                        backgroundColor: 'var(--mantine-color-yellow-0)',
+                        border: '1px solid var(--mantine-color-yellow-4)',
+                        borderRadius: 'var(--mantine-radius-sm)',
+                        padding: '4px 8px',
+                      },
+                    }
+                  : undefined
+              }
+            />
           )
-        }
-        return <Box key={user.id}>{checkbox}</Box>
-      })}
-    </Stack>
+
+          if (noEmail) {
+            return (
+              <Tooltip key={user.id} label="该用户未设置邮箱，无法接收邮件通知" position="right">
+                {checkbox}
+              </Tooltip>
+            )
+          }
+          return <Box key={user.id}>{checkbox}</Box>
+        })}
+      </Stack>
+    </Box>
   )
 
   const isDirty =
@@ -271,10 +284,8 @@ export default function EmailSettingsPage() {
   return (
     <Stack gap="lg">
       <PageHeader title="邮件通知" dirty={isDirty} loading={loading} onSave={handleSave} />
-
       {/* 邮件发送配置 */}
       <Divider label="邮件发送配置" labelPosition="left" />
-
       <Box>
         <Text fw={500} mb="xs">
           发送方式
@@ -289,7 +300,6 @@ export default function EmailSettingsPage() {
           ]}
         />
       </Box>
-
       {provider && (
         <TextInput
           label="发件人地址"
@@ -299,7 +309,6 @@ export default function EmailSettingsPage() {
           onChange={(e) => setField('emailSmtpFrom', e.currentTarget.value)}
         />
       )}
-
       {provider === 'resend' && (
         <PasswordInput
           label="Resend API Key"
@@ -311,7 +320,6 @@ export default function EmailSettingsPage() {
           onChange={(e) => setField('emailResendApiKey', e.currentTarget.value)}
         />
       )}
-
       {provider === 'smtp' && (
         <>
           <Group grow>
@@ -353,7 +361,6 @@ export default function EmailSettingsPage() {
           />
         </>
       )}
-
       {provider && (
         <>
           <Divider label="发送测试" labelPosition="left" />
@@ -381,14 +388,11 @@ export default function EmailSettingsPage() {
           </Group>
         </>
       )}
-
       {/* 通知事件配置 */}
       <Divider label="通知事件" labelPosition="left" />
-
       <Alert icon={<IconInfoCircle size={16} />} color="blue" variant="light">
         选择需要发送邮件通知的事件，以及通知的接收人。发送时会跳过未设置邮箱的用户。
       </Alert>
-
       <Box>
         <Switch
           label="有新的评论"
@@ -397,7 +401,6 @@ export default function EmailSettingsPage() {
         />
         {commentNotify.enabled && renderUserCheckboxes(commentNotify, setCommentNotify)}
       </Box>
-
       <Box>
         <Switch
           label="有新的留言"

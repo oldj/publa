@@ -7,6 +7,7 @@ import { NowrapBadge } from '../../_components/NowrapBadge'
 import { notify } from '@/lib/notify'
 import {
   ActionIcon,
+  Box,
   Button,
   Divider,
   Drawer,
@@ -157,7 +158,7 @@ export default function CommentsPage() {
   }
 
   return (
-    <div>
+    <Box mt="md">
       <Group justify="space-between" mb="lg">
         <Title order={3}>评论管理</Title>
         <Select
@@ -509,6 +510,6 @@ export default function CommentsPage() {
           </Stack>
         )}
       </Drawer>
-    </div>
+    </Box>
   )
 }

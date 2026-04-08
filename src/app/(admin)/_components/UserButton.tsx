@@ -4,13 +4,8 @@ import type { AuthUser } from '@/server/auth'
 import { Avatar, Group, Text, UnstyledButton } from '@mantine/core'
 import { IconLogout } from '@tabler/icons-react'
 import { useRouter } from 'next/navigation'
+import { RoleLabel } from './RoleLabel'
 import classes from './UserButton.module.scss'
-
-const roleLabels: Record<string, string> = {
-  owner: '站长',
-  admin: '管理员',
-  editor: '编辑',
-}
 
 export function UserButton({ user }: { user: AuthUser | null }) {
   const router = useRouter()
@@ -33,9 +28,7 @@ export function UserButton({ user }: { user: AuthUser | null }) {
             <Text size="sm" fw={500}>
               {user.username}
             </Text>
-            <Text c="dimmed" size="xs">
-              {roleLabels[user.role] || user.role}
-            </Text>
+            <RoleLabel role={user.role} />
           </div>
           <UnstyledButton onClick={handleLogout} title="退出登录">
             <IconLogout size={16} stroke={1.5} />

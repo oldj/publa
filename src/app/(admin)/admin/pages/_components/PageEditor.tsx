@@ -1,5 +1,8 @@
 'use client'
 
+import { EditorHeader } from '@/app/(admin)/_components/EditorHeader'
+import myModal from '@/app/(admin)/_components/myModals'
+import PublishSettings from '@/app/(admin)/_components/PublishSettings'
 import {
   type ContentType,
   htmlToMarkdown,
@@ -9,27 +12,9 @@ import ContentTypeSelector from '@/components/editors/ContentTypeSelector'
 import RichTextEditorWrapper, {
   type RichTextEditorHandle,
 } from '@/components/editors/RichTextEditorWrapper'
-import myModal from '@/app/(admin)/_components/myModals'
-import PublishSettings from '@/app/(admin)/_components/PublishSettings'
 import { notify } from '@/lib/notify'
+import { Button, Grid, Menu, Paper, Select, Stack, Text, TextInput, Textarea } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
-import {
-  Badge,
-  Button,
-  Grid,
-  Group,
-  Menu,
-  Paper,
-  Select,
-  Stack,
-  Text,
-  TextInput,
-  Textarea,
-  Title,
-} from '@mantine/core'
-import { IconArrowLeft, IconDeviceFloppy, IconEye, IconSend, IconX } from '@tabler/icons-react'
-import dayjs from 'dayjs'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { shouldCreateDraftRecord } from '../../_lib/draft-persistence'
@@ -562,7 +547,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
           const newPublishedAt =
             overrides?.publishedAt !== undefined
               ? overrides.publishedAt
-              : json.data?.publishedAt ?? form.publishedAt
+              : (json.data?.publishedAt ?? form.publishedAt)
           setForm((prev) => ({ ...prev, status, publishedAt: newPublishedAt }))
           setPublishTab(
             status === 'published' ? 'published' : status === 'scheduled' ? 'scheduled' : 'draft',
@@ -634,144 +619,65 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
 
   return (
     <div style={{ position: 'relative' }}>
-      {/* 固定在右上角的保存/发布按钮 */}
-      <Group
-        gap="xs"
-        style={{
-          position: 'sticky',
-          top: 'var(--mantine-spacing-sm)',
-          float: 'right',
-          zIndex: 100,
-          padding: 'var(--mantine-spacing-xs)',
-          borderRadius: 'var(--mantine-radius-md)',
-          backdropFilter: 'blur(8px)',
+      <EditorHeader
+        entityId={pageId}
+        entityLabel="页面"
+        backUrl="/admin/pages"
+        status={form.status}
+        dirty={dirty}
+        loading={loading}
+        autoSaveTime={autoSaveTime}
+        onPreview={handlePreview}
+        onSaveDraft={handleSaveDraft}
+        onPublish={handleSave}
+        onDiscardDraft={async () => {
+          // 先删除草稿，再重新加载已发布内容
+          await fetch(`/api/pages/${pageId}/draft`, { method: 'DELETE' })
+          const res = await fetch(`/api/pages/${pageId}`)
+          const json = await res.json()
+          if (!json.success) return
+          const pageData = json.data
+          const restoredForm: FormState = {
+            title: pageData.title,
+            path: pageData.path || '',
+            template: pageData.template || 'default',
+            mimeType: pageData.mimeType || '',
+            status: pageData.status,
+            publishedAt: pageData.publishedAt ?? null,
+            seoTitle: pageData.seoTitle || '',
+            seoDescription: pageData.seoDescription || '',
+          }
+          const restoreCT = (pageData.contentType || 'richtext') as ContentType
+          setForm(restoredForm)
+          setPathError(restoredForm.path ? validatePath(restoredForm.path) : null)
+          setContentType(restoreCT)
+          contentTypeRef.current = restoreCT
+          if (restoreCT === 'richtext') {
+            const ed = getEditor()
+            if (ed) ed.commands.setContent(pageData.contentHtml)
+          }
+          setTextContent(pageData.contentRaw)
+          textContentRef.current = pageData.contentRaw
+          lastAutoSaveContent.current = pageData.contentRaw
+          lastAutoSaveMetaRef.current = getMetaSnapshot(restoredForm)
+          savedSnapshot.current = makeSnapshot(restoredForm, pageData.contentRaw)
+          editorDirty.current = false
+          setDirty(false)
+          setAutoSaveTime(null)
+          setPublishTab(
+            pageData.status === 'published'
+              ? 'published'
+              : pageData.status === 'scheduled'
+                ? 'scheduled'
+                : 'draft',
+          )
+          if (pageData.status === 'scheduled' && pageData.publishedAt) {
+            setScheduledTime(new Date(pageData.publishedAt))
+          } else {
+            setScheduledTime(null)
+          }
         }}
-      >
-        {pageId && (
-          <Button
-            variant="subtle"
-            leftSection={<IconEye size={16} />}
-            onClick={handlePreview}
-            loading={loading}
-          >
-            预览
-          </Button>
-        )}
-        <Button
-          variant="default"
-          leftSection={<IconDeviceFloppy size={16} />}
-          onClick={handleSaveDraft}
-          loading={loading}
-        >
-          保存
-        </Button>
-        <Button
-          leftSection={<IconSend size={16} />}
-          onClick={async () => {
-            if (form.status !== 'published') {
-              if (!(await myModal.confirm({ message: '确定要发布这个页面吗？' }))) return
-            }
-            await handleSave()
-          }}
-          loading={loading}
-        >
-          发布
-        </Button>
-      </Group>
-
-      <Group mb="lg">
-        <Button
-          variant="subtle"
-          component={Link}
-          href="/admin/pages"
-          leftSection={<IconArrowLeft size={16} />}
-        >
-          返回
-        </Button>
-        <Title order={3}>{isEdit ? '编辑页面' : '新建页面'}</Title>
-        {isEdit && (
-          <Badge
-            color={
-              form.status === 'published' ? 'green' : form.status === 'scheduled' ? 'blue' : 'gray'
-            }
-            variant="light"
-            size="lg"
-          >
-            {form.status === 'published'
-              ? '已发布'
-              : form.status === 'scheduled'
-                ? '定时发布'
-                : '草稿'}
-          </Badge>
-        )}
-        {dirty && (
-          <Group gap={4}>
-            <Badge color="orange" variant="light" size="lg">
-              已修改
-            </Badge>
-            {pageId && form.status === 'published' && (
-              <IconX
-                size={16}
-                color="var(--mantine-color-orange-6)"
-                style={{ cursor: 'pointer' }}
-                onClick={async () => {
-                  if (!(await myModal.confirm({ message: '是否要放弃所有未发布的修改？' }))) return
-                  // 先删除草稿，再重新加载已发布内容
-                  await fetch(`/api/pages/${pageId}/draft`, { method: 'DELETE' })
-                  const res = await fetch(`/api/pages/${pageId}`)
-                  const json = await res.json()
-                  if (!json.success) return
-                  const pageData = json.data
-                  const restoredForm: FormState = {
-                    title: pageData.title,
-                    path: pageData.path || '',
-                    template: pageData.template || 'default',
-                    mimeType: pageData.mimeType || '',
-                    status: pageData.status,
-                    publishedAt: pageData.publishedAt ?? null,
-                    seoTitle: pageData.seoTitle || '',
-                    seoDescription: pageData.seoDescription || '',
-                  }
-                  const restoreCT = (pageData.contentType || 'richtext') as ContentType
-                  setForm(restoredForm)
-                  setPathError(restoredForm.path ? validatePath(restoredForm.path) : null)
-                  setContentType(restoreCT)
-                  contentTypeRef.current = restoreCT
-                  if (restoreCT === 'richtext') {
-                    const ed = getEditor()
-                    if (ed) ed.commands.setContent(pageData.contentHtml)
-                  }
-                  setTextContent(pageData.contentRaw)
-                  textContentRef.current = pageData.contentRaw
-                  lastAutoSaveContent.current = pageData.contentRaw
-                  lastAutoSaveMetaRef.current = getMetaSnapshot(restoredForm)
-                  savedSnapshot.current = makeSnapshot(restoredForm, pageData.contentRaw)
-                  editorDirty.current = false
-                  setDirty(false)
-                  setAutoSaveTime(null)
-                  setPublishTab(
-                    pageData.status === 'published'
-                      ? 'published'
-                      : pageData.status === 'scheduled'
-                        ? 'scheduled'
-                        : 'draft',
-                  )
-                  if (pageData.status === 'scheduled' && pageData.publishedAt) {
-                    setScheduledTime(new Date(pageData.publishedAt))
-                  } else {
-                    setScheduledTime(null)
-                  }
-                }}
-              />
-            )}
-          </Group>
-        )}
-        {autoSaveTime && (
-          <Text size="sm" c="dimmed">
-            自动保存：{dayjs(autoSaveTime).format('YYYY-MM-DD HH:mm:ss')}
-          </Text>
-        )}
-      </Group>
+      />
 
       <Grid>
         {/* 主编辑区 */}

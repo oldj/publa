@@ -4,7 +4,7 @@ import { NowrapBadge } from '../../_components/NowrapBadge'
 import adminStyles from '../../_components/AdminShell.module.scss'
 
 import { notify } from '@/lib/notify'
-import { ActionIcon, Button, Group, Modal, Table, Text, TextInput, Title } from '@mantine/core'
+import { ActionIcon, Box, Button, Group, Modal, Table, Text, TextInput, Title } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import { IconPencil, IconPlus, IconTrash } from '@tabler/icons-react'
 import { useCallback, useEffect, useState } from 'react'
@@ -115,7 +115,7 @@ export default function TagsPage() {
   }
 
   return (
-    <div>
+    <Box mt="md">
       <Group justify="space-between" mb="lg">
         <Title order={3}>标签管理</Title>
         <Button leftSection={<IconPlus size={16} />} onClick={() => handleOpen()}>
@@ -215,6 +215,6 @@ export default function TagsPage() {
           </Button>
         </Group>
       </Modal>
-    </div>
+    </Box>
   )
 }

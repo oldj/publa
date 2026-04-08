@@ -615,7 +615,7 @@ export default function MenusPage() {
   const topMenus = menuList.filter((m) => !m.parentId)
 
   return (
-    <Box>
+    <Box mt="md">
       <Group justify="space-between" mb="lg">
         <Title order={3}>菜单管理</Title>
         <Group>
