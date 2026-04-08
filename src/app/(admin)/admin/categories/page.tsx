@@ -6,6 +6,7 @@ import adminStyles from '../../_components/AdminShell.module.scss'
 import { notify } from '@/lib/notify'
 import {
   ActionIcon,
+  Box,
   Button,
   Group,
   Modal,
@@ -134,7 +135,7 @@ export default function CategoriesPage() {
   }
 
   return (
-    <div>
+    <Box mt="md">
       <Group justify="space-between" mb="lg">
         <Title order={3}>分类管理</Title>
         <Button leftSection={<IconPlus size={16} />} onClick={() => handleOpen()}>
@@ -248,6 +249,6 @@ export default function CategoriesPage() {
           </Button>
         </Group>
       </Modal>
-    </div>
+    </Box>
   )
 }

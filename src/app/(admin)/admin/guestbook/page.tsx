@@ -7,6 +7,7 @@ import { NowrapBadge } from '../../_components/NowrapBadge'
 import { notify } from '@/lib/notify'
 import {
   ActionIcon,
+  Box,
   Button,
   Divider,
   Drawer,
@@ -141,7 +142,7 @@ export default function GuestbookAdminPage() {
   }
 
   return (
-    <div>
+    <Box mt="md">
       <Group justify="space-between" mb="lg">
         <Title order={3}>留言管理</Title>
         <Group gap="sm">
@@ -334,6 +335,6 @@ export default function GuestbookAdminPage() {
           </Stack>
         )}
       </Drawer>
-    </div>
+    </Box>
   )
 }

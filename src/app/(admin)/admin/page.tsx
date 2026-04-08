@@ -1,6 +1,6 @@
 import { db } from '@/server/db'
 import { comments, contents, guestbookMessages, users } from '@/server/db/schema'
-import { Group, Paper, SimpleGrid, Text, ThemeIcon, Title } from '@mantine/core'
+import { Box, Group, Paper, SimpleGrid, Text, ThemeIcon, Title } from '@mantine/core'
 import {
   IconAlertCircle,
   IconFileText,
@@ -50,7 +50,7 @@ export default async function AdminDashboard() {
   ]
 
   return (
-    <div>
+    <Box mt="md">
       <Title order={3} mb="lg">
         仪表盘
       </Title>
@@ -74,6 +74,6 @@ export default async function AdminDashboard() {
           </Paper>
         ))}
       </SimpleGrid>
-    </div>
+    </Box>
   )
 }

@@ -6,6 +6,7 @@ import {
   ActionIcon,
   Anchor,
   Badge,
+  Box,
   Button,
   Card,
   Checkbox,
@@ -424,7 +425,7 @@ export default function AttachmentsPage() {
   const isImage = (mimeType: string) => mimeType.startsWith('image/')
 
   return (
-    <div>
+    <Box mt="md">
       <Group justify="space-between" mb="lg">
         <Group gap="sm">
           <Title order={3}>附件管理</Title>
@@ -1105,6 +1106,6 @@ export default function AttachmentsPage() {
           </Stack>
         )}
       </Drawer>
-    </div>
+    </Box>
   )
 }

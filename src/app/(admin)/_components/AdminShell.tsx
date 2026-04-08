@@ -137,7 +137,9 @@ export function AdminShell({
           </Group>
         </AppShell.Header>
 
-        <AppShell.Main pb={60}>{children}</AppShell.Main>
+        <AppShell.Main pt={0} pb={60}>
+          {children}
+        </AppShell.Main>
       </AppShell>
     </AdminCountsProvider>
   )

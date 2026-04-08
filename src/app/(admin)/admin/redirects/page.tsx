@@ -340,7 +340,7 @@ export default function RedirectRulesPage() {
   }
 
   return (
-    <Box>
+    <Box mt="md">
       <Group justify="space-between" mb="lg">
         <div>
           <Title order={3}>跳转规则</Title>

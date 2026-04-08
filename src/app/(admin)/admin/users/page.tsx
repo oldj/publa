@@ -9,6 +9,7 @@ import { RoleLabel } from '../../_components/RoleLabel'
 
 import {
   ActionIcon,
+  Box,
   Button,
   Divider,
   Drawer,
@@ -269,7 +270,7 @@ export default function UsersPage() {
   }
 
   return (
-    <div>
+    <Box mt="md">
       <Group justify="space-between" mb="lg">
         <Title order={3}>用户管理</Title>
         {!isEditor && (
@@ -515,6 +516,6 @@ export default function UsersPage() {
           </Stack>
         )}
       </Drawer>
-    </div>
+    </Box>
   )
 }

@@ -4,6 +4,7 @@ import myModal from '@/app/(admin)/_components/myModals'
 import { notify } from '@/lib/notify'
 import {
   Badge,
+  Box,
   Button,
   Divider,
   Drawer,
@@ -156,7 +157,7 @@ export default function ImportExportPage() {
   }
 
   return (
-    <div>
+    <Box mt="md">
       <Group justify="space-between" mb="lg">
         <Title order={3}>导入导出</Title>
         <Group gap="xs">
@@ -271,6 +272,6 @@ export default function ImportExportPage() {
           <div className="post-content" dangerouslySetInnerHTML={{ __html: formatHtml }} />
         </ScrollArea>
       </Drawer>
-    </div>
+    </Box>
   )
 }

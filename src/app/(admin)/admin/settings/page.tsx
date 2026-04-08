@@ -2,6 +2,7 @@
 
 import { notify } from '@/lib/notify'
 import {
+  Box,
   Button,
   Divider,
   Group,
@@ -207,7 +208,7 @@ export default function SettingsPage() {
     favicon.mode === 'upload' ? '已上传文件' : favicon.mode === 'url' ? '外链 URL' : '默认图标'
 
   return (
-    <div>
+    <Box>
       <PageHeader title="系统设置" dirty={isDirty} loading={loading} onSave={handleSave} />
 
       <Stack>
@@ -433,6 +434,6 @@ export default function SettingsPage() {
           styles={{ input: { fontFamily: 'monospace', maxHeight: 400, overflow: 'auto' } }}
         />
       </Stack>
-    </div>
+    </Box>
   )
 }

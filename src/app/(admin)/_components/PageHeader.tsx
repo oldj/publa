@@ -31,7 +31,7 @@ export function PageHeader({
     <Group
       justify="space-between"
       mb="lg"
-      pb="md"
+      py="md"
       style={{
         position: 'sticky',
         top: 0,

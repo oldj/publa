@@ -6,6 +6,7 @@ import { NowrapBadge } from '@/app/(admin)/_components/NowrapBadge'
 import { notify } from '@/lib/notify'
 import {
   ActionIcon,
+  Box,
   Button,
   Group,
   Pagination,
@@ -97,7 +98,7 @@ export default function PostsPage() {
   }
 
   return (
-    <div>
+    <Box mt="md">
       <Group justify="space-between" mb="lg">
         <Title order={3}>文章管理</Title>
         <Button component={Link} href="/admin/posts/new" leftSection={<IconPlus size={16} />}>
@@ -264,6 +265,6 @@ export default function PostsPage() {
           <Pagination total={data.pageCount} value={page} onChange={setPage} />
         </Group>
       )}
-    </div>
+    </Box>
   )
 }
