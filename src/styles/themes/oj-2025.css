@@ -542,9 +542,9 @@ figure figcaption:empty {
 }
 
 .post-list-read-more {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  font-size: 14px;
+  /* font-size: 14px; */
   gap: 0.5em;
   height: 1.5em;
   transition: 0.3s;
@@ -555,8 +555,10 @@ figure figcaption:empty {
   opacity: 1;
 }
 
-.post-list-icon {
+.post-list-read-more-icon {
   opacity: 0.5;
+  display: flex;
+  align-items: center;
 }
 
 /* 有头图时：左图右文两栏布局 */

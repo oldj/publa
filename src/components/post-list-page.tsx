@@ -51,7 +51,7 @@ const PostCard = (props: { post: IPost }) => {
         <div className="post-list-summary">{post.html}</div>
         <Link href={post.url} className="post-list-read-more">
           <span>阅读全文</span>
-          <span className="post-list-icon">
+          <span className="post-list-read-more-icon">
             <IconChevronRight size={16} />
           </span>
         </Link>
