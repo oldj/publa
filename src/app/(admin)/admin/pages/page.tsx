@@ -16,6 +16,7 @@ import {
   Title,
 } from '@mantine/core'
 import { IconEye, IconPencil, IconPlus, IconSearch, IconTrash } from '@tabler/icons-react'
+import clsx from 'clsx'
 import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 
@@ -122,10 +123,10 @@ export default function PagesAdminPage() {
           <Table.Thead>
             <Table.Tr>
               <Table.Th className={adminStyles.cellFill}>标题</Table.Th>
-              <Table.Th className={adminStyles.cellFit}>路径</Table.Th>
-              <Table.Th className={adminStyles.cellFit}>类型</Table.Th>
-              <Table.Th className={adminStyles.cellFit}>状态</Table.Th>
-              <Table.Th className={adminStyles.cellFit}>操作</Table.Th>
+              <Table.Th className={clsx(adminStyles.cellFit, adminStyles.cellCenter)}>路径</Table.Th>
+              <Table.Th className={clsx(adminStyles.cellFit, adminStyles.cellCenter)}>类型</Table.Th>
+              <Table.Th className={clsx(adminStyles.cellFit, adminStyles.cellCenter)}>状态</Table.Th>
+              <Table.Th className={clsx(adminStyles.cellFit, adminStyles.cellCenter)}>操作</Table.Th>
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
@@ -140,7 +141,7 @@ export default function PagesAdminPage() {
                         style={{
                           color: 'inherit',
                           textDecoration: 'none',
-                          fontWeight: 500,
+                          fontWeight: 'normal',
                           fontSize: 'var(--mantine-font-size-sm)',
                         }}
                       >
@@ -157,7 +158,7 @@ export default function PagesAdminPage() {
                       )}
                     </Group>
                   </Table.Td>
-                  <Table.Td className={adminStyles.cellFit}>
+                  <Table.Td className={clsx(adminStyles.cellFit, adminStyles.cellCenter)}>
                     {p.path ? (
                       <Text size="sm" c="dimmed">
                         /{p.path}
@@ -168,17 +169,17 @@ export default function PagesAdminPage() {
                       </Text>
                     )}
                   </Table.Td>
-                  <Table.Td className={adminStyles.cellFit}>
+                  <Table.Td className={clsx(adminStyles.cellFit, adminStyles.cellCenter)}>
                     <NowrapBadge variant="light" size="sm">
                       {p.contentType}
                     </NowrapBadge>
                   </Table.Td>
-                  <Table.Td className={adminStyles.cellFit}>
+                  <Table.Td className={clsx(adminStyles.cellFit, adminStyles.cellCenter)}>
                     <NowrapBadge color={st.color} variant="light">
                       {st.label}
                     </NowrapBadge>
                   </Table.Td>
-                  <Table.Td className={adminStyles.cellFit}>
+                  <Table.Td className={clsx(adminStyles.cellFit, adminStyles.cellCenter)}>
                     <Group gap="xs" wrap="nowrap">
                       <ActionIcon
                         variant="subtle"

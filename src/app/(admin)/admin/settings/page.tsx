@@ -317,18 +317,19 @@ export default function SettingsPage() {
 
         <Divider label="评论设置" labelPosition="left" mt="md" />
         <Switch
-          label="全局启用评论"
-          description="关闭后，全站所有文章都不允许提交新评论"
-          checked={settings.enableComment === 'true'}
-          onChange={(e) => setField('enableComment', e.currentTarget.checked ? 'true' : 'false')}
-        />
-        <Switch
           label="全局显示评论列表"
           description="关闭后，全站所有文章都不显示已有评论列表"
           checked={settings.showCommentsGlobally === 'true'}
           onChange={(e) =>
             setField('showCommentsGlobally', e.currentTarget.checked ? 'true' : 'false')
           }
+        />
+        <Switch
+          label="全局启用评论"
+          description="关闭后，全站所有文章都不允许提交新评论"
+          checked={settings.enableComment === 'true'}
+          disabled={settings.showCommentsGlobally === 'false'}
+          onChange={(e) => setField('enableComment', e.currentTarget.checked ? 'true' : 'false')}
         />
         <Switch
           label="评论默认通过审核"

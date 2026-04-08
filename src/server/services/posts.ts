@@ -105,6 +105,10 @@ export async function listPostsAdmin(options: PostListOptions = {}) {
       categoryId: contents.categoryId,
       categoryName: categories.name,
       viewCount: contents.viewCount,
+      commentCount:
+        sql<number>`(SELECT COUNT(*) FROM ${comments} WHERE ${comments.contentId} = ${contents.id} AND ${comments.deletedAt} IS NULL)`.as(
+          'commentCount',
+        ),
       pinned: contents.pinned,
       allowComment: contents.allowComment,
       createdAt: contents.createdAt,

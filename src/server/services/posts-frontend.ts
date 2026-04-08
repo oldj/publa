@@ -83,7 +83,8 @@ async function buildFrontendPost(
   // 评论开关逻辑（PRD 4.6）
   const enableComment = (await getSetting('enableComment')) !== 'false'
   const showCommentsGlobally = (await getSetting('showCommentsGlobally')) !== 'false'
-  const canComment = enableComment && post.allowComment
+  // showCommentsGlobally 是最高优先级开关，关闭时一切评论相关均不显示
+  const canComment = showCommentsGlobally && enableComment && post.allowComment
   const canShowComments = canComment || (showCommentsGlobally && post.showComments)
   // 获取分类
   const category = post.categoryId
@@ -162,6 +163,7 @@ async function buildFrontendPost(
     next: { title: '', url: '' },
     comments: commentList,
     canComment: preview ? false : canComment,
+    canShowComments: preview ? false : canShowComments,
     related: [],
   }
 }

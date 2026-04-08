@@ -61,7 +61,12 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  return NextResponse.next()
+  // 将路径传递给 Server Component，用于根布局条件渲染 customHeadHtml
+  return NextResponse.next({
+    request: {
+      headers: new Headers([...request.headers.entries(), ['x-pathname', pathname]]),
+    },
+  })
 }
 
 export const config = {

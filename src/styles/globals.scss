@@ -1,7 +1,4 @@
-@use "common";
-@use "fns";
-@use "vars";
-//@use "animate.css/animate.min.css'";
+$mobile-width: 800px;
 
 * {
   box-sizing: border-box;
@@ -12,6 +9,8 @@
   --animate-delay: 0s;
 }
 
+// ---- 文档基础 ----
+
 html,
 body {
   $fm: "PingFang SC", "Songti SC", Helvetica, Arial, sans-serif;
@@ -21,32 +20,20 @@ body {
   font-family: $fm;
   font-size: 14px;
   line-height: 1.5em;
-  color: vars.$font-color;
-  //font-weight: 400;
-  //background: #f7f7f7;
-  //scroll-behavior: smooth;
+  color: var(--color-text);
 
   --mantine-font-family: $fm;
 }
 
-//html {
-//  scroll-behavior: smooth;
-//}
-
 body[data-role="body"] {
-  // padding-top: 40px;
-  background: #f7f7f7;
+  background: var(--bg-gray);
 }
 
-a {
-  color: vars.$link-color;
-  text-decoration: none;
-  transition: 0.3s;
-
-  &:hover {
-    color: vars.$link-color-hover;
-  }
+main {
+  min-height: calc(100vh - 120px);
 }
+
+// ---- 排版 ----
 
 h1,
 h2,
@@ -61,6 +48,10 @@ h1 {
   font-size: 2em;
 }
 
+h1.page_title {
+  margin-bottom: 1em;
+}
+
 h2 {
   font-size: 1.5em;
   padding: 0.5em 0;
@@ -71,91 +62,6 @@ h3 {
   padding: 0.5em 0;
 }
 
-main {
-  min-height: calc(100vh - 120px);
-  //background: $bg-color-1;
-}
-
-figure {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  text-align: center;
-  margin: 2em 0;
-
-  img {
-    display: block;
-    vertical-align: middle;
-  }
-
-  figcaption {
-    margin-top: 1em;
-    color: vars.$font-color-weak;
-    font-size: 14px;
-
-    &:empty {
-      display: none;
-    }
-  }
-}
-
-blockquote {
-  background: vars.$bg-gray;
-  margin: 1em 0 1.2em 0;
-  padding: 32px;
-  overflow: auto;
-  box-sizing: border-box;
-  width: 100%;
-  border-left: 4px solid vars.$border-color-base;
-
-  &:before {
-    content: "";
-    display: block;
-    background: url("/images/quote.svg") no-repeat 50% 50%;
-    width: 27px;
-    height: 20px;
-    position: absolute;
-    z-index: 1;
-    font-size: 80px;
-    margin: -37px 0 0 -25px;
-    opacity: 0.1;
-  }
-
-  p:last-child {
-    margin-bottom: 0;
-  }
-}
-
-pre {
-  @include fns.code;
-  tab-size: 4;
-  white-space: pre;
-  margin-bottom: 1em;
-
-  code {
-    @include fns.code;
-    font-size: 14px;
-    line-height: 1.6em;
-
-    &.hljs {
-      padding: 16px;
-      background: vars.$bg-gray;
-    }
-
-    &.language-txt,
-    &.language-text,
-    &.language-plaintext {
-      display: block;
-      background: vars.$bg-gray;
-      padding: 16px;
-      overflow-x: auto;
-      //text-wrap: wrap;
-      white-space: pre-wrap;
-    }
-  }
-}
-
 p {
   margin: 0 0 1em 0;
 
@@ -164,75 +70,13 @@ p {
   }
 }
 
-ul,
-ol {
-  margin: 0 0 1em 0;
-  padding-left: 2em;
-}
-
-li {
-}
-
-p,
-li {
-  code {
-    @include fns.code;
-    background: vars.$bg-gray;
-    padding: 0.1em 0.3em;
-    margin: 0 0.3em;
-    border-radius: vars.$border-radius-base;
-    border: 1px solid vars.$border-color-base;
-    //word-break: break-all;
-  }
-}
-
-input,
-button,
-textarea {
-  outline: none;
-  border: 1px solid vars.$border-color-base;
-  border-radius: 2px;
-  transition: vars.$anim-ts;
-
-  &:focus {
-    border-color: vars.$primary-color;
-  }
-}
-
-input,
-textarea {
-  &::placeholder {
-    color: vars.$font-color-weak;
-    opacity: 0.5;
-  }
-}
-
-textarea {
-  padding: 4px 8px;
-}
-
-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  transition: vars.$anim-ts;
-  cursor: pointer;
-  border: none;
+a {
+  color: var(--color-link);
+  text-decoration: none;
+  transition: 0.3s;
 
   &:hover {
-    opacity: 0.8;
-  }
-
-  &[type="submit"] {
-    letter-spacing: 0.1em;
-    background: vars.$primary-color;
-    color: vars.$font-color-reverse;
-  }
-
-  &:focus-visible {
-    box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.3);
-    border-radius: 2px;
+    color: var(--color-link-hover);
   }
 }
 
@@ -246,78 +90,91 @@ area {
   }
 }
 
-// 文章内容中的图片对齐
-.post-content img[data-align="center"] {
-  display: block;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.post-content img[data-align="right"] {
-  display: block;
-  margin-left: auto;
-}
-
-// 文章内容中的表格样式，限定在 .post-content 内以避免影响后台
-.post-content table {
-  border-spacing: 0;
-  border-top: 2px solid vars.$primary-color;
-  border-bottom: 2px solid vars.$primary-color;
-  margin-bottom: 1.5em;
-  font-size: 14px;
-  min-width: 100%;
-  table-layout: fixed;
-
-  thead {
-    font-weight: bold;
-    background: vars.$bg-gray;
-
-    th {
-      text-align: center;
-    }
-  }
-
-  tr {
-    border-bottom: 1px solid vars.$primary-color;
-  }
-
-  th,
-  td {
-    padding: 4px 8px;
-    border: 0;
-    border-bottom: 1px solid vars.$primary-color;
-    border-right: 1px solid vars.$primary-color;
-
-    &:last-child {
-      border-right: 0;
-    }
-  }
-}
-
-hr {
-  border: 0;
-  border-top: 1px solid vars.$border-color-base;
-  margin: 2em 0;
-}
-
-kbd {
-  //@include code;
-  background: vars.$bg-paper;
-  padding: 0.1em 0.4em;
-  margin: 0 0.1em;
-  border-radius: 4px;
-  border: 1px solid vars.$border-color-base;
-  border-right-width: 2px;
-  border-bottom-width: 2px;
-}
-
 del {
   text-decoration: line-through;
 }
 
-@media screen and (max-width: vars.$mobile-width) {
+// ---- 列表 ----
+
+ul,
+ol {
+  margin: 0 0 1em 0;
+  padding-left: 2em;
+}
+
+hr {
+  border: 0;
+  border-top: 1px solid var(--color-border);
+  margin: 2em 0;
+}
+
+// ---- 表单控件 ----
+
+input,
+button,
+textarea {
+  outline: none;
+  border: 1px solid var(--color-border);
+  border-radius: 2px;
+  transition: var(--anim-duration);
+
+  &:focus {
+    border-color: var(--color-primary);
+  }
+}
+
+input,
+textarea {
+  &::placeholder {
+    color: var(--color-text-tertiary);
+    opacity: 0.5;
+  }
+}
+
+textarea {
+  padding: 4px 8px;
+}
+
+button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  cursor: pointer;
+  border: none;
+
+  &:hover {
+    opacity: 0.8;
+  }
+
+  &[type="submit"] {
+    letter-spacing: 0.1em;
+    background: var(--color-primary);
+    color: var(--color-text-reverse);
+  }
+
+  &.btn_primary {
+    height: 42px;
+    padding: 0 1.5em;
+    min-width: 120px;
+    font-size: 16px;
+  }
+
+  &:focus-visible {
+    box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.3);
+    border-radius: 2px;
+  }
+}
+
+// ---- 响应式 ----
+
+@media screen and (max-width: $mobile-width) {
   body {
     padding-top: 0;
     background: none;
+  }
+
+  .normal_page {
+    padding: 20px;
   }
 }
