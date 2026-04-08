@@ -343,7 +343,7 @@ export async function getFrontendPostBySlug(
         .where(baseConditions)
         .groupBy(contents.id, contents.title, contents.slug, contents.publishedAt)
         .orderBy(desc(count(contentTags.tagId)), desc(contents.publishedAt))
-        .limit(3)
+        .limit(100)
     } else {
       // 无标签：按发布时间排序
       relatedRows = await db
@@ -351,15 +351,23 @@ export async function getFrontendPostBySlug(
         .from(contents)
         .where(baseConditions)
         .orderBy(desc(contents.publishedAt))
-        .limit(3)
+        .limit(100)
     }
 
-    post.related = relatedRows
-      .filter((r) => r.slug)
-      .map((r) => ({
-        title: r.title,
-        url: `/posts/${r.slug}`,
-      }))
+    // 取前 3 条最相关的，再从剩余中随机取 2 条
+    const filtered = relatedRows.filter((r) => r.slug)
+    const top = filtered.slice(0, 3)
+    const rest = filtered.slice(3)
+    for (let i = rest.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[rest[i], rest[j]] = [rest[j], rest[i]]
+    }
+    const picked = [...top, ...rest.slice(0, 2)]
+
+    post.related = picked.map((r) => ({
+      title: r.title,
+      url: `/posts/${r.slug}`,
+    }))
   }
 
   if (incrementViewCount) {
