@@ -20,6 +20,7 @@ export const ADMIN_SETTINGS_KEYS = [
   'rssContent',
   'rssLimit',
   'enableGuestbook',
+  'enableSearch',
   'guestbookWelcome',
   'footerCopyright',
   'customAfterPostHtml',
