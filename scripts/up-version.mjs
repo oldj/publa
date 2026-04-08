@@ -8,9 +8,9 @@
  *   node scripts/up-version.mjs major    # major: 0.1.3 → 1.0.0
  */
 
-import { readFileSync, writeFileSync } from 'node:fs'
 import { execSync } from 'node:child_process'
-import { resolve, dirname } from 'node:path'
+import { readFileSync, writeFileSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -54,3 +54,4 @@ execSync(`git commit -m "chore: bump version to ${versionStr}"`, { cwd: root })
 execSync(`git tag release-v${versionStr}`, { cwd: root })
 
 console.log(`版本号已更新: v${versionStr}`)
+console.log(`已添加 git tag: release-v${versionStr}`)
