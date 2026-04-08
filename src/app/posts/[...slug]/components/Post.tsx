@@ -60,6 +60,50 @@ export default function Post(props: IProps) {
     setComments(post?.comments || [])
   }, [post.id])
 
+  // 客户端浏览计数：管理员不计数，不支持 localStorage 视为爬虫不计数，
+  // 同一路径 1 分钟内刷新不重复计数，访问其他页面后再回来则计数。
+  useEffect(() => {
+    if (account) return
+
+    try {
+      if (!window.localStorage) return
+    } catch {
+      return
+    }
+
+    const STORAGE_KEY = 'publa_last_view'
+    const currentPath = window.location.pathname
+
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY)
+      if (raw) {
+        const stored = JSON.parse(raw)
+        if (stored.path === currentPath && Date.now() - stored.timestamp < 60_000) {
+          return
+        }
+      }
+    } catch {
+      // 数据损坏，继续计数
+    }
+
+    try {
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ path: currentPath, timestamp: Date.now() }),
+      )
+    } catch {
+      // 存储满或被禁用，忽略
+    }
+
+    if (post?.slug) {
+      fetch('/api/view-count', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug: post.slug }),
+      }).catch(() => {})
+    }
+  }, [post.slug, account])
+
   // useEffect(() => {
   //   let { html, headers } = getHeadersFromHTML(post?.html || '')
   //   setHTML(html)
@@ -139,8 +183,8 @@ export default function Post(props: IProps) {
 
   useEffect(() => {
     const onScroll = () => {
-      const scroll_top = document.documentElement.scrollTop || document.body.scrollTop
-      setShowBackToTop(scroll_top > 300)
+      const scrollTop = document.documentElement.scrollTop || document.body.scrollTop
+      setShowBackToTop(scrollTop > 300)
 
       const toc1 = refToc1.current
       if (!toc1) return

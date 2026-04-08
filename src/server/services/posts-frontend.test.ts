@@ -37,18 +37,12 @@ async function createPost(overrides: Partial<typeof schema.contents.$inferInsert
 }
 
 describe('getFrontendPostBySlug', () => {
-  it('已发布文章正常访问可返回数据，且浏览量只增加一次', async () => {
+  it('已发布文章正常访问可返回数据，且不会在服务端增加浏览量', async () => {
     await createPost({ slug: 'published-post' })
 
-    const metadataPost = await getFrontendPostBySlug('published-post', {
-      incrementViewCount: false,
-    })
-    const pagePost = await getFrontendPostBySlug('published-post', {
-      incrementViewCount: true,
-    })
+    const post = await getFrontendPostBySlug('published-post')
 
-    expect(metadataPost?.title).toBe('测试文章')
-    expect(pagePost?.title).toBe('测试文章')
+    expect(post?.title).toBe('测试文章')
 
     const saved = await maybeFirst(
       testDb
@@ -57,7 +51,7 @@ describe('getFrontendPostBySlug', () => {
         .where(eq(schema.contents.slug, 'published-post'))
         .limit(1),
     )
-    expect(saved?.viewCount).toBe(1)
+    expect(saved?.viewCount).toBe(0)
   })
 
   it('草稿文章正常访问返回 null', async () => {
@@ -112,7 +106,6 @@ describe('getFrontendPostBySlug', () => {
       const post = await getFrontendPostBySlug(slug, {
         preview: true,
         viewer: { id: 1 },
-        incrementViewCount: false,
       })
 
       expect(post).not.toBeNull()

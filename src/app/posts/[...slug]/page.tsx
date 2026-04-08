@@ -28,7 +28,6 @@ interface GetDataOptions {
   pathname: string
   preview: boolean
   viewer: Awaited<ReturnType<typeof getCurrentUser>>
-  incrementViewCount: boolean
 }
 
 function buildSearchQuery(searchParams: PageSearchParams): string {
@@ -77,13 +76,7 @@ function isPreviewRequest(preview: string | string[] | undefined): boolean {
   return preview === '1'
 }
 
-async function getData({
-  slugKey,
-  pathname,
-  preview,
-  viewer,
-  incrementViewCount,
-}: GetDataOptions): Promise<IPostData> {
+async function getData({ slugKey, pathname, preview, viewer }: GetDataOptions): Promise<IPostData> {
   // 处理 --preview-{id} 模式的预览请求
   const previewId = parsePreviewId(slugKey)
   if (previewId !== null) {
@@ -97,7 +90,6 @@ async function getData({
   const post = await getFrontendPostBySlug(slugKey, {
     preview,
     viewer,
-    incrementViewCount,
   })
 
   if (!post) {
@@ -155,7 +147,6 @@ export const generateMetadata = async ({
     pathname: `/posts/${slugKey}`,
     preview,
     viewer,
-    incrementViewCount: false,
   })
 
   const title = data.post?.title || ''
@@ -192,7 +183,6 @@ export default async function Page({
       pathname: `/posts/${slugKey}`,
       preview,
       viewer: currentUser,
-      incrementViewCount: !preview && !currentUser,
     }),
     getSetting('customAfterPostHtml'),
   ])

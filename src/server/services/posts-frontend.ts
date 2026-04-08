@@ -22,7 +22,6 @@ interface BuildFrontendPostOptions {
 interface FrontendPostBySlugOptions {
   preview?: boolean
   viewer?: FrontendPostViewer | null
-  incrementViewCount?: boolean
 }
 
 /** 获取前台分类列表（兼容 ICategory） */
@@ -255,7 +254,7 @@ export async function getFrontendPostBySlug(
   options: FrontendPostBySlugOptions = {},
 ): Promise<IPost | null> {
   await publishScheduledPosts()
-  const { preview = false, viewer = null, incrementViewCount = true } = options
+  const { preview = false, viewer = null } = options
   const now = new Date().toISOString()
 
   if (preview && !viewer) return null
@@ -368,13 +367,6 @@ export async function getFrontendPostBySlug(
       title: r.title,
       url: `/posts/${r.slug}`,
     }))
-  }
-
-  if (incrementViewCount) {
-    await db
-      .update(contents)
-      .set({ viewCount: sql`${contents.viewCount} + 1` })
-      .where(eq(contents.id, row.id))
   }
 
   return post
