@@ -611,6 +611,7 @@ figure figcaption:empty {
   margin-bottom: 60px;
   gap: 4px 8px;
   flex-wrap: wrap;
+  justify-content: center;
 }
 
 .post-list-pagination a,

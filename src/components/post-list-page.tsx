@@ -82,7 +82,6 @@ const Pager = (props: PageProps) => {
 
   return (
     <div className="post-list-pager">
-      <div className="post-list-label">页码：</div>
       <div className="post-list-pagination">{pages}</div>
     </div>
   )
