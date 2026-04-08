@@ -4,6 +4,7 @@ import { comments, contents } from '@/server/db/schema'
 import { normalizeExternalUrl } from '@/server/lib/user-content'
 import { and, asc, count, desc, eq, inArray, isNull } from 'drizzle-orm'
 import { publishScheduledPosts } from './posts'
+import { getSetting } from './settings'
 
 export interface CommentInput {
   contentId: number
@@ -87,7 +88,14 @@ export async function getCommentContentAccess(
 
 /** 提交评论 */
 export async function createComment(input: CommentInput) {
-  // 检查内容是否存在且允许评论
+  // 校验全局评论开关
+  const showCommentsGlobally = (await getSetting('showCommentsGlobally')) !== 'false'
+  const enableComment = (await getSetting('enableComment')) !== 'false'
+  if (!showCommentsGlobally || !enableComment) {
+    return { success: false, message: '该内容不允许评论' }
+  }
+
+  // 检查内容是否存在、类型为 post、且允许评论
   const content = await maybeFirst(
     db
       .select()
@@ -95,7 +103,7 @@ export async function createComment(input: CommentInput) {
       .where(and(eq(contents.id, input.contentId), eq(contents.type, 'post')))
       .limit(1),
   )
-  if (!content || !content.allowComment || content.deletedAt) {
+  if (!content || !content.allowComment || !content.showComments || content.deletedAt) {
     return { success: false, message: '该内容不允许评论' }
   }
 

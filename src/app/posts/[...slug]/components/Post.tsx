@@ -252,32 +252,36 @@ export default function Post(props: IProps) {
         )}
       </div>
 
-      <div className="post-comments">
-        <h2>评论：</h2>
-        {comments.length === 0 ? (
-          <div className="post-detail-no-records">暂无评论</div>
-        ) : (
-          comments.map((i) => <Comment data={i} key={i.id} refreshComments={refreshComments} />)
-        )}
-      </div>
+      {post.canShowComments && (
+        <>
+          <div className="post-comments">
+            <h2>评论：</h2>
+            {comments.length === 0 ? (
+              <div className="post-detail-no-records">暂无评论</div>
+            ) : (
+              comments.map((i) => <Comment data={i} key={i.id} refreshComments={refreshComments} />)
+            )}
+          </div>
 
-      {post.canComment ? (
-        <div className="post-comment-form">
-          <h2>发表评论：</h2>
-          <div className="post-detail-info">电子邮件地址不会被公开。必填项已用 * 标注。</div>
+          {post.canComment ? (
+            <div className="post-comment-form">
+              <h2>发表评论：</h2>
+              <div className="post-detail-info">电子邮件地址不会被公开。必填项已用 * 标注。</div>
 
-          <CommentForm
-            contentId={post.id}
-            parentId={0}
-            onSuccess={(d) => {
-              if (d && d.status === 'approved') {
-                refreshComments().catch((e) => console.error(e))
-              }
-            }}
-          />
-        </div>
-      ) : (
-        <div className="post-comment-closed">评论已关闭。</div>
+              <CommentForm
+                contentId={post.id}
+                parentId={0}
+                onSuccess={(d) => {
+                  if (d && d.status === 'approved') {
+                    refreshComments().catch((e) => console.error(e))
+                  }
+                }}
+              />
+            </div>
+          ) : (
+            <div className="post-comment-closed">评论已关闭。</div>
+          )}
+        </>
       )}
 
       {showToc2 && (

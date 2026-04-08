@@ -1117,15 +1117,16 @@ export default function PostEditor({ postId }: { postId?: number }) {
                 </Alert>
               )}
               <Checkbox
-                label="允许评论"
-                checked={form.allowComment}
-                onChange={(e) => setField('allowComment', e.currentTarget.checked)}
-              />
-              <Checkbox
                 label="显示评论"
-                mt="xs"
                 checked={form.showComments}
                 onChange={(e) => setField('showComments', e.currentTarget.checked)}
+              />
+              <Checkbox
+                label="允许评论"
+                mt="xs"
+                checked={form.allowComment}
+                disabled={!form.showComments}
+                onChange={(e) => setField('allowComment', e.currentTarget.checked)}
               />
             </Paper>
 

@@ -89,6 +89,7 @@ export async function getPreviewPost(contentId: number): Promise<IPost | null> {
     next: { title: '', url: '' },
     comments: [],
     canComment: false,
+    canShowComments: false,
     related: [],
   }
 }

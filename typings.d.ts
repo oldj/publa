@@ -52,6 +52,7 @@ export interface IPost {
   }
   comments: IComment[]
   canComment: boolean
+  canShowComments: boolean
   related: { title: string; url: string }[]
 }
 
