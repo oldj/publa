@@ -721,15 +721,6 @@ export default function PostEditor({ postId }: { postId?: number }) {
     })
   }
 
-  // 自动生成 slug（简易实现）
-  const generateSlug = () => {
-    const slug = form.title
-      .toLowerCase()
-      .replace(/[^a-z0-9\u4e00-\u9fa5]+/g, '-')
-      .replace(/^-|-$/g, '')
-    setField('slug', slug || '')
-  }
-
   return (
     <div style={{ position: 'relative' }}>
       {/* 固定在右上角的保存/发布按钮 */}
@@ -878,25 +869,19 @@ export default function PostEditor({ postId }: { postId?: number }) {
               onChange={(e) => setField('title', e.target.value)}
             />
 
-            <Group align="flex-end">
-              <TextInput
-                label="Slug"
-                placeholder="post-url-slug"
-                style={{ flex: 1 }}
-                value={form.slug}
-                onChange={(e) => setField('slug', e.target.value)}
-                error={
-                  form.slug.startsWith('-')
-                    ? 'Slug 不能以 - 开头'
-                    : form.slug.endsWith('-')
-                      ? 'Slug 不能以 - 结尾'
-                      : undefined
-                }
-              />
-              <Button variant="light" size="sm" onClick={generateSlug}>
-                自动生成
-              </Button>
-            </Group>
+            <TextInput
+              label="Slug"
+              placeholder="post-url-slug"
+              value={form.slug}
+              onChange={(e) => setField('slug', e.target.value)}
+              error={
+                form.slug.startsWith('-')
+                  ? 'Slug 不能以 - 开头'
+                  : form.slug.endsWith('-')
+                    ? 'Slug 不能以 - 结尾'
+                    : undefined
+              }
+            />
 
             <Group>
               <ContentTypeSelector
