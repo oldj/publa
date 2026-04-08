@@ -4,6 +4,7 @@ import checkOutLinks from '@/app/posts/[...slug]/libs/checkOutLinks'
 import CommentForm from '@/components/comment-form'
 import PageLoading from '@/components/page-loading'
 import TOC from '@/components/toc'
+import UnsafeHtml from '@/components/UnsafeHtml'
 import { codeHighlightAliases, codeHighlightLanguages } from '@/lib/code-highlight'
 import { IHeader } from '@/lib/getHeadersFromHTML'
 import Spacer from '@/widgets/Spacer'
@@ -180,9 +181,7 @@ export default function Post(props: IProps) {
         dangerouslySetInnerHTML={{ __html: html || '' }}
       />
 
-      {afterPostHtml && (
-        <div className="post-after-content" dangerouslySetInnerHTML={{ __html: afterPostHtml }} />
-      )}
+      {afterPostHtml && <UnsafeHtml className="post-after-content" html={afterPostHtml} />}
 
       <div className="post-detail-props">
         {post.category && (
