@@ -73,7 +73,7 @@ export default function SetupPage() {
         创建管理员账号以开始使用
       </Text>
 
-      <Paper withBorder shadow="sm" p={22} mt={30} radius="md">
+      <Paper withBorder shadow="sm" p={22} pb={40} mt={30} radius="md">
         <form onSubmit={handleSubmit}>
           <TextInput
             label="用户名"
