@@ -3,7 +3,6 @@
  * @homepage: https://oldj.net
  */
 
-import HeadElements from '@/components/HeadElements'
 import { getMenuTree } from '@/server/services/menus'
 import { getFrontendCategories, getFrontendTags } from '@/server/services/posts-frontend'
 import { getSetting } from '@/server/services/settings'
@@ -25,14 +24,12 @@ export default async function BasicLayout(props: IProps) {
     siteTitle,
     siteSlogan,
     footerCopyright,
-    customHeadHtml,
     customBodyStartHtml,
     customBodyEndHtml,
   } = await getData()
 
   return (
     <>
-      {customHeadHtml && <HeadElements html={customHeadHtml} />}
       {customBodyStartHtml && <div dangerouslySetInnerHTML={{ __html: customBodyStartHtml }} />}
 
       <div className="basic-layout">
@@ -58,7 +55,6 @@ async function getData() {
     .replace(/\{SITE_NAME}/g, siteTitle)
     .replace(/\{FULL_YEAR}/g, year)
 
-  const customHeadHtml = (await getSetting('customHeadHtml')) || ''
   const customBodyStartHtml = (await getSetting('customBodyStartHtml')) || ''
   const customBodyEndHtml = (await getSetting('customBodyEndHtml')) || ''
 
@@ -69,7 +65,6 @@ async function getData() {
     siteTitle,
     siteSlogan,
     footerCopyright,
-    customHeadHtml,
     customBodyStartHtml,
     customBodyEndHtml,
   }

@@ -1,8 +1,10 @@
+import HeadElements from '@/components/HeadElements'
 import NProgressBar from '@/components/NProgress'
 import { buildFaviconHref, getFaviconConfigFromSettings } from '@/server/services/favicon'
 import { getAllSettings } from '@/server/services/settings'
 import '@/styles/globals.scss'
 import { Metadata } from 'next'
+import { headers } from 'next/headers'
 import { Suspense } from 'react'
 
 export const dynamic = 'force-dynamic'
@@ -53,10 +55,16 @@ export default async function RootLayout({ children }: { children: any }) {
   const siteTitle = siteSettings.siteTitle || 'Publa'
   const rssTitle = siteSettings.rssTitle || siteTitle
 
+  const customHeadHtml = siteSettings.customHeadHtml || ''
+  const headersList = await headers()
+  const pathname = headersList.get('x-pathname') || ''
+  const isFrontend = !pathname.startsWith('/admin') && !pathname.startsWith('/setup')
+
   return (
     <html lang="zh">
       <head>
         <link rel="alternate" type="application/rss+xml" title={rssTitle} href="/rss.xml" />
+        {isFrontend && customHeadHtml && <HeadElements html={customHeadHtml} />}
       </head>
       <body data-role="body">
         <Suspense fallback={null}>
