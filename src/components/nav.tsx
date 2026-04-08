@@ -38,9 +38,33 @@ export default function Nav({
   const pathname = usePathname()
   const menuItems = menus && menus.length > 0 ? menus : defaultMenus
 
+  // 收集所有内部菜单 URL（排除外链和空白）
+  const internalUrls = menuItems.flatMap((item) => {
+    const urls: string[] = []
+    if (item.url && !item.url.startsWith('http') && item.target !== '_blank') {
+      urls.push(item.url)
+    }
+    if (item.children) {
+      item.children.forEach((child) => {
+        if (child.url && !child.url.startsWith('http') && child.target !== '_blank') {
+          urls.push(child.url)
+        }
+      })
+    }
+    return urls
+  })
+
+  // 是否有任何非 `/` 的内部菜单项匹配当前路径
+  const hasNonRootMatch = internalUrls
+    .filter((url) => url !== '/')
+    .some((url) => pathname.startsWith(url))
+
   const isActive = (url: string) => {
     if (!url) return false
-    if (url === '/') return pathname === '/'
+    if (url === '/') {
+      // 精确匹配，或没有其他菜单项匹配时作为兜底
+      return pathname === '/' || !hasNonRootMatch
+    }
     return pathname.startsWith(url)
   }
 
