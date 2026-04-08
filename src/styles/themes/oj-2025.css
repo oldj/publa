@@ -913,6 +913,10 @@ figure figcaption:empty {
   position: relative;
 }
 
+.post-detail:has(.post-detail-cover) {
+  padding-top: 0;
+}
+
 .post-detail h1,
 .post-detail h2,
 .post-detail h3,
