@@ -1082,6 +1082,11 @@ figure figcaption:empty {
   opacity: 0.5;
 }
 
+.post-detail-content iframe.ifr-video {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+}
+
 .post-detail-img {
   display: flex;
   align-items: center;
