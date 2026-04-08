@@ -27,6 +27,7 @@ interface PostItem {
   status: string
   categoryName: string | null
   viewCount: number
+  commentCount: number
   pinned: boolean
   hasDraft: boolean
   publishedAt: string | null
@@ -141,6 +142,7 @@ export default function PostsPage() {
               <Table.Th className={adminStyles.cellFit}>分类</Table.Th>
               <Table.Th className={adminStyles.cellFit}>状态</Table.Th>
               <Table.Th className={adminStyles.cellFit}>浏览</Table.Th>
+              <Table.Th className={adminStyles.cellFit}>评论</Table.Th>
               <Table.Th className={adminStyles.cellFit}>发布时间</Table.Th>
               <Table.Th className={adminStyles.cellFit}>操作</Table.Th>
             </Table.Tr>
@@ -193,6 +195,9 @@ export default function PostsPage() {
                     <Text size="sm">{post.viewCount}</Text>
                   </Table.Td>
                   <Table.Td className={adminStyles.cellFit}>
+                    <Text size="sm">{post.commentCount}</Text>
+                  </Table.Td>
+                  <Table.Td className={adminStyles.cellFit}>
                     <Text size="sm" c="dimmed">
                       {post.publishedAt ? dayjs(post.publishedAt).format('YYYY-MM-DD HH:mm') : '-'}
                     </Text>
@@ -230,7 +235,7 @@ export default function PostsPage() {
             })}
             {data?.items.length === 0 && (
               <Table.Tr>
-                <Table.Td colSpan={6}>
+                <Table.Td colSpan={7}>
                   <Text ta="center" c="dimmed" py="md">
                     暂无文章
                   </Text>
