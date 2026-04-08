@@ -9,6 +9,7 @@
  */
 
 import { readFileSync, writeFileSync } from 'node:fs'
+import { execSync } from 'node:child_process'
 import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -46,5 +47,10 @@ const pkgPath = resolve(root, 'package.json')
 const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'))
 pkg.version = versionStr
 writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n', 'utf-8')
+
+// 自动提交版本变更
+execSync(`git add src/version.json package.json`, { cwd: root })
+execSync(`git commit -m "chore: bump version to ${versionStr}"`, { cwd: root })
+execSync(`git tag release-v${versionStr}`, { cwd: root })
 
 console.log(`版本号已更新: v${versionStr}`)
