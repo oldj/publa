@@ -5,10 +5,10 @@ import { normalizeEmail, normalizePassword, normalizeUsername } from '@/lib/user
 import { useCurrentUser } from '../../_components/AdminCountsContext'
 import adminStyles from '../../_components/AdminShell.module.scss'
 import { NowrapBadge } from '../../_components/NowrapBadge'
+import { RoleLabel } from '../../_components/RoleLabel'
 
 import {
   ActionIcon,
-  Badge,
   Button,
   Divider,
   Drawer,
@@ -79,12 +79,6 @@ const ACTION_LABELS: Record<string, string> = {
   delete_redirect: '删除重定向',
   import_data: '导入数据',
   export_data: '导出数据',
-}
-
-const roleMap: Record<string, { label: string; color: string }> = {
-  owner: { label: '站长', color: 'red' },
-  admin: { label: '管理员', color: 'blue' },
-  editor: { label: '编辑', color: 'green' },
 }
 
 export default function UsersPage() {
@@ -298,7 +292,6 @@ export default function UsersPage() {
           </Table.Thead>
           <Table.Tbody>
             {userList.map((u) => {
-              const r = roleMap[u.role] || { label: u.role, color: 'gray' }
               const operable = canOperate(u)
               return (
                 <Table.Tr key={u.id}>
@@ -309,9 +302,7 @@ export default function UsersPage() {
                     </Text>
                   </Table.Td>
                   <Table.Td>
-                    <NowrapBadge color={r.color} variant="light">
-                      {r.label}
-                    </NowrapBadge>
+                    <RoleLabel role={u.role} />
                   </Table.Td>
                   <Table.Td>
                     <Text size="sm" c="dimmed">
@@ -406,9 +397,7 @@ export default function UsersPage() {
         {editUser && (
           <Stack gap="md">
             <Group gap="xs">
-              <Badge color={roleMap[editUser.role]?.color || 'gray'} variant="light">
-                {roleMap[editUser.role]?.label || editUser.role}
-              </Badge>
+              <RoleLabel role={editUser.role} />
               <Text size="xs" c="dimmed">
                 创建于 {dayjs(editUser.createdAt).format('YYYY-MM-DD HH:mm')}
               </Text>
