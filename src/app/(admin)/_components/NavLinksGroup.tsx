@@ -112,7 +112,7 @@ export function NavLinksGroup({
             <ThemeIcon variant="subtle" size={30}>
               <Icon size={18} />
             </ThemeIcon>
-            <Box ml="md">{label}</Box>
+            <Box ml="6px">{label}</Box>
           </Box>
         </Group>
       </UnstyledButton>
@@ -127,7 +127,7 @@ export function NavLinksGroup({
             <ThemeIcon variant="subtle" size={30}>
               <Icon size={18} />
             </ThemeIcon>
-            <Box ml="md">{label}</Box>
+            <Box ml="6px">{label}</Box>
           </Box>
           {hasLinks && (
             <IconChevronRight
