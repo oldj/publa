@@ -13,10 +13,11 @@ interface IProps {
   categories: ICategory[]
   tags: ITag[]
   footerCopyright?: string
+  enableSearch?: boolean
 }
 
 export default function footer(props: IProps) {
-  let { categories, tags, footerCopyright } = props
+  let { categories, tags, footerCopyright, enableSearch } = props
   const [kw, setKw] = useState('')
 
   const onSearch = () => {
@@ -51,19 +52,21 @@ export default function footer(props: IProps) {
             ))}
           </ul>
 
-          <div className="site-footer-search">
-            <input
-              placeholder="Search in Google"
-              // allowClear
-              onChange={(e) => setKw(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.code === 'Enter') {
-                  onSearch()
-                }
-              }}
-            />
-            <button onClick={() => onSearch()}>搜索</button>
-          </div>
+          {enableSearch && (
+            <div className="site-footer-search">
+              <input
+                placeholder="Search in Google"
+                // allowClear
+                onChange={(e) => setKw(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.code === 'Enter') {
+                    onSearch()
+                  }
+                }}
+              />
+              <button onClick={() => onSearch()}>搜索</button>
+            </div>
+          )}
 
           <div className="site-footer-rss">
             <a href="/feed" target="_blank">

@@ -1,4 +1,5 @@
 import { getCurrentUser, isSystemInitialized } from '@/server/auth'
+import '@/styles/admin.scss'
 import { redirect } from 'next/navigation'
 import { AdminShell } from '../_components/AdminShell'
 

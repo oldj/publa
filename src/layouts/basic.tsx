@@ -26,6 +26,7 @@ export default async function BasicLayout(props: IProps) {
     footerCopyright,
     customBodyStartHtml,
     customBodyEndHtml,
+    enableSearch,
   } = await getData()
 
   return (
@@ -37,7 +38,12 @@ export default async function BasicLayout(props: IProps) {
         <main className="basic-layout-body">{children}</main>
       </div>
 
-      <Footer categories={categories || []} tags={tags || []} footerCopyright={footerCopyright} />
+      <Footer
+        categories={categories || []}
+        tags={tags || []}
+        footerCopyright={footerCopyright}
+        enableSearch={enableSearch}
+      />
       {customBodyEndHtml && <div dangerouslySetInnerHTML={{ __html: customBodyEndHtml }} />}
     </>
   )
@@ -57,6 +63,7 @@ async function getData() {
 
   const customBodyStartHtml = (await getSetting('customBodyStartHtml')) || ''
   const customBodyEndHtml = (await getSetting('customBodyEndHtml')) || ''
+  const enableSearch = (await getSetting('enableSearch')) === 'true'
 
   return {
     categories: categories || [],
@@ -67,5 +74,6 @@ async function getData() {
     footerCopyright,
     customBodyStartHtml,
     customBodyEndHtml,
+    enableSearch,
   }
 }

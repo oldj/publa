@@ -15,5 +15,10 @@ export const theme = createTheme({
         label: { textBoxTrim: 'none' },
       },
     },
+    Modal: {
+      defaultProps: {
+        centered: true,
+      },
+    },
   },
 })

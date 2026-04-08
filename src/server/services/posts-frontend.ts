@@ -7,7 +7,7 @@ import { categories, comments, contents, contentTags, tags } from '@/server/db/s
 import { normalizeExternalUrl, renderUserTextToHtml } from '@/server/lib/user-content'
 import { publishScheduledPosts } from '@/server/services/posts'
 import { getSetting } from '@/server/services/settings'
-import { and, asc, count, desc, eq, exists, isNull, lte, sql } from 'drizzle-orm'
+import { and, asc, count, desc, eq, exists, inArray, isNull, lte, ne, sql } from 'drizzle-orm'
 import type { ICategory, IComment, IItemPage, IPost, ITag } from 'typings'
 
 interface FrontendPostViewer {
@@ -314,6 +314,60 @@ export async function getFrontendPostBySlug(
     if (next[0]) {
       post.next = { title: next[0].title, url: `/posts/${next[0].slug}` }
     }
+  }
+
+  // 获取相关文章
+  if (row.categoryId) {
+    const tagIds = post.tags.map((t) => t.id)
+
+    const baseConditions = and(
+      eq(contents.type, 'post'),
+      eq(contents.status, 'published'),
+      lte(contents.publishedAt, now),
+      isNull(contents.deletedAt),
+      eq(contents.categoryId, row.categoryId),
+      ne(contents.id, row.id),
+    )
+
+    let relatedRows: { title: string; slug: string | null }[]
+
+    if (tagIds.length > 0) {
+      // 有标签：按共同标签数排序
+      relatedRows = await db
+        .select({ title: contents.title, slug: contents.slug })
+        .from(contents)
+        .leftJoin(
+          contentTags,
+          and(eq(contentTags.contentId, contents.id), inArray(contentTags.tagId, tagIds)),
+        )
+        .where(baseConditions)
+        .groupBy(contents.id, contents.title, contents.slug, contents.publishedAt)
+        .orderBy(desc(count(contentTags.tagId)), desc(contents.publishedAt))
+        .limit(100)
+    } else {
+      // 无标签：按发布时间排序
+      relatedRows = await db
+        .select({ title: contents.title, slug: contents.slug })
+        .from(contents)
+        .where(baseConditions)
+        .orderBy(desc(contents.publishedAt))
+        .limit(100)
+    }
+
+    // 取前 3 条最相关的，再从剩余中随机取 2 条
+    const filtered = relatedRows.filter((r) => r.slug)
+    const top = filtered.slice(0, 3)
+    const rest = filtered.slice(3)
+    for (let i = rest.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[rest[i], rest[j]] = [rest[j], rest[i]]
+    }
+    const picked = [...top, ...rest.slice(0, 2)]
+
+    post.related = picked.map((r) => ({
+      title: r.title,
+      url: `/posts/${r.slug}`,
+    }))
   }
 
   if (incrementViewCount) {

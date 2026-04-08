@@ -20,7 +20,6 @@ const defaultSettings: { key: string; value: string }[] = [
   { key: 'faviconMimeType', value: '' },
   { key: 'faviconVersion', value: '' },
   { key: 'defaultTheme', value: 'light' },
-  { key: 'allowThemeToggle', value: 'true' },
   { key: 'enableComment', value: 'true' },
   { key: 'showCommentsGlobally', value: 'true' },
   { key: 'defaultApprove', value: 'false' },
@@ -30,6 +29,7 @@ const defaultSettings: { key: string; value: string }[] = [
   { key: 'rssContent', value: 'full' },
   { key: 'rssLimit', value: '20' },
   { key: 'enableGuestbook', value: 'true' },
+  { key: 'enableSearch', value: 'true' },
   { key: 'guestbookWelcome', value: '欢迎给我留言！' },
   // 底部版权
   { key: 'footerCopyright', value: '{SITE_NAME} &copy; {FULL_YEAR}' },

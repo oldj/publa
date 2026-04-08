@@ -371,6 +371,14 @@ export default function SettingsPage() {
           style={{ width: 120 }}
         />
 
+        <Divider label="搜索设置" labelPosition="left" mt="md" />
+        <Switch
+          label="启用搜索"
+          description="关闭后，页脚的搜索框将不再显示"
+          checked={settings.enableSearch === 'true'}
+          onChange={(e) => setField('enableSearch', e.currentTarget.checked ? 'true' : 'false')}
+        />
+
         <Divider label="底部版权" labelPosition="left" mt="md" />
         <Textarea
           label="底部版权信息"
@@ -381,13 +389,6 @@ export default function SettingsPage() {
           value={settings.footerCopyright || ''}
           onChange={(e) => setField('footerCopyright', e.target.value)}
           styles={{ input: { maxHeight: 400, overflow: 'auto' } }}
-        />
-
-        <Divider label="主题设置" labelPosition="left" mt="md" />
-        <Switch
-          label="允许主题切换"
-          checked={settings.allowThemeToggle === 'true'}
-          onChange={(e) => setField('allowThemeToggle', e.currentTarget.checked ? 'true' : 'false')}
         />
 
         <Divider label="自定义 HTML" labelPosition="left" mt="md" />
