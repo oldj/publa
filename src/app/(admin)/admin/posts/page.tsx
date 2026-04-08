@@ -16,6 +16,7 @@ import {
   Title,
 } from '@mantine/core'
 import { IconEye, IconPencil, IconPlus, IconSearch, IconTrash } from '@tabler/icons-react'
+import clsx from 'clsx'
 import dayjs from 'dayjs'
 import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
@@ -139,12 +140,24 @@ export default function PostsPage() {
           <Table.Thead>
             <Table.Tr>
               <Table.Th className={adminStyles.cellFill}>标题</Table.Th>
-              <Table.Th className={adminStyles.cellFit}>分类</Table.Th>
-              <Table.Th className={adminStyles.cellFit}>状态</Table.Th>
-              <Table.Th className={adminStyles.cellFit}>浏览</Table.Th>
-              <Table.Th className={adminStyles.cellFit}>评论</Table.Th>
-              <Table.Th className={adminStyles.cellFit}>发布时间</Table.Th>
-              <Table.Th className={adminStyles.cellFit}>操作</Table.Th>
+              <Table.Th className={clsx(adminStyles.cellFit, adminStyles.cellCenter)}>
+                分类
+              </Table.Th>
+              <Table.Th className={clsx(adminStyles.cellFit, adminStyles.cellCenter)}>
+                状态
+              </Table.Th>
+              <Table.Th className={clsx(adminStyles.cellFit, adminStyles.cellCenter)}>
+                浏览
+              </Table.Th>
+              <Table.Th className={clsx(adminStyles.cellFit, adminStyles.cellCenter)}>
+                评论
+              </Table.Th>
+              <Table.Th className={clsx(adminStyles.cellFit, adminStyles.cellCenter)}>
+                发布时间
+              </Table.Th>
+              <Table.Th className={clsx(adminStyles.cellFit, adminStyles.cellCenter)}>
+                操作
+              </Table.Th>
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
@@ -181,28 +194,28 @@ export default function PostsPage() {
                       )}
                     </Group>
                   </Table.Td>
-                  <Table.Td className={adminStyles.cellFit}>
+                  <Table.Td className={clsx(adminStyles.cellFit, adminStyles.cellCenter)}>
                     <Text size="sm" c="dimmed">
                       {post.categoryName || '-'}
                     </Text>
                   </Table.Td>
-                  <Table.Td className={adminStyles.cellFit}>
+                  <Table.Td className={clsx(adminStyles.cellFit, adminStyles.cellCenter)}>
                     <NowrapBadge color={st.color} variant="light">
                       {st.label}
                     </NowrapBadge>
                   </Table.Td>
-                  <Table.Td className={adminStyles.cellFit}>
+                  <Table.Td className={clsx(adminStyles.cellFit, adminStyles.cellCenter)}>
                     <Text size="sm">{post.viewCount}</Text>
                   </Table.Td>
-                  <Table.Td className={adminStyles.cellFit}>
+                  <Table.Td className={clsx(adminStyles.cellFit, adminStyles.cellCenter)}>
                     <Text size="sm">{post.commentCount}</Text>
                   </Table.Td>
-                  <Table.Td className={adminStyles.cellFit}>
+                  <Table.Td className={clsx(adminStyles.cellFit, adminStyles.cellCenter)}>
                     <Text size="sm" c="dimmed">
                       {post.publishedAt ? dayjs(post.publishedAt).format('YYYY-MM-DD HH:mm') : '-'}
                     </Text>
                   </Table.Td>
-                  <Table.Td className={adminStyles.cellFit}>
+                  <Table.Td className={clsx(adminStyles.cellFit, adminStyles.cellCenter)}>
                     <Group gap="xs" wrap="nowrap">
                       <ActionIcon
                         variant="subtle"
