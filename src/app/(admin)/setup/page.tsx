@@ -3,12 +3,14 @@
 import { notify } from '@/lib/notify'
 import { normalizeEmail, normalizePassword, normalizeUsername } from '@/lib/user-input'
 import { version } from '@/lib/version'
+import { useAdminUrl } from '@/app/(admin)/_components/AdminPathContext'
 import { Button, Container, Paper, PasswordInput, Text, TextInput, Title } from '@mantine/core'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
 export default function SetupPage() {
   const router = useRouter()
+  const adminUrl = useAdminUrl()
   const [loading, setLoading] = useState(false)
   const [form, setForm] = useState({
     username: '',
@@ -55,7 +57,7 @@ export default function SetupPage() {
 
       if (data.success) {
         notify({ color: 'green', message: '初始化成功，即将跳转到后台' })
-        router.push('/admin')
+        router.push(adminUrl())
       } else {
         notify({ color: 'red', message: data.message || '初始化失败' })
       }

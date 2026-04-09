@@ -1,4 +1,5 @@
 'use client'
+import { useAdminUrl } from '@/app/(admin)/_components/AdminPathContext'
 import myModal from '@/app/(admin)/_components/myModals'
 import adminStyles from '../../_components/AdminShell.module.scss'
 
@@ -52,6 +53,7 @@ const statusMap: Record<string, { label: string; color: string }> = {
 }
 
 export default function PostsPage() {
+  const adminUrl = useAdminUrl()
   const [data, setData] = useState<PostListResult | null>(null)
   const [page, setPage] = useState(1)
   const [status, setStatus] = useState('')
@@ -101,7 +103,7 @@ export default function PostsPage() {
     <Box mt="md">
       <Group justify="space-between" mb="lg">
         <Title order={3}>文章管理</Title>
-        <Button component={Link} href="/admin/posts/new" leftSection={<IconPlus size={16} />}>
+        <Button component={Link} href={adminUrl('/posts/new')} leftSection={<IconPlus size={16} />}>
           新建文章
         </Button>
       </Group>
@@ -174,7 +176,7 @@ export default function PostsPage() {
                         </NowrapBadge>
                       )}
                       <Link
-                        href={`/admin/posts/${post.id}`}
+                        href={adminUrl(`/posts/${post.id}`)}
                         style={{
                           color: 'inherit',
                           textDecoration: 'none',
@@ -231,7 +233,7 @@ export default function PostsPage() {
                       <ActionIcon
                         variant="subtle"
                         component={Link}
-                        href={`/admin/posts/${post.id}`}
+                        href={adminUrl(`/posts/${post.id}`)}
                       >
                         <IconPencil size={16} />
                       </ActionIcon>

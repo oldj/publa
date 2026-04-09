@@ -16,6 +16,7 @@ import {
 } from '@mantine/core'
 import { IconInfoCircle, IconTrash } from '@tabler/icons-react'
 import dayjs from 'dayjs'
+import { useAdminUrl } from '@/app/(admin)/_components/AdminPathContext'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 import { useCurrentUser } from '../../_components/AdminCountsContext'
@@ -41,6 +42,7 @@ const PAGE_SIZE = 50
 
 export default function EmailLogsPage() {
   const router = useRouter()
+  const adminUrl = useAdminUrl()
   const currentUser = useCurrentUser()
   const [logs, setLogs] = useState<EmailLog[]>([])
   const [total, setTotal] = useState(0)
@@ -59,7 +61,7 @@ export default function EmailLogsPage() {
 
   useEffect(() => {
     if (currentUser && !['owner', 'admin'].includes(currentUser.role)) {
-      router.replace('/admin')
+      router.replace(adminUrl())
     }
   }, [currentUser, router])
 

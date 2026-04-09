@@ -4,17 +4,19 @@ import type { AuthUser } from '@/server/auth'
 import { ActionIcon, Avatar, Group, Text } from '@mantine/core'
 import { IconLogout } from '@tabler/icons-react'
 import { useRouter } from 'next/navigation'
+import { useAdminUrl } from './AdminPathContext'
 import myModal from './myModals'
 import { RoleLabel } from './RoleLabel'
 import classes from './UserButton.module.scss'
 
 export function UserButton({ user }: { user: AuthUser | null }) {
   const router = useRouter()
+  const adminUrl = useAdminUrl()
 
   const handleLogout = async () => {
     if (!(await myModal.confirm({ message: '确定要退出登录吗？' }))) return
     await fetch('/api/auth/logout', { method: 'POST' })
-    router.push('/admin/login')
+    router.push(adminUrl('/login'))
   }
 
   if (!user) return null

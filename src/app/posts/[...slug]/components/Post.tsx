@@ -38,10 +38,11 @@ interface IProps {
   html?: string
   headers?: IHeader[]
   afterPostHtml?: string
+  adminPath?: string
 }
 
 export default function Post(props: IProps) {
-  const { account, post, html, headers, afterPostHtml } = props
+  const { account, post, html, headers, afterPostHtml, adminPath = 'admin' } = props
   const router = useRouter()
   const [comments, setComments] = useState<IComment[]>(post?.comments || [])
   // const [html, setHTML] = useState<string>('')
@@ -250,7 +251,7 @@ export default function Post(props: IProps) {
 
         {account?.isStaff && (
           <span>
-            <Link href={`/admin/posts/${post.id}`} target={'_blank'}>
+            <Link href={`/${adminPath}/posts/${post.id}`} target={'_blank'}>
               [文章管理]
             </Link>
           </span>

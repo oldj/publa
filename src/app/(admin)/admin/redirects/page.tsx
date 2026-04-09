@@ -42,6 +42,7 @@ import {
   IconRouteAltLeft,
   IconTrash,
 } from '@tabler/icons-react'
+import { useAdminUrl } from '@/app/(admin)/_components/AdminPathContext'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 import { useCurrentUser } from '../../_components/AdminCountsContext'
@@ -179,6 +180,7 @@ function SortableRuleRow({
 
 export default function RedirectRulesPage() {
   const router = useRouter()
+  const adminUrl = useAdminUrl()
   const currentUser = useCurrentUser()
   const [rules, setRules] = useState<RedirectRule[]>([])
   const [loading, setLoading] = useState(false)
@@ -206,7 +208,7 @@ export default function RedirectRulesPage() {
 
   useEffect(() => {
     if (currentUser && !['owner', 'admin'].includes(currentUser.role)) {
-      router.replace('/admin')
+      router.replace(adminUrl())
     }
   }, [currentUser, router])
 

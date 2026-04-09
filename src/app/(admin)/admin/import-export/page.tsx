@@ -17,6 +17,7 @@ import {
   Title,
 } from '@mantine/core'
 import { IconDownload, IconEye, IconUpload } from '@tabler/icons-react'
+import { useAdminUrl } from '@/app/(admin)/_components/AdminPathContext'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { useAdminCounts, useCurrentUser } from '../../_components/AdminCountsContext'
@@ -34,6 +35,7 @@ const typeLabel: Record<string, string> = {
 
 export default function ImportExportPage() {
   const router = useRouter()
+  const adminUrl = useAdminUrl()
   const currentUser = useCurrentUser()
   const { refreshCounts } = useAdminCounts()
   const [importing, setImporting] = useState(false)
@@ -46,7 +48,7 @@ export default function ImportExportPage() {
 
   useEffect(() => {
     if (currentUser && !['owner', 'admin'].includes(currentUser.role)) {
-      router.replace('/admin')
+      router.replace(adminUrl())
     }
   }, [currentUser, router])
 

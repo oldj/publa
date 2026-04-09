@@ -1,12 +1,10 @@
+import { getPageReservedPrefixes } from '@/lib/admin-path'
 import { db } from '@/server/db'
 import { insertOne, maybeFirst, updateOne } from '@/server/db/query'
 import { contentRevisions, contents } from '@/server/db/schema'
 import { parsePageDraftMetadata } from '@/shared/revision-metadata'
 import { and, count, desc, eq, exists, isNull, like, lte, ne, or, sql } from 'drizzle-orm'
 import { listDraftsByTargetIds } from './revisions'
-
-/** 保留路径，页面不能使用 */
-const RESERVED_PATHS = ['admin', 'api', 'setup', 'rss.xml', 'sitemap.xml', 'uploads', 'posts']
 
 /** 校验页面路径 */
 export function validatePagePath(
@@ -34,7 +32,7 @@ export function validatePagePath(
   }
 
   const topSegment = path.split('/')[0]
-  if (RESERVED_PATHS.includes(topSegment)) {
+  if (getPageReservedPrefixes().includes(topSegment)) {
     return { valid: false, message: `"${topSegment}" 是保留路径，不能使用` }
   }
 
