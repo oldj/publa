@@ -240,18 +240,18 @@ export default function EmailSettingsPage() {
               }
               checked={config.userIds.includes(user.id)}
               onChange={() => toggleNotifyUser(config, setConfig, user.id)}
-              styles={
-                noEmail
-                  ? {
-                      body: {
-                        backgroundColor: 'var(--mantine-color-yellow-0)',
-                        border: '1px solid var(--mantine-color-yellow-4)',
-                        borderRadius: 'var(--mantine-radius-sm)',
-                        padding: '4px 8px',
-                      },
-                    }
-                  : undefined
-              }
+              // styles={
+              //   noEmail
+              //     ? {
+              //         body: {
+              //           backgroundColor: 'var(--mantine-color-yellow-0)',
+              //           border: '1px solid var(--mantine-color-yellow-4)',
+              //           borderRadius: 'var(--mantine-radius-sm)',
+              //           padding: '4px 8px',
+              //         },
+              //       }
+              //     : undefined
+              // }
             />
           )
 
