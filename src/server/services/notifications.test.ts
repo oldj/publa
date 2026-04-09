@@ -11,18 +11,17 @@ vi.mock('@/server/services/email-sender', () => ({
 const { notifyNewComment, notifyNewGuestbook } = await import('./notifications')
 const { listEmailLogs } = await import('./email-logs')
 
-async function setSetting(key: string, value: string) {
+async function setSetting(key: string, value: unknown) {
+  const serialized = JSON.stringify(value)
+  const { eq } = await import('drizzle-orm')
   const existing = await testDb
     .select()
     .from(schema.settings)
-    .where((await import('drizzle-orm')).eq(schema.settings.key, key))
+    .where(eq(schema.settings.key, key))
   if (existing.length > 0) {
-    await testDb
-      .update(schema.settings)
-      .set({ value })
-      .where((await import('drizzle-orm')).eq(schema.settings.key, key))
+    await testDb.update(schema.settings).set({ value: serialized }).where(eq(schema.settings.key, key))
   } else {
-    await testDb.insert(schema.settings).values({ key, value })
+    await testDb.insert(schema.settings).values({ key, value: serialized })
   }
 }
 
@@ -61,7 +60,7 @@ beforeEach(async () => {
 describe('notifyNewComment', () => {
   it('开启通知并指定有邮箱的用户时，发送邮件并记录日志', async () => {
     await setUserEmail(1, 'admin@test.com')
-    await setSetting('emailNotifyNewComment', JSON.stringify({ enabled: true, userIds: [1] }))
+    await setSetting('emailNotifyNewComment', { enabled: true, userIds: [1] })
     await setSetting('siteUrl', 'https://example.com')
     const post = await createTestPost()
 
@@ -102,7 +101,7 @@ describe('notifyNewComment', () => {
 
   it('通知未开启（enabled: false）时不发送邮件', async () => {
     await setUserEmail(1, 'admin@test.com')
-    await setSetting('emailNotifyNewComment', JSON.stringify({ enabled: false, userIds: [1] }))
+    await setSetting('emailNotifyNewComment', { enabled: false, userIds: [1] })
     const post = await createTestPost()
 
     await notifyNewComment({
@@ -116,7 +115,7 @@ describe('notifyNewComment', () => {
 
   it('指定的用户没有邮箱时不发送邮件', async () => {
     // setupTestDb 创建的用户默认没有 email
-    await setSetting('emailNotifyNewComment', JSON.stringify({ enabled: true, userIds: [1, 2] }))
+    await setSetting('emailNotifyNewComment', { enabled: true, userIds: [1, 2] })
     const post = await createTestPost()
 
     await notifyNewComment({
@@ -133,7 +132,7 @@ describe('notifyNewComment', () => {
   it('多用户中仅向有邮箱的用户发送', async () => {
     await setUserEmail(1, 'admin@test.com')
     // user 2 没有 email
-    await setSetting('emailNotifyNewComment', JSON.stringify({ enabled: true, userIds: [1, 2] }))
+    await setSetting('emailNotifyNewComment', { enabled: true, userIds: [1, 2] })
     const post = await createTestPost()
 
     await notifyNewComment({
@@ -150,7 +149,7 @@ describe('notifyNewComment', () => {
   it('发送失败时日志记录 fail 状态', async () => {
     mockSendEmail.mockResolvedValue({ success: false, error: 'Connection refused' })
     await setUserEmail(1, 'admin@test.com')
-    await setSetting('emailNotifyNewComment', JSON.stringify({ enabled: true, userIds: [1] }))
+    await setSetting('emailNotifyNewComment', { enabled: true, userIds: [1] })
     const post = await createTestPost()
 
     await notifyNewComment({
@@ -166,7 +165,7 @@ describe('notifyNewComment', () => {
 
   it('评论内容中的 HTML 被转义', async () => {
     await setUserEmail(1, 'admin@test.com')
-    await setSetting('emailNotifyNewComment', JSON.stringify({ enabled: true, userIds: [1] }))
+    await setSetting('emailNotifyNewComment', { enabled: true, userIds: [1] })
     const post = await createTestPost()
 
     await notifyNewComment({
@@ -185,7 +184,7 @@ describe('notifyNewComment', () => {
 describe('notifyNewGuestbook', () => {
   it('开启通知时发送邮件', async () => {
     await setUserEmail(1, 'admin@test.com')
-    await setSetting('emailNotifyNewGuestbook', JSON.stringify({ enabled: true, userIds: [1] }))
+    await setSetting('emailNotifyNewGuestbook', { enabled: true, userIds: [1] })
     await setSetting('siteUrl', 'https://example.com')
 
     await notifyNewGuestbook({

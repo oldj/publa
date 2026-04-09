@@ -8,15 +8,7 @@ let favicon: FaviconModule
 
 async function getSettingsMap() {
   const rows = await testDb.select().from(schema.settings)
-  return Object.fromEntries(
-    rows.map((row) => {
-      try {
-        return [row.key, JSON.parse(row.value)]
-      } catch {
-        return [row.key, row.value]
-      }
-    }),
-  )
+  return Object.fromEntries(rows.map((row) => [row.key, JSON.parse(row.value)]))
 }
 
 describe('favicon service', () => {

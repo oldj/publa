@@ -41,24 +41,12 @@ const DEFAULT_NOTIFY: NotifyConfig = { enabled: false, userIds: [] }
 const SENSITIVE_KEYS = ['emailResendApiKey', 'emailSmtpPassword']
 
 function parseNotifyConfig(value: unknown): NotifyConfig {
-  if (!value) return { ...DEFAULT_NOTIFY }
-  // 兼容旧格式（字符串）和新格式（对象）
-  let parsed = value
-  if (typeof parsed === 'string') {
-    try {
-      parsed = JSON.parse(parsed)
-    } catch {
-      return { ...DEFAULT_NOTIFY }
-    }
+  if (!value || typeof value !== 'object') return { ...DEFAULT_NOTIFY }
+  const obj = value as Record<string, unknown>
+  return {
+    enabled: !!obj.enabled,
+    userIds: Array.isArray(obj.userIds) ? obj.userIds : [],
   }
-  if (parsed && typeof parsed === 'object') {
-    const obj = parsed as Record<string, unknown>
-    return {
-      enabled: !!obj.enabled,
-      userIds: Array.isArray(obj.userIds) ? obj.userIds : [],
-    }
-  }
-  return { ...DEFAULT_NOTIFY }
 }
 
 export default function EmailSettingsPage() {

@@ -75,8 +75,8 @@ async function seedContentData() {
 // 辅助：插入测试设置数据
 async function seedSettingsData() {
   await testDb.insert(schema.settings).values([
-    { key: 'siteTitle', value: '我的博客' },
-    { key: 'siteUrl', value: 'https://example.com' },
+    { key: 'siteTitle', value: '"我的博客"' },
+    { key: 'siteUrl', value: '"https://example.com"' },
   ])
   await testDb.insert(schema.menus).values([{ id: 60, title: '首页', url: '/' }])
   await testDb.insert(schema.redirectRules).values([
@@ -230,11 +230,11 @@ describe('exportSettingsData', () => {
 
   it('导出设置数据不包含敏感字段', async () => {
     await testDb.insert(schema.settings).values([
-      { key: 'storageProvider', value: 's3' },
-      { key: 'storageS3Bucket', value: 'my-bucket' },
-      { key: 'storageS3AccessKey', value: 'AKID_SECRET' },
-      { key: 'storageS3SecretKey', value: 'SECRET_KEY_VALUE' },
-      { key: 'jwtSecret', value: 'jwt-secret-value' },
+      { key: 'storageProvider', value: '"s3"' },
+      { key: 'storageS3Bucket', value: '"my-bucket"' },
+      { key: 'storageS3AccessKey', value: '"AKID_SECRET"' },
+      { key: 'storageS3SecretKey', value: '"SECRET_KEY_VALUE"' },
+      { key: 'jwtSecret', value: '"jwt-secret-value"' },
     ])
     const data = await exportSettingsData()
     const keys = data.settings.map((s) => s.key)
@@ -831,15 +831,15 @@ describe('importSettingsData', () => {
 
     const allSettings = await testDb.select().from(schema.settings)
     expect(allSettings).toHaveLength(1)
-    expect(allSettings[0].value).toBe('新标题')
+    expect(allSettings[0].value).toBe('"新标题"')
   })
 
   it('导入设置时保留现有敏感字段并忽略导入数据中的敏感字段', async () => {
-    // 预设敏感字段
+    // 预设敏感字段（DB 中存 JSON 编码值）
     await testDb.insert(schema.settings).values([
-      { key: 'storageS3AccessKey', value: 'EXISTING_KEY' },
-      { key: 'storageS3SecretKey', value: 'EXISTING_SECRET' },
-      { key: 'jwtSecret', value: 'EXISTING_JWT_SECRET' },
+      { key: 'storageS3AccessKey', value: '"EXISTING_KEY"' },
+      { key: 'storageS3SecretKey', value: '"EXISTING_SECRET"' },
+      { key: 'jwtSecret', value: '"EXISTING_JWT_SECRET"' },
     ])
 
     await importSettingsData(
@@ -858,23 +858,23 @@ describe('importSettingsData', () => {
 
     const allSettings = await testDb.select().from(schema.settings)
     const map = Object.fromEntries(allSettings.map((s) => [s.key, s.value]))
-    // 非敏感字段正常导入
-    expect(map.siteTitle).toBe('新站点')
-    expect(map.storageProvider).toBe('s3')
+    // 非敏感字段正常导入（DB 中是 JSON 编码）
+    expect(map.siteTitle).toBe('"新站点"')
+    expect(map.storageProvider).toBe('"s3"')
     // 敏感字段保留原值，不被导入数据覆盖
-    expect(map.storageS3AccessKey).toBe('EXISTING_KEY')
-    expect(map.storageS3SecretKey).toBe('EXISTING_SECRET')
-    expect(map.jwtSecret).toBe('EXISTING_JWT_SECRET')
+    expect(map.storageS3AccessKey).toBe('"EXISTING_KEY"')
+    expect(map.storageS3SecretKey).toBe('"EXISTING_SECRET"')
+    expect(map.jwtSecret).toBe('"EXISTING_JWT_SECRET"')
   })
 
-  it('导入设置时兼容旧格式字符串值并规范化为真实类型', async () => {
+  it('导入设置时使���原生类型并正确序列化', async () => {
     await importSettingsData(
       {
         settings: [
           { key: 'siteTitle', value: '新站点' },
-          { key: 'enableComment', value: 'false' },
-          { key: 'rssLimit', value: '20' },
-          { key: 'emailNotifyNewComment', value: '{"enabled":true,"userIds":[1]}' },
+          { key: 'enableComment', value: false },
+          { key: 'rssLimit', value: 20 },
+          { key: 'emailNotifyNewComment', value: { enabled: true, userIds: [1] } },
         ],
       },
       1,
@@ -883,7 +883,7 @@ describe('importSettingsData', () => {
     const allSettings = await testDb.select().from(schema.settings)
     const map = Object.fromEntries(allSettings.map((s) => [s.key, s.value]))
 
-    expect(map.siteTitle).toBe('新站点')
+    expect(map.siteTitle).toBe('"新站点"')
     expect(map.enableComment).toBe('false')
     expect(map.rssLimit).toBe('20')
     expect(map.emailNotifyNewComment).toBe('{"enabled":true,"userIds":[1]}')
@@ -1101,7 +1101,7 @@ describe('importSettingsData', () => {
 
     const allSettings = await testDb.select().from(schema.settings)
     expect(allSettings).toHaveLength(4)
-    expect(allSettings.find((s) => s.key === 'siteTitle')?.value).toBe('我的博客')
+    expect(allSettings.find((s) => s.key === 'siteTitle')?.value).toBe('"我的博客"')
     expect(allSettings.find((s) => s.key === 'enableComment')?.value).toBe('false')
     expect(allSettings.find((s) => s.key === 'rssLimit')?.value).toBe('20')
     expect(allSettings.find((s) => s.key === 'emailNotifyNewComment')?.value).toBe(

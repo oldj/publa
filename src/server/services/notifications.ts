@@ -13,21 +13,10 @@ interface NotifyConfig {
 }
 
 function parseNotifyConfig(value: unknown): NotifyConfig | null {
-  if (!value) return null
-  // 兼容旧格式（字符串）和新格式（对象）
-  let parsed = value
-  if (typeof parsed === 'string') {
-    try {
-      parsed = JSON.parse(parsed)
-    } catch {
-      return null
-    }
-  }
-  if (parsed && typeof parsed === 'object' && 'enabled' in parsed) {
-    const obj = parsed as Record<string, unknown>
-    if (obj.enabled && Array.isArray(obj.userIds) && obj.userIds.length > 0) {
-      return parsed as NotifyConfig
-    }
+  if (!value || typeof value !== 'object') return null
+  const obj = value as Record<string, unknown>
+  if (obj.enabled && Array.isArray(obj.userIds) && obj.userIds.length > 0) {
+    return value as NotifyConfig
   }
   return null
 }

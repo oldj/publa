@@ -3,14 +3,14 @@ import { maybeFirst } from '@/server/db/query'
 import { settings } from '@/server/db/schema'
 import { eq } from 'drizzle-orm'
 
-type SettingValueKind = 'string' | 'boolean' | 'number' | 'notify'
-
 export interface NotifySettingValue {
   enabled: boolean
   userIds: number[]
 }
 
 export type SettingValue = string | boolean | number | NotifySettingValue
+
+type SettingValueKind = 'string' | 'boolean' | 'number' | 'notify'
 
 export const ADMIN_SETTINGS_KEYS = [
   'siteTitle',
@@ -129,89 +129,44 @@ const SETTING_VALUE_KINDS: Record<string, SettingValueKind> = Object.freeze({
   ...Object.fromEntries(NOTIFY_SETTING_KEYS.map((key) => [key, 'notify' as const])),
 })
 
-/** 安全解析 JSON，失败时返回原始字符串 */
-function safeJsonParse(raw: string): unknown {
-  try {
-    return JSON.parse(raw)
-  } catch {
-    return raw
-  }
-}
-
-function getSettingValueKind(key: string): SettingValueKind {
+export function getSettingValueKind(key: string): SettingValueKind {
   return SETTING_VALUE_KINDS[key] ?? 'string'
 }
 
-function normalizeBooleanValue(value: unknown): boolean | null {
-  if (value === true || value === 'true') return true
-  if (value === false || value === 'false') return false
-  return null
-}
-
-function normalizeNumberValue(value: unknown): number | null {
-  if (typeof value === 'number' && Number.isInteger(value)) return value
-  if (typeof value === 'string' && value.trim() !== '') {
-    const parsed = Number(value)
-    if (Number.isInteger(parsed)) return parsed
+function validateNotifyValue(value: unknown): NotifySettingValue {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new SettingsValidationError({ invalidValueKeys: [] })
   }
-  return null
-}
-
-function normalizeNotifyValue(value: unknown): NotifySettingValue | null {
-  let parsed = value
-  if (typeof parsed === 'string') {
-    try {
-      parsed = JSON.parse(parsed)
-    } catch {
-      return null
+  const obj = value as Record<string, unknown>
+  if (typeof obj.enabled !== 'boolean' || !Array.isArray(obj.userIds)) {
+    throw new SettingsValidationError({ invalidValueKeys: [] })
+  }
+  for (const id of obj.userIds) {
+    if (typeof id !== 'number' || !Number.isInteger(id) || id <= 0) {
+      throw new SettingsValidationError({ invalidValueKeys: [] })
     }
   }
-
-  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-    return null
-  }
-
-  const obj = parsed as Record<string, unknown>
-  const enabled = normalizeBooleanValue(obj.enabled)
-  if (enabled == null || !Array.isArray(obj.userIds)) {
-    return null
-  }
-
-  const userIds: number[] = []
-  for (const item of obj.userIds) {
-    const userId = normalizeNumberValue(item)
-    if (userId == null || userId <= 0) {
-      return null
-    }
-    userIds.push(userId)
-  }
-
-  return { enabled, userIds }
+  return { enabled: obj.enabled, userIds: obj.userIds as number[] }
 }
 
 function normalizeSettingValue(key: string, value: unknown): SettingValue {
   switch (getSettingValueKind(key)) {
-    case 'boolean': {
-      const normalized = normalizeBooleanValue(value)
-      if (normalized == null) {
+    case 'boolean':
+      if (typeof value !== 'boolean') {
         throw new SettingsValidationError({ invalidValueKeys: [key] })
       }
-      return normalized
-    }
-    case 'number': {
-      const normalized = normalizeNumberValue(value)
-      if (normalized == null) {
+      return value
+    case 'number':
+      if (typeof value !== 'number' || !Number.isInteger(value)) {
         throw new SettingsValidationError({ invalidValueKeys: [key] })
       }
-      return normalized
-    }
-    case 'notify': {
-      const normalized = normalizeNotifyValue(value)
-      if (!normalized) {
+      return value
+    case 'notify':
+      try {
+        return validateNotifyValue(value)
+      } catch {
         throw new SettingsValidationError({ invalidValueKeys: [key] })
       }
-      return normalized
-    }
     case 'string':
     default:
       if (typeof value !== 'string') {
@@ -221,53 +176,17 @@ function normalizeSettingValue(key: string, value: unknown): SettingValue {
   }
 }
 
-function parseStoredStringValue(raw: string): string {
-  const parsed = safeJsonParse(raw)
-  return typeof parsed === 'string' ? parsed : raw
+/** 统一使用 JSON.stringify 序列化 */
+export function serializeSettingValue(_key: string, value: unknown): string {
+  return JSON.stringify(value)
 }
 
-function parseStoredBooleanValue(raw: string): boolean | string {
-  const parsed = safeJsonParse(raw)
-  const normalized = normalizeBooleanValue(parsed)
-  return normalized == null ? raw : normalized
-}
-
-function parseStoredNumberValue(raw: string): number | string {
-  const parsed = safeJsonParse(raw)
-  const normalized = normalizeNumberValue(parsed)
-  return normalized == null ? raw : normalized
-}
-
-function parseStoredNotifyValue(raw: string): NotifySettingValue | string {
-  const normalized = normalizeNotifyValue(raw)
-  return normalized ?? raw
-}
-
-export function deserializeSettingValue(key: string, raw: string): SettingValue | string {
-  switch (getSettingValueKind(key)) {
-    case 'boolean':
-      return parseStoredBooleanValue(raw)
-    case 'number':
-      return parseStoredNumberValue(raw)
-    case 'notify':
-      return parseStoredNotifyValue(raw)
-    case 'string':
-    default:
-      return parseStoredStringValue(raw)
-  }
-}
-
-export function serializeSettingValue(key: string, value: unknown): string {
-  const normalized = normalizeSettingValue(key, value)
-  switch (getSettingValueKind(key)) {
-    case 'string':
-      return normalized as string
-    case 'boolean':
-    case 'number':
-    case 'notify':
-      return JSON.stringify(normalized)
-    default:
-      return String(normalized)
+/** 统一使用 JSON.parse 反序列化，兼容尚未迁移的旧格式纯文本 */
+export function deserializeSettingValue(_key: string, raw: string): SettingValue {
+  try {
+    return JSON.parse(raw) as SettingValue
+  } catch {
+    return raw
   }
 }
 
@@ -396,7 +315,8 @@ export function pickSettings(
 }
 
 /** 设置单个值 */
-export async function setSetting(key: string, value: unknown) {
+export async function setSetting(key: string, value: SettingValue) {
+  normalizeSettingValue(key, value)
   const serialized = serializeSettingValue(key, value)
   const existing = await maybeFirst(
     db.select().from(settings).where(eq(settings.key, key)).limit(1),
@@ -409,7 +329,7 @@ export async function setSetting(key: string, value: unknown) {
 }
 
 /** 批量更新设置 */
-export async function updateSettings(data: Record<string, unknown>) {
+export async function updateSettings(data: Record<string, SettingValue>) {
   for (const [key, value] of Object.entries(data)) {
     await setSetting(key, value)
   }

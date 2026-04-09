@@ -5,14 +5,7 @@
 .user {
   display: block;
   width: 100%;
-  padding: var(--mantine-spacing-xs) var(--mantine-spacing-sm);
+  padding: var(--mantine-spacing-xs) 0;
   border-radius: var(--mantine-radius-sm);
   color: var(--mantine-color-text);
-
-  &:hover {
-    background-color: light-dark(
-      var(--mantine-color-gray-0),
-      var(--mantine-color-dark-6)
-    );
-  }
 }

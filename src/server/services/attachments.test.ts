@@ -24,8 +24,8 @@ beforeEach(async () => {
   await setupTestDb()
   // 设置存储配置
   await testDb.insert(schema.settings).values([
-    { key: 'storageProvider', value: 's3' },
-    { key: 'attachmentBaseUrl', value: 'https://cdn.example.com' },
+    { key: 'storageProvider', value: '"s3"' },
+    { key: 'attachmentBaseUrl', value: '"https://cdn.example.com"' },
   ])
   // 重置 mock
   vi.clearAllMocks()
