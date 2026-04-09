@@ -210,7 +210,7 @@ export default function RedirectRulesPage() {
     if (currentUser && !['owner', 'admin'].includes(currentUser.role)) {
       router.replace(adminUrl())
     }
-  }, [currentUser, router])
+  }, [currentUser, router, adminUrl])
 
   useEffect(() => {
     if (!currentUser || !['owner', 'admin'].includes(currentUser.role)) return

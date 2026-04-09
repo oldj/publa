@@ -50,7 +50,7 @@ export default function ImportExportPage() {
     if (currentUser && !['owner', 'admin'].includes(currentUser.role)) {
       router.replace(adminUrl())
     }
-  }, [currentUser, router])
+  }, [currentUser, router, adminUrl])
 
   if (!currentUser || !['owner', 'admin'].includes(currentUser.role)) {
     return null
