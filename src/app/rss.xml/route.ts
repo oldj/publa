@@ -8,11 +8,11 @@ import { Feed } from 'feed'
 import { NextResponse } from 'next/server'
 
 export async function GET(request: Request) {
-  const siteUrl = (await getSetting('siteUrl')) || new URL(request.url).origin
-  const siteTitle = (await getSetting('siteTitle')) || 'Publa'
-  const siteDescription = (await getSetting('siteDescription')) || ''
-  const rssLimit = parseInt((await getSetting('rssLimit')) || '10')
-  const rssContent = (await getSetting('rssContent')) || 'full'
+  const siteUrl = String((await getSetting('siteUrl')) ?? '') || new URL(request.url).origin
+  const siteTitle = String((await getSetting('siteTitle')) ?? '') || 'Publa'
+  const siteDescription = String((await getSetting('siteDescription')) ?? '')
+  const rssLimit = Number(await getSetting('rssLimit')) || 10
+  const rssContent = String((await getSetting('rssContent')) ?? '') || 'full'
 
   const now = new Date().toISOString()
 

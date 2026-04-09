@@ -12,15 +12,22 @@ interface NotifyConfig {
   userIds: number[]
 }
 
-function parseNotifyConfig(value: string | null): NotifyConfig | null {
+function parseNotifyConfig(value: unknown): NotifyConfig | null {
   if (!value) return null
-  try {
-    const parsed = JSON.parse(value)
-    if (parsed?.enabled && Array.isArray(parsed.userIds) && parsed.userIds.length > 0) {
+  // 兼容旧格式（字符串）和新格式（对象）
+  let parsed = value
+  if (typeof parsed === 'string') {
+    try {
+      parsed = JSON.parse(parsed)
+    } catch {
+      return null
+    }
+  }
+  if (parsed && typeof parsed === 'object' && 'enabled' in parsed) {
+    const obj = parsed as Record<string, unknown>
+    if (obj.enabled && Array.isArray(obj.userIds) && obj.userIds.length > 0) {
       return parsed as NotifyConfig
     }
-  } catch (e) {
-    console.error(e)
   }
   return null
 }
@@ -80,7 +87,7 @@ export async function notifyNewComment(data: {
   )
   const contentTitle = row?.title || '未知文章'
 
-  const siteUrl = (await getSetting('siteUrl')) || ''
+  const siteUrl = String((await getSetting('siteUrl')) ?? '')
   const subject = `新评论：${truncate(contentTitle, 50)}`
   const html = buildEmailHtml({
     title: `文章「${escapeHtml(contentTitle)}」收到新评论`,
@@ -108,7 +115,7 @@ export async function notifyNewGuestbook(data: { authorName: string; content: st
   const recipients = await resolveRecipients(config)
   if (recipients.length === 0) return
 
-  const siteUrl = (await getSetting('siteUrl')) || ''
+  const siteUrl = String((await getSetting('siteUrl')) ?? '')
   const subject = `新留言：来自 ${data.authorName}`
   const html = buildEmailHtml({
     title: '收到新的留言',

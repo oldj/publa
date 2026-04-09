@@ -4,6 +4,8 @@ import { logActivity } from '@/server/services/activity-logs'
 import {
   ADMIN_SETTINGS_KEYS,
   getAllSettings,
+  isSettingsValidationError,
+  normalizeSettingsPayload,
   pickSettings,
   updateSettings,
 } from '@/server/services/settings'
@@ -25,19 +27,24 @@ export async function PUT(request: NextRequest) {
 
   const { data: body, error } = await safeParseJson(request)
   if (error) return error
-  const invalidKeys = Object.keys(body).filter((key) => !ADMIN_SETTINGS_KEYS.includes(key as any))
-  if (invalidKeys.length > 0) {
-    return NextResponse.json(
-      {
-        success: false,
-        code: 'VALIDATION_ERROR',
-        message: `不支持修改以下设置项：${invalidKeys.join(', ')}`,
-      },
-      { status: 400 },
-    )
+
+  try {
+    const normalized = normalizeSettingsPayload(body, ADMIN_SETTINGS_KEYS)
+    await updateSettings(normalized)
+  } catch (error) {
+    if (isSettingsValidationError(error)) {
+      return NextResponse.json(
+        {
+          success: false,
+          code: 'VALIDATION_ERROR',
+          message: error.message,
+        },
+        { status: 400 },
+      )
+    }
+    throw error
   }
 
-  await updateSettings(body)
   await logActivity(request, guard.user.id, 'update_settings')
   return NextResponse.json({ success: true })
 }

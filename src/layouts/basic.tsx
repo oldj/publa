@@ -5,7 +5,7 @@
 
 import { getMenuTree } from '@/server/services/menus'
 import { getFrontendCategories, getFrontendTags } from '@/server/services/posts-frontend'
-import { getSetting } from '@/server/services/settings'
+import { getSetting, toBool, toStr } from '@/server/services/settings'
 import '@/styles/themes/oj-2025.css'
 import React from 'react'
 import Footer from 'src/components/footer'
@@ -53,17 +53,17 @@ async function getData() {
   const categories = await getFrontendCategories()
   const tags = await getFrontendTags()
   const menus = await getMenuTree()
-  const siteTitle = (await getSetting('siteTitle')) || 'Publa'
-  const siteSlogan = (await getSetting('siteSlogan')) || 'Yet Another Amazing Blog'
+  const siteTitle = toStr(await getSetting('siteTitle'), 'Publa')
+  const siteSlogan = toStr(await getSetting('siteSlogan'), 'Yet Another Amazing Blog')
   const year = String(new Date().getFullYear())
-  const rawCopyright = (await getSetting('footerCopyright')) || '{SITE_NAME} &copy; {FULL_YEAR}'
+  const rawCopyright = toStr(await getSetting('footerCopyright'), '{SITE_NAME} &copy; {FULL_YEAR}')
   const footerCopyright = rawCopyright
     .replace(/\{SITE_NAME}/g, siteTitle)
     .replace(/\{FULL_YEAR}/g, year)
 
-  const customBodyStartHtml = (await getSetting('customBodyStartHtml')) || ''
-  const customBodyEndHtml = (await getSetting('customBodyEndHtml')) || ''
-  const enableSearch = (await getSetting('enableSearch')) === 'true'
+  const customBodyStartHtml = toStr(await getSetting('customBodyStartHtml'))
+  const customBodyEndHtml = toStr(await getSetting('customBodyEndHtml'))
+  const enableSearch = toBool(await getSetting('enableSearch'), false)
 
   return {
     categories: categories || [],

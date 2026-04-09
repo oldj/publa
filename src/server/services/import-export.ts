@@ -19,6 +19,11 @@ import {
 import { syncPrimaryKeySequences } from '@/server/db/sequences'
 import { htmlToText } from '@/server/lib/markdown'
 import { validateRedirectRuleInput } from '@/server/services/redirect-rules'
+import {
+  deserializeSettingValue,
+  normalizeSettingsPayload,
+  serializeSettingValue,
+} from '@/server/services/settings'
 import crypto from 'crypto'
 import { asc, eq } from 'drizzle-orm'
 
@@ -70,7 +75,12 @@ export async function exportSettingsData() {
 
   // 设置数据中排除存储敏感信息
   const allSettings = await db.select().from(settings)
-  const filteredSettings = allSettings.filter((s) => !SECRET_KEYS.has(s.key))
+  const filteredSettings = allSettings
+    .filter((s) => !SECRET_KEYS.has(s.key))
+    .map((item) => ({
+      key: item.key,
+      value: deserializeSettingValue(item.key, item.value),
+    }))
 
   return {
     meta: { type: 'settings', version: META_VERSION, exportedAt: new Date().toISOString() },
@@ -357,13 +367,19 @@ export async function importSettingsData(data: any, currentUserId: number) {
 
   await db.transaction(async (tx) => {
     if (Array.isArray(data.settings)) {
+      const inputSettings: Record<string, unknown> = {}
+      for (const item of data.settings) {
+        if (item?.key && item.value !== undefined && !SECRET_KEYS.has(item.key)) {
+          inputSettings[item.key] = item.value
+        }
+      }
+      const normalizedSettings = normalizeSettingsPayload(inputSettings)
+
       await tx.delete(settings)
 
       // 导入非敏感设置
-      for (const item of data.settings) {
-        if (item.key && item.value !== undefined && !SECRET_KEYS.has(item.key)) {
-          await tx.insert(settings).values(item)
-        }
+      for (const [key, value] of Object.entries(normalizedSettings)) {
+        await tx.insert(settings).values({ key, value: serializeSettingValue(key, value) })
       }
 
       // 恢复敏感设置

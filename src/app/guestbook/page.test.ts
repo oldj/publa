@@ -5,7 +5,8 @@ const { mockGetSetting, mockRedirectOrNotFound } = vi.hoisted(() => ({
   mockRedirectOrNotFound: vi.fn(),
 }))
 
-vi.mock('@/server/services/settings', () => ({
+vi.mock('@/server/services/settings', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/server/services/settings')>()),
   getSetting: mockGetSetting,
 }))
 
@@ -30,7 +31,7 @@ describe('src/app/guestbook/page', () => {
   })
 
   it('留言板关闭时会先尝试跳转规则', async () => {
-    mockGetSetting.mockResolvedValue('false')
+    mockGetSetting.mockResolvedValue(false)
     mockRedirectOrNotFound.mockRejectedValue(new Error('REDIRECT'))
 
     await expect(GuestbookPage()).rejects.toThrow('REDIRECT')

@@ -16,8 +16,8 @@ export async function generateMetadata(): Promise<Metadata> {
 
   try {
     const s = await getAllSettings()
-    siteTitle = s.siteTitle || siteTitle
-    siteDescription = s.siteDescription || ''
+    siteTitle = String(s.siteTitle ?? '') || siteTitle
+    siteDescription = String(s.siteDescription ?? '')
     faviconHref = buildFaviconHref(getFaviconConfigFromSettings(s).version)
   } catch {
     // 数据库可能尚未初始化
@@ -45,17 +45,17 @@ export const viewport = {
 
 export default async function RootLayout({ children }: { children: any }) {
   // 从数据库读取设置
-  let siteSettings: Record<string, string> = {}
+  let siteSettings: Record<string, unknown> = {}
   try {
     siteSettings = await getAllSettings()
   } catch {
     // 数据库可能尚未初始化
   }
 
-  const siteTitle = siteSettings.siteTitle || 'Publa'
-  const rssTitle = siteSettings.rssTitle || siteTitle
+  const siteTitle = String(siteSettings.siteTitle ?? '') || 'Publa'
+  const rssTitle = String(siteSettings.rssTitle ?? '') || siteTitle
 
-  const customHeadHtml = siteSettings.customHeadHtml || ''
+  const customHeadHtml = String(siteSettings.customHeadHtml ?? '')
   const headersList = await headers()
   const pathname = headersList.get('x-pathname') || ''
   const isFrontend = !pathname.startsWith('/admin') && !pathname.startsWith('/setup')

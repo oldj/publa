@@ -70,7 +70,11 @@ describe('initJwtSecret', () => {
   })
 
   it('环境变量为默认值时视为未配置，走数据库逻辑', async () => {
-    process.env = { ...originalEnv, NODE_ENV: 'production', JWT_SECRET: 'blog-jwt-secret-change-me' }
+    process.env = {
+      ...originalEnv,
+      NODE_ENV: 'production',
+      JWT_SECRET: 'blog-jwt-secret-change-me',
+    }
 
     const { getSetting } = await import('@/server/services/settings')
     vi.mocked(getSetting).mockResolvedValue('secret-from-db')
@@ -92,7 +96,7 @@ describe('initJwtSecret', () => {
 
     expect(setSetting).toHaveBeenCalledWith('jwtSecret', expect.any(String))
     // 验证生成的 secret 非空且长度合理（base64url 编码的 32 字节 = 43 字符）
-    const savedValue = vi.mocked(setSetting).mock.calls[0][1]
+    const savedValue = vi.mocked(setSetting).mock.calls[0][1] as string
     expect(savedValue.length).toBeGreaterThanOrEqual(40)
     expect(process.env.JWT_SECRET).toBe(savedValue)
   })

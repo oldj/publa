@@ -52,7 +52,7 @@ async function resolveFilename(filename: string): Promise<string> {
 
 /** 获取附件的完整 URL */
 export async function getAttachmentUrl(storageKey: string): Promise<string> {
-  const baseUrl = (await getSetting('attachmentBaseUrl')) || ''
+  const baseUrl = String((await getSetting('attachmentBaseUrl')) ?? '')
   return baseUrl + storageKey
 }
 
@@ -69,7 +69,7 @@ export async function uploadAttachment(input: {
   const storage = await getStorageProvider()
   if (!storage) throw new Error('Storage not configured')
 
-  const provider = await getSetting('storageProvider')
+  const provider = String((await getSetting('storageProvider')) ?? '')
   const filename = await resolveFilename(input.originalFilename)
   const storageKey = buildStorageKey(filename)
 
@@ -101,7 +101,7 @@ export async function uploadAttachment(input: {
 /** 列出附件（动态拼接完整 URL） */
 export async function listAttachments(options: { page?: number; pageSize?: number } = {}) {
   const { page = 1, pageSize = 24 } = options
-  const baseUrl = (await getSetting('attachmentBaseUrl')) || ''
+  const baseUrl = String((await getSetting('attachmentBaseUrl')) ?? '')
 
   const where = isNull(attachments.deletedAt)
   const [{ total }] = await db.select({ total: count() }).from(attachments).where(where)
@@ -124,7 +124,7 @@ export async function listAttachments(options: { page?: number; pageSize?: numbe
 
 /** 获取单个附件详情 */
 export async function getAttachment(id: number) {
-  const baseUrl = (await getSetting('attachmentBaseUrl')) || ''
+  const baseUrl = String((await getSetting('attachmentBaseUrl')) ?? '')
   const row = await maybeFirst(db.select().from(attachments).where(eq(attachments.id, id)).limit(1))
   if (!row) return null
   return { ...row, publicUrl: baseUrl + row.storageKey }

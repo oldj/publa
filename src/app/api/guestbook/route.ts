@@ -5,13 +5,12 @@ import { safeParseJson } from '@/server/lib/request'
 import { getRequestInfo } from '@/server/lib/request-info'
 import { createGuestbookMessage } from '@/server/services/guestbook'
 import { notifyNewGuestbook } from '@/server/services/notifications'
-import { getSetting } from '@/server/services/settings'
+import { getSetting, toBool } from '@/server/services/settings'
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
-  const enableGuestbook = await getSetting('enableGuestbook')
-  if (enableGuestbook === 'false') {
+  if (!toBool(await getSetting('enableGuestbook'))) {
     return NextResponse.json(
       { success: false, code: 'NOT_FOUND', message: 'Guestbook is disabled' },
       { status: 404 },

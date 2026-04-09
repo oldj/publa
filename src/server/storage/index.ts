@@ -12,46 +12,46 @@ export interface StorageProvider {
 
 /** 从 settings 读取当前配置并返回对应存储实例，未配置时返回 null */
 export async function getStorageProvider(): Promise<StorageProvider | null> {
-  const provider = await getSetting('storageProvider')
+  const provider = String((await getSetting('storageProvider')) ?? '')
   if (!provider) return null
 
   if (provider === 's3') {
     const { S3Storage } = await import('./s3')
-    const endpoint = await getSetting('storageS3Endpoint')
-    const region = await getSetting('storageS3Region')
-    const bucket = await getSetting('storageS3Bucket')
-    const accessKey = await getSetting('storageS3AccessKey')
-    const secretKey = await getSetting('storageS3SecretKey')
+    const endpoint = String((await getSetting('storageS3Endpoint')) ?? '')
+    const region = String((await getSetting('storageS3Region')) ?? '')
+    const bucket = String((await getSetting('storageS3Bucket')) ?? '')
+    const accessKey = String((await getSetting('storageS3AccessKey')) ?? '')
+    const secretKey = String((await getSetting('storageS3SecretKey')) ?? '')
     if (!endpoint || !bucket || !accessKey || !secretKey) return null
     return new S3Storage({ endpoint, region: region || 'us-east-1', bucket, accessKey, secretKey })
   }
 
   if (provider === 'oss') {
     const { OSSStorage } = await import('./oss')
-    const region = await getSetting('storageOssRegion')
-    const bucket = await getSetting('storageOssBucket')
-    const accessKeyId = await getSetting('storageOssAccessKeyId')
-    const accessKeySecret = await getSetting('storageOssAccessKeySecret')
+    const region = String((await getSetting('storageOssRegion')) ?? '')
+    const bucket = String((await getSetting('storageOssBucket')) ?? '')
+    const accessKeyId = String((await getSetting('storageOssAccessKeyId')) ?? '')
+    const accessKeySecret = String((await getSetting('storageOssAccessKeySecret')) ?? '')
     if (!region || !bucket || !accessKeyId || !accessKeySecret) return null
     return new OSSStorage({ region, bucket, accessKeyId, accessKeySecret })
   }
 
   if (provider === 'cos') {
     const { COSStorage } = await import('./cos')
-    const region = await getSetting('storageCosRegion')
-    const bucket = await getSetting('storageCosBucket')
-    const secretId = await getSetting('storageCosSecretId')
-    const secretKey = await getSetting('storageCosSecretKey')
+    const region = String((await getSetting('storageCosRegion')) ?? '')
+    const bucket = String((await getSetting('storageCosBucket')) ?? '')
+    const secretId = String((await getSetting('storageCosSecretId')) ?? '')
+    const secretKey = String((await getSetting('storageCosSecretKey')) ?? '')
     if (!region || !bucket || !secretId || !secretKey) return null
     return new COSStorage({ region, bucket, secretId, secretKey })
   }
 
   if (provider === 'r2') {
     const { R2Storage } = await import('./r2')
-    const accountId = await getSetting('storageR2AccountId')
-    const bucket = await getSetting('storageR2Bucket')
-    const accessKey = await getSetting('storageR2AccessKey')
-    const secretKey = await getSetting('storageR2SecretKey')
+    const accountId = String((await getSetting('storageR2AccountId')) ?? '')
+    const bucket = String((await getSetting('storageR2Bucket')) ?? '')
+    const accessKey = String((await getSetting('storageR2AccessKey')) ?? '')
+    const secretKey = String((await getSetting('storageR2SecretKey')) ?? '')
     if (!accountId || !bucket || !accessKey || !secretKey) return null
     return new R2Storage({ accountId, bucket, accessKey, secretKey })
   }

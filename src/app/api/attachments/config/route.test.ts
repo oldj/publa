@@ -1,9 +1,16 @@
 import { NextResponse } from 'next/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { mockRequireRole, mockGetAllSettings, mockUpdateSettings, mockCreateStorageProvider } = vi.hoisted(() => ({
+const {
+  mockRequireRole,
+  mockGetAllSettings,
+  mockNormalizeSettingsPayload,
+  mockUpdateSettings,
+  mockCreateStorageProvider,
+} = vi.hoisted(() => ({
   mockRequireRole: vi.fn(),
   mockGetAllSettings: vi.fn(),
+  mockNormalizeSettingsPayload: vi.fn(),
   mockUpdateSettings: vi.fn(),
   mockCreateStorageProvider: vi.fn(),
 }))
@@ -14,6 +21,30 @@ vi.mock('@/server/auth', () => ({
 
 vi.mock('@/server/services/settings', () => ({
   getAllSettings: mockGetAllSettings,
+  isSettingsValidationError: (error: unknown) =>
+    Boolean(error && typeof error === 'object' && 'name' in (error as Record<string, unknown>)),
+  normalizeSettingsPayload: mockNormalizeSettingsPayload,
+  STORAGE_SETTINGS_KEYS: [
+    'storageProvider',
+    'storageS3Endpoint',
+    'storageS3Region',
+    'storageS3Bucket',
+    'storageS3AccessKey',
+    'storageS3SecretKey',
+    'storageOssRegion',
+    'storageOssBucket',
+    'storageOssAccessKeyId',
+    'storageOssAccessKeySecret',
+    'storageCosRegion',
+    'storageCosBucket',
+    'storageCosSecretId',
+    'storageCosSecretKey',
+    'storageR2AccountId',
+    'storageR2Bucket',
+    'storageR2AccessKey',
+    'storageR2SecretKey',
+    'attachmentBaseUrl',
+  ],
   updateSettings: mockUpdateSettings,
 }))
 
@@ -27,6 +58,7 @@ describe('/api/attachments/config', () => {
   beforeEach(() => {
     mockRequireRole.mockReset()
     mockGetAllSettings.mockReset()
+    mockNormalizeSettingsPayload.mockReset()
     mockUpdateSettings.mockReset()
     mockCreateStorageProvider.mockReset()
 
@@ -43,6 +75,7 @@ describe('/api/attachments/config', () => {
       storageS3SecretKey: 'SECRET_KEY_VALUE',
       attachmentBaseUrl: 'https://cdn.example.com',
     })
+    mockNormalizeSettingsPayload.mockImplementation((payload) => payload)
   })
 
   it('站长读取配置时只返回脱敏后的密钥', async () => {
@@ -80,15 +113,69 @@ describe('/api/attachments/config', () => {
       ),
     })
 
-    const response = await PUT(new Request('http://localhost/api/attachments/config', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ storageProvider: 's3' }),
-    }) as any)
+    const response = await PUT(
+      new Request('http://localhost/api/attachments/config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ storageProvider: 's3' }),
+      }) as any,
+    )
     const json = await response.json()
 
     expect(response.status).toBe(403)
     expect(json.code).toBe('FORBIDDEN')
+    expect(mockUpdateSettings).not.toHaveBeenCalled()
+  })
+
+  it('站长可以提交合法的存储配置', async () => {
+    const response = await PUT(
+      new Request('http://localhost/api/attachments/config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storageProvider: 's3',
+          storageS3Bucket: 'new-bucket',
+        }),
+      }) as any,
+    )
+    const json = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(json.success).toBe(true)
+    expect(mockNormalizeSettingsPayload).toHaveBeenCalledWith(
+      {
+        storageProvider: 's3',
+        storageS3Bucket: 'new-bucket',
+      },
+      expect.any(Array),
+    )
+    expect(mockUpdateSettings).toHaveBeenCalledWith({
+      storageProvider: 's3',
+      storageS3Bucket: 'new-bucket',
+    })
+  })
+
+  it('存储配置中的对象值会被拒绝', async () => {
+    mockNormalizeSettingsPayload.mockImplementationOnce(() => {
+      const error = new Error('以下设置项的值类型不合法：attachmentBaseUrl')
+      error.name = 'SettingsValidationError'
+      throw error
+    })
+
+    const response = await PUT(
+      new Request('http://localhost/api/attachments/config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          attachmentBaseUrl: { url: 'https://cdn.example.com' },
+        }),
+      }) as any,
+    )
+    const json = await response.json()
+
+    expect(response.status).toBe(400)
+    expect(json.code).toBe('VALIDATION_ERROR')
+    expect(json.message).toContain('attachmentBaseUrl')
     expect(mockUpdateSettings).not.toHaveBeenCalled()
   })
 })

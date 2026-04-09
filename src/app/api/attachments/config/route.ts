@@ -1,31 +1,14 @@
 import { requireRole } from '@/server/auth'
 import { safeParseJson } from '@/server/lib/request'
-import { getAllSettings, updateSettings } from '@/server/services/settings'
+import {
+  getAllSettings,
+  isSettingsValidationError,
+  normalizeSettingsPayload,
+  STORAGE_SETTINGS_KEYS,
+  updateSettings,
+} from '@/server/services/settings'
 import { createStorageProvider } from '@/server/storage'
 import { NextRequest, NextResponse } from 'next/server'
-
-// 存储相关的 settings 键
-const STORAGE_KEYS = [
-  'storageProvider',
-  'storageS3Endpoint',
-  'storageS3Region',
-  'storageS3Bucket',
-  'storageS3AccessKey',
-  'storageS3SecretKey',
-  'storageOssRegion',
-  'storageOssBucket',
-  'storageOssAccessKeyId',
-  'storageOssAccessKeySecret',
-  'storageCosRegion',
-  'storageCosBucket',
-  'storageCosSecretId',
-  'storageCosSecretKey',
-  'storageR2AccountId',
-  'storageR2Bucket',
-  'storageR2AccessKey',
-  'storageR2SecretKey',
-  'attachmentBaseUrl',
-]
 
 /** 脱敏处理：只显示前 4 位和后 4 位，短密钥使用不可碰撞的占位符 */
 const MASKED_PLACEHOLDER = '\x00MASKED\x00'
@@ -42,15 +25,15 @@ export async function GET() {
 
   const all = await getAllSettings()
   const config: Record<string, string> = {}
-  for (const key of STORAGE_KEYS) {
-    config[key] = all[key] || ''
+  for (const key of STORAGE_SETTINGS_KEYS) {
+    config[key] = String(all[key] ?? '')
   }
 
   // 脱敏密钥
-  config.storageS3SecretKey = maskSecret(all.storageS3SecretKey)
-  config.storageOssAccessKeySecret = maskSecret(all.storageOssAccessKeySecret)
-  config.storageCosSecretKey = maskSecret(all.storageCosSecretKey)
-  config.storageR2SecretKey = maskSecret(all.storageR2SecretKey)
+  config.storageS3SecretKey = maskSecret(String(all.storageS3SecretKey ?? ''))
+  config.storageOssAccessKeySecret = maskSecret(String(all.storageOssAccessKeySecret ?? ''))
+  config.storageCosSecretKey = maskSecret(String(all.storageCosSecretKey ?? ''))
+  config.storageR2SecretKey = maskSecret(String(all.storageR2SecretKey ?? ''))
 
   return NextResponse.json({ success: true, data: config })
 }
@@ -63,7 +46,7 @@ export async function PUT(request: NextRequest) {
   const { data: body, error } = await safeParseJson(request)
   if (error) return error
   const all = await getAllSettings()
-  const updates: Record<string, string> = {}
+  const updates: Record<string, unknown> = {}
 
   // 密钥字段：如果提交值与当前脱敏值完全相同，说明用户未修改，跳过更新
   const SECRET_FIELDS: Record<string, string> = {
@@ -73,16 +56,32 @@ export async function PUT(request: NextRequest) {
     storageR2SecretKey: 'storageR2SecretKey',
   }
 
-  for (const key of STORAGE_KEYS) {
-    if (body[key] !== undefined) {
-      if (key in SECRET_FIELDS && body[key] === maskSecret(all[key])) {
+  for (const key of STORAGE_SETTINGS_KEYS) {
+    if ((body as Record<string, unknown>)[key] !== undefined) {
+      if (key in SECRET_FIELDS && body[key] === maskSecret(String(all[key] ?? ''))) {
         continue
       }
       updates[key] = body[key]
     }
   }
 
-  await updateSettings(updates)
+  try {
+    const normalized = normalizeSettingsPayload(updates, STORAGE_SETTINGS_KEYS)
+    await updateSettings(normalized)
+  } catch (error) {
+    if (isSettingsValidationError(error)) {
+      return NextResponse.json(
+        {
+          success: false,
+          code: 'VALIDATION_ERROR',
+          message: error.message,
+        },
+        { status: 400 },
+      )
+    }
+    throw error
+  }
+
   return NextResponse.json({ success: true })
 }
 
@@ -97,17 +96,23 @@ export async function POST(request: NextRequest) {
 
   // 如果密钥是脱敏值（与当前脱敏结果完全相同），从 settings 读取真实值
   const all = await getAllSettings()
-  if (provider === 's3' && config.secretKey === maskSecret(all.storageS3SecretKey)) {
-    config.secretKey = all.storageS3SecretKey || ''
+  if (provider === 's3' && config.secretKey === maskSecret(String(all.storageS3SecretKey ?? ''))) {
+    config.secretKey = String(all.storageS3SecretKey ?? '')
   }
-  if (provider === 'r2' && config.secretKey === maskSecret(all.storageR2SecretKey)) {
-    config.secretKey = all.storageR2SecretKey || ''
+  if (provider === 'r2' && config.secretKey === maskSecret(String(all.storageR2SecretKey ?? ''))) {
+    config.secretKey = String(all.storageR2SecretKey ?? '')
   }
-  if (provider === 'oss' && config.accessKeySecret === maskSecret(all.storageOssAccessKeySecret)) {
-    config.accessKeySecret = all.storageOssAccessKeySecret || ''
+  if (
+    provider === 'oss' &&
+    config.accessKeySecret === maskSecret(String(all.storageOssAccessKeySecret ?? ''))
+  ) {
+    config.accessKeySecret = String(all.storageOssAccessKeySecret ?? '')
   }
-  if (provider === 'cos' && config.secretKey === maskSecret(all.storageCosSecretKey)) {
-    config.secretKey = all.storageCosSecretKey || ''
+  if (
+    provider === 'cos' &&
+    config.secretKey === maskSecret(String(all.storageCosSecretKey ?? ''))
+  ) {
+    config.secretKey = String(all.storageCosSecretKey ?? '')
   }
 
   const storage = await createStorageProvider(provider, config)

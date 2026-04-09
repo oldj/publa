@@ -6,7 +6,7 @@ import { maybeFirst } from '@/server/db/query'
 import { categories, comments, contents, contentTags, tags } from '@/server/db/schema'
 import { normalizeExternalUrl, renderUserTextToHtml } from '@/server/lib/user-content'
 import { publishScheduledPosts } from '@/server/services/posts'
-import { getSetting } from '@/server/services/settings'
+import { getSetting, toBool } from '@/server/services/settings'
 import { and, asc, count, desc, eq, exists, inArray, isNull, lte, ne, sql } from 'drizzle-orm'
 import type { ICategory, IComment, IItemPage, IPost, ITag } from 'typings'
 
@@ -80,8 +80,8 @@ async function buildFrontendPost(
 ): Promise<IPost> {
   const { includeComments = false, preview = false } = options
   // 评论开关逻辑（PRD 4.6）
-  const enableComment = (await getSetting('enableComment')) !== 'false'
-  const showCommentsGlobally = (await getSetting('showCommentsGlobally')) !== 'false'
+  const enableComment = toBool(await getSetting('enableComment'))
+  const showCommentsGlobally = toBool(await getSetting('showCommentsGlobally'))
   // showCommentsGlobally 是最高优先级开关，关闭时一切评论相关均不显示
   const canComment = showCommentsGlobally && enableComment && post.allowComment
   const canShowComments = canComment || (showCommentsGlobally && post.showComments)

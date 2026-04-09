@@ -1,7 +1,7 @@
 import FeedbackForm from '@/components/feedback-form'
 import BasicLayout from '@/layouts/basic'
 import { redirectOrNotFound } from '@/server/lib/frontend-404'
-import { getSetting } from '@/server/services/settings'
+import { getSetting, toBool, toStr } from '@/server/services/settings'
 import { Metadata } from 'next'
 
 export const metadata: Metadata = {
@@ -9,10 +9,9 @@ export const metadata: Metadata = {
 }
 
 export default async function GuestbookPage() {
-  const enableGuestbook = await getSetting('enableGuestbook')
-  if (enableGuestbook === 'false') await redirectOrNotFound('/guestbook')
+  if (!toBool(await getSetting('enableGuestbook'))) await redirectOrNotFound('/guestbook')
 
-  const guestbookWelcome = await getSetting('guestbookWelcome')
+  const guestbookWelcome = toStr(await getSetting('guestbookWelcome'))
 
   return (
     <BasicLayout>

@@ -7,7 +7,7 @@ import { and, desc, eq, isNull, lte } from 'drizzle-orm'
 import { NextResponse } from 'next/server'
 
 export async function GET(request: Request) {
-  const siteUrl = (await getSetting('siteUrl')) || new URL(request.url).origin
+  const siteUrl = String((await getSetting('siteUrl')) ?? '') || new URL(request.url).origin
   const now = new Date().toISOString()
 
   // 获取所有已发布文章

@@ -4,7 +4,7 @@ import { comments, contents } from '@/server/db/schema'
 import { normalizeExternalUrl } from '@/server/lib/user-content'
 import { and, asc, count, desc, eq, inArray, isNull } from 'drizzle-orm'
 import { publishScheduledPosts } from './posts'
-import { getSetting } from './settings'
+import { getSetting, toBool } from './settings'
 
 export interface CommentInput {
   contentId: number
@@ -89,8 +89,8 @@ export async function getCommentContentAccess(
 /** 提交评论 */
 export async function createComment(input: CommentInput) {
   // 校验全局评论开关
-  const showCommentsGlobally = (await getSetting('showCommentsGlobally')) !== 'false'
-  const enableComment = (await getSetting('enableComment')) !== 'false'
+  const showCommentsGlobally = toBool(await getSetting('showCommentsGlobally'))
+  const enableComment = toBool(await getSetting('enableComment'))
   if (!showCommentsGlobally || !enableComment) {
     return { success: false, message: '该内容不允许评论' }
   }

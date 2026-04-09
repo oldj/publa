@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { mockRequireRole, mockGetAllSettings, mockUpdateSettings } = vi.hoisted(() => ({
-  mockRequireRole: vi.fn(),
-  mockGetAllSettings: vi.fn(),
-  mockUpdateSettings: vi.fn(),
-}))
+const { mockRequireRole, mockGetAllSettings, mockNormalizeSettingsPayload, mockUpdateSettings } =
+  vi.hoisted(() => ({
+    mockRequireRole: vi.fn(),
+    mockGetAllSettings: vi.fn(),
+    mockNormalizeSettingsPayload: vi.fn(),
+    mockUpdateSettings: vi.fn(),
+  }))
 
 vi.mock('@/server/auth', () => ({
   requireRole: mockRequireRole,
@@ -17,11 +19,14 @@ vi.mock('@/server/services/settings', () => {
   return {
     ADMIN_SETTINGS_KEYS,
     getAllSettings: mockGetAllSettings,
+    isSettingsValidationError: (error: unknown) =>
+      Boolean(error && typeof error === 'object' && 'name' in (error as Record<string, unknown>)),
+    normalizeSettingsPayload: mockNormalizeSettingsPayload,
     updateSettings: mockUpdateSettings,
-    pickSettings: (allSettings: Record<string, string>, keys: readonly string[]) => {
-      const result: Record<string, string> = {}
+    pickSettings: (allSettings: Record<string, unknown>, keys: readonly string[]) => {
+      const result: Record<string, unknown> = {}
       for (const key of keys) {
-        result[key] = allSettings[key] || ''
+        result[key] = allSettings[key] ?? ''
       }
       return result
     },
@@ -34,6 +39,7 @@ describe('/api/settings', () => {
   beforeEach(() => {
     mockRequireRole.mockReset()
     mockGetAllSettings.mockReset()
+    mockNormalizeSettingsPayload.mockReset()
     mockUpdateSettings.mockReset()
 
     mockRequireRole.mockResolvedValue({
@@ -42,10 +48,11 @@ describe('/api/settings', () => {
     })
     mockGetAllSettings.mockResolvedValue({
       siteTitle: 'Publa',
-      enableComment: 'true',
-      showCommentsGlobally: 'false',
+      enableComment: true,
+      showCommentsGlobally: false,
       storageS3SecretKey: 'SECRET_VALUE',
     })
+    mockNormalizeSettingsPayload.mockImplementation((payload) => payload)
   })
 
   it('未登录读取设置时返回 401', async () => {
@@ -88,44 +95,85 @@ describe('/api/settings', () => {
     expect(json.success).toBe(true)
     expect(json.data).toEqual({
       siteTitle: 'Publa',
-      enableComment: 'true',
-      showCommentsGlobally: 'false',
+      enableComment: true,
+      showCommentsGlobally: false,
     })
     expect(json.data.storageS3SecretKey).toBeUndefined()
   })
 
   it('管理员可以更新白名单内设置', async () => {
-    const response = await PUT(new Request('http://localhost/api/settings', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        siteTitle: 'New Title',
-        enableComment: 'false',
-      }),
-    }) as any)
+    const response = await PUT(
+      new Request('http://localhost/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          siteTitle: 'New Title',
+          enableComment: false,
+        }),
+      }) as any,
+    )
     const json = await response.json()
 
     expect(response.status).toBe(200)
     expect(json.success).toBe(true)
+    expect(mockNormalizeSettingsPayload).toHaveBeenCalledWith(
+      {
+        siteTitle: 'New Title',
+        enableComment: false,
+      },
+      ['siteTitle', 'enableComment', 'showCommentsGlobally'],
+    )
     expect(mockUpdateSettings).toHaveBeenCalledWith({
       siteTitle: 'New Title',
-      enableComment: 'false',
+      enableComment: false,
     })
   })
 
   it('通过 /api/settings 写入敏感字段会被拒绝', async () => {
-    const response = await PUT(new Request('http://localhost/api/settings', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        siteTitle: 'New Title',
-        storageS3SecretKey: 'SHOULD_NOT_PASS',
-      }),
-    }) as any)
+    mockNormalizeSettingsPayload.mockImplementationOnce(() => {
+      const error = new Error('不支持修改以下设置项：storageS3SecretKey')
+      error.name = 'SettingsValidationError'
+      throw error
+    })
+
+    const response = await PUT(
+      new Request('http://localhost/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          siteTitle: 'New Title',
+          storageS3SecretKey: 'SHOULD_NOT_PASS',
+        }),
+      }) as any,
+    )
     const json = await response.json()
 
     expect(response.status).toBe(400)
     expect(json.code).toBe('VALIDATION_ERROR')
+    expect(mockUpdateSettings).not.toHaveBeenCalled()
+  })
+
+  it('通过 /api/settings 写入对象值会被拒绝', async () => {
+    mockNormalizeSettingsPayload.mockImplementationOnce(() => {
+      const error = new Error('以下设置项的值类型不合法：siteTitle')
+      error.name = 'SettingsValidationError'
+      throw error
+    })
+
+    const response = await PUT(
+      new Request('http://localhost/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          siteTitle: { text: 'New Title' },
+        }),
+      }) as any,
+    )
+    const json = await response.json()
+
+    expect(response.status).toBe(400)
+    expect(json.code).toBe('VALIDATION_ERROR')
+    expect(json.message).toContain('siteTitle')
     expect(mockUpdateSettings).not.toHaveBeenCalled()
   })
 })

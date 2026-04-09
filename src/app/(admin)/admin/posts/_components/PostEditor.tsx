@@ -245,8 +245,8 @@ export default function PostEditor({ postId }: { postId?: number }) {
       }
       if (settingsData.success) {
         const s = settingsData.data
-        setGlobalCommentOff(s.enableComment === 'false')
-        setGlobalShowCommentsOff(s.showCommentsGlobally === 'false')
+        setGlobalCommentOff(s.enableComment === false)
+        setGlobalShowCommentsOff(s.showCommentsGlobally === false)
       }
     })
   }, [])

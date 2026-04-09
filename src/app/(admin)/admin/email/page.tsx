@@ -40,29 +40,37 @@ interface NotifyConfig {
 const DEFAULT_NOTIFY: NotifyConfig = { enabled: false, userIds: [] }
 const SENSITIVE_KEYS = ['emailResendApiKey', 'emailSmtpPassword']
 
-function parseNotifyConfig(value: string): NotifyConfig {
+function parseNotifyConfig(value: unknown): NotifyConfig {
   if (!value) return { ...DEFAULT_NOTIFY }
-  try {
-    const parsed = JSON.parse(value)
-    return {
-      enabled: !!parsed.enabled,
-      userIds: Array.isArray(parsed.userIds) ? parsed.userIds : [],
+  // 兼容旧格式（字符串）和新格式（对象）
+  let parsed = value
+  if (typeof parsed === 'string') {
+    try {
+      parsed = JSON.parse(parsed)
+    } catch {
+      return { ...DEFAULT_NOTIFY }
     }
-  } catch {
-    return { ...DEFAULT_NOTIFY }
   }
+  if (parsed && typeof parsed === 'object') {
+    const obj = parsed as Record<string, unknown>
+    return {
+      enabled: !!obj.enabled,
+      userIds: Array.isArray(obj.userIds) ? obj.userIds : [],
+    }
+  }
+  return { ...DEFAULT_NOTIFY }
 }
 
 export default function EmailSettingsPage() {
   const router = useRouter()
   const currentUser = useCurrentUser()
-  const [settings, setSettings] = useState<Record<string, string>>({})
+  const [settings, setSettings] = useState<Record<string, unknown>>({})
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(false)
   const [testTo, setTestTo] = useState('')
   const [testLoading, setTestLoading] = useState(false)
   const initialRef = useRef<{
-    settings: Record<string, string>
+    settings: Record<string, unknown>
     comment: NotifyConfig
     guestbook: NotifyConfig
   }>({
@@ -126,15 +134,15 @@ export default function EmailSettingsPage() {
     setSettings((prev) => ({ ...prev, [key]: value }))
   }
 
-  const provider = settings.emailProvider || ''
+  const provider = String(settings.emailProvider ?? '')
 
   const handleSave = async () => {
     setLoading(true)
     try {
-      const payload: Record<string, string> = {
+      const payload: Record<string, unknown> = {
         ...settings,
-        emailNotifyNewComment: JSON.stringify(commentNotify),
-        emailNotifyNewGuestbook: JSON.stringify(guestbookNotify),
+        emailNotifyNewComment: commentNotify,
+        emailNotifyNewGuestbook: guestbookNotify,
       }
       // 敏感字段为空时不提交，避免覆盖已有值
       for (const key of SENSITIVE_KEYS) {
@@ -274,7 +282,8 @@ export default function EmailSettingsPage() {
 
   const isDirty =
     Object.keys(settings).some(
-      (key) => settings[key] !== (initialRef.current.settings[key] ?? ''),
+      (key) =>
+        JSON.stringify(settings[key]) !== JSON.stringify(initialRef.current.settings[key] ?? ''),
     ) ||
     commentNotify.enabled !== initialRef.current.comment.enabled ||
     JSON.stringify(commentNotify.userIds) !== JSON.stringify(initialRef.current.comment.userIds) ||
@@ -305,7 +314,7 @@ export default function EmailSettingsPage() {
           label="发件人地址"
           description={provider === 'resend' ? '需在 Resend 控制台完成域名验证' : ''}
           placeholder="noreply@example.com"
-          value={settings.emailSmtpFrom || ''}
+          value={String(settings.emailSmtpFrom ?? '')}
           onChange={(e) => setField('emailSmtpFrom', e.currentTarget.value)}
         />
       )}
@@ -316,7 +325,7 @@ export default function EmailSettingsPage() {
           placeholder={
             configuredSecrets.has('emailResendApiKey') ? '已配置，留空保留原值' : 're_...'
           }
-          value={settings.emailResendApiKey || ''}
+          value={String(settings.emailResendApiKey ?? '')}
           onChange={(e) => setField('emailResendApiKey', e.currentTarget.value)}
         />
       )}
@@ -326,32 +335,32 @@ export default function EmailSettingsPage() {
             <TextInput
               label="SMTP 主机"
               placeholder="smtp.example.com"
-              value={settings.emailSmtpHost || ''}
+              value={String(settings.emailSmtpHost ?? '')}
               onChange={(e) => setField('emailSmtpHost', e.currentTarget.value)}
             />
             <TextInput
               label="SMTP 端口"
               placeholder="587"
-              value={settings.emailSmtpPort || ''}
+              value={String(settings.emailSmtpPort ?? '')}
               onChange={(e) => setField('emailSmtpPort', e.currentTarget.value)}
             />
           </Group>
           <Group grow>
             <TextInput
               label="用户名"
-              value={settings.emailSmtpUsername || ''}
+              value={String(settings.emailSmtpUsername ?? '')}
               onChange={(e) => setField('emailSmtpUsername', e.currentTarget.value)}
             />
             <PasswordInput
               label="密码"
               placeholder={configuredSecrets.has('emailSmtpPassword') ? '已配置，留空保留原值' : ''}
-              value={settings.emailSmtpPassword || ''}
+              value={String(settings.emailSmtpPassword ?? '')}
               onChange={(e) => setField('emailSmtpPassword', e.currentTarget.value)}
             />
           </Group>
           <Select
             label="加密方式"
-            value={settings.emailSmtpEncryption || 'tls'}
+            value={String(settings.emailSmtpEncryption ?? 'tls')}
             onChange={(v) => setField('emailSmtpEncryption', v || 'tls')}
             data={[
               { label: 'TLS (推荐)', value: 'tls' },

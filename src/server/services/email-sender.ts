@@ -55,15 +55,15 @@ async function sendViaSmtp(
 /** 发送邮件，根据当前配置自动选择 Resend 或 SMTP */
 export async function sendEmail(to: string[], subject: string, html: string): Promise<SendResult> {
   const s = await getAllSettings()
-  const provider = s.emailProvider
-  const from = s.emailSmtpFrom
+  const provider = String(s.emailProvider ?? '')
+  const from = String(s.emailSmtpFrom ?? '')
 
   if (!from) {
     return { success: false, error: 'Email sender address not configured' }
   }
 
   if (provider === 'resend') {
-    const apiKey = s.emailResendApiKey
+    const apiKey = String(s.emailResendApiKey ?? '')
     if (!apiKey) {
       return { success: false, error: 'Resend API key not configured' }
     }
@@ -71,11 +71,11 @@ export async function sendEmail(to: string[], subject: string, html: string): Pr
   }
 
   if (provider === 'smtp') {
-    const host = s.emailSmtpHost
-    const port = parseInt(s.emailSmtpPort || '587', 10)
-    const username = s.emailSmtpUsername
-    const password = s.emailSmtpPassword
-    const encryption = s.emailSmtpEncryption || 'tls'
+    const host = String(s.emailSmtpHost ?? '')
+    const port = Number(s.emailSmtpPort) || 587
+    const username = String(s.emailSmtpUsername ?? '')
+    const password = String(s.emailSmtpPassword ?? '')
+    const encryption = String(s.emailSmtpEncryption || 'tls')
     if (!host) {
       return { success: false, error: 'SMTP host not configured' }
     }

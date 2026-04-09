@@ -122,12 +122,12 @@ export function isValidFaviconUrl(value: string): boolean {
   }
 }
 
-export function getFaviconConfigFromSettings(allSettings: Record<string, string>): FaviconConfig {
-  const rawUrl = (allSettings.faviconUrl || '').trim()
-  const rawMimeType = normalizeMimeType(allSettings.faviconMimeType)
-  const rawData = allSettings.faviconData || ''
-  const rawVersion = (allSettings.faviconVersion || '').trim()
-  const requestedMode = normalizeFaviconMode(allSettings.faviconMode)
+export function getFaviconConfigFromSettings(allSettings: Record<string, unknown>): FaviconConfig {
+  const rawUrl = String(allSettings.faviconUrl ?? '').trim()
+  const rawMimeType = normalizeMimeType(String(allSettings.faviconMimeType ?? ''))
+  const rawData = String(allSettings.faviconData ?? '')
+  const rawVersion = String(allSettings.faviconVersion ?? '').trim()
+  const requestedMode = normalizeFaviconMode(String(allSettings.faviconMode ?? ''))
 
   let mode: FaviconMode = requestedMode
   if (mode === 'url' && !isValidFaviconUrl(rawUrl)) {
@@ -184,7 +184,7 @@ async function readDefaultFavicon(): Promise<FaviconAsset> {
 }
 
 async function buildFaviconAsset(
-  settings: Record<string, string>,
+  settings: Record<string, unknown>,
   config: FaviconConfig,
 ): Promise<FaviconAsset> {
   if (config.mode === 'url') {
@@ -197,7 +197,7 @@ async function buildFaviconAsset(
 
   if (config.mode === 'upload') {
     try {
-      const body = Buffer.from(settings.faviconData || '', 'base64')
+      const body = Buffer.from(String(settings.faviconData ?? ''), 'base64')
       validateUploadBuffer(body, config.mimeType)
       return {
         kind: 'binary',
@@ -214,7 +214,7 @@ async function buildFaviconAsset(
 }
 
 async function loadFaviconState(): Promise<CachedFaviconState> {
-  let settings: Record<string, string> = {}
+  let settings: Record<string, unknown> = {}
 
   try {
     settings = await getAllSettings()

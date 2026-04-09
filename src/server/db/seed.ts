@@ -2,43 +2,46 @@
  * 数据库初始数据脚本
  * 用于系统首次初始化时填充默认数据
  */
+import { serializeSettingValue } from '@/server/services/settings'
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core'
 import { db, dbReady } from './index'
 import { contents, menus, settings } from './schema'
 
-/** 默认系统设置 */
-const defaultSettings: { key: string; value: string }[] = [
-  { key: 'siteTitle', value: 'Publa' },
-  { key: 'siteSlogan', value: 'Yet Another Amazing Blog' },
-  { key: 'siteDescription', value: '' },
-  { key: 'siteUrl', value: '' },
-  { key: 'language', value: 'zh' },
-  { key: 'timezone', value: 'Asia/Shanghai' },
-  { key: 'faviconUrl', value: '' },
-  { key: 'faviconMode', value: 'default' },
-  { key: 'faviconData', value: '' },
-  { key: 'faviconMimeType', value: '' },
-  { key: 'faviconVersion', value: '' },
-  { key: 'defaultTheme', value: 'light' },
-  { key: 'enableComment', value: 'true' },
-  { key: 'showCommentsGlobally', value: 'true' },
-  { key: 'defaultApprove', value: 'false' },
-  { key: 'enableRss', value: 'true' },
-  { key: 'rssTitle', value: '' },
-  { key: 'rssDescription', value: '' },
-  { key: 'rssContent', value: 'full' },
-  { key: 'rssLimit', value: '20' },
-  { key: 'enableGuestbook', value: 'true' },
-  { key: 'enableSearch', value: 'true' },
-  { key: 'guestbookWelcome', value: '欢迎给我留言！' },
-  // 底部版权
-  { key: 'footerCopyright', value: '{SITE_NAME} &copy; {FULL_YEAR}' },
-  // 自定义 HTML
-  { key: 'customAfterPostHtml', value: '' },
-  { key: 'customHeadHtml', value: '' },
-  { key: 'customBodyStartHtml', value: '' },
-  { key: 'customBodyEndHtml', value: '' },
-]
+/** 默认系统设置（原生类型，插入时自动 JSON 序列化） */
+const defaultSettings = (
+  [
+    { key: 'siteTitle', value: 'Publa' },
+    { key: 'siteSlogan', value: 'Yet Another Amazing Blog' },
+    { key: 'siteDescription', value: '' },
+    { key: 'siteUrl', value: '' },
+    { key: 'language', value: 'zh' },
+    { key: 'timezone', value: 'Asia/Shanghai' },
+    { key: 'faviconUrl', value: '' },
+    { key: 'faviconMode', value: 'default' },
+    { key: 'faviconData', value: '' },
+    { key: 'faviconMimeType', value: '' },
+    { key: 'faviconVersion', value: '' },
+    { key: 'defaultTheme', value: 'light' },
+    { key: 'enableComment', value: true },
+    { key: 'showCommentsGlobally', value: true },
+    { key: 'defaultApprove', value: false },
+    { key: 'enableRss', value: true },
+    { key: 'rssTitle', value: '' },
+    { key: 'rssDescription', value: '' },
+    { key: 'rssContent', value: 'full' },
+    { key: 'rssLimit', value: 20 },
+    { key: 'enableGuestbook', value: true },
+    { key: 'enableSearch', value: true },
+    { key: 'guestbookWelcome', value: '欢迎给我留言！' },
+    // 底部版权
+    { key: 'footerCopyright', value: '{SITE_NAME} &copy; {FULL_YEAR}' },
+    // 自定义 HTML
+    { key: 'customAfterPostHtml', value: '' },
+    { key: 'customHeadHtml', value: '' },
+    { key: 'customBodyStartHtml', value: '' },
+    { key: 'customBodyEndHtml', value: '' },
+  ] as { key: string; value: unknown }[]
+).map(({ key, value }) => ({ key, value: serializeSettingValue(key, value) }))
 
 /** 默认菜单项 */
 const defaultMenus = [

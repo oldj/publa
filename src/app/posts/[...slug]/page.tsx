@@ -197,7 +197,7 @@ export default async function Page({
         post={data.post}
         html={data.html}
         headers={data.headers}
-        afterPostHtml={afterPostHtml || undefined}
+        afterPostHtml={String(afterPostHtml ?? '') || undefined}
       />
     </BasicLayout>
   )

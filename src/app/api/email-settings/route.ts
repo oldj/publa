@@ -3,6 +3,8 @@ import { safeParseJson } from '@/server/lib/request'
 import {
   EMAIL_SETTINGS_KEYS,
   getAllSettings,
+  isSettingsValidationError,
+  normalizeSettingsPayload,
   pickSettings,
   updateSettings,
 } from '@/server/services/settings'
@@ -30,24 +32,28 @@ export async function PUT(request: NextRequest) {
   const { data: body, error } = await safeParseJson(request)
   if (error) return error
 
-  const invalidKeys = Object.keys(body).filter((key) => !EMAIL_SETTINGS_KEYS.includes(key as any))
-  if (invalidKeys.length > 0) {
-    return NextResponse.json(
-      {
-        success: false,
-        code: 'VALIDATION_ERROR',
-        message: `不支持修改以下设置项：${invalidKeys.join(', ')}`,
-      },
-      { status: 400 },
-    )
-  }
-
   // 敏感字段：掩码或空值表示未修改，跳过以避免覆盖原值
-  const filtered = { ...body }
+  const filtered = { ...(body as Record<string, unknown>) }
   for (const key of SENSITIVE_KEYS) {
     if (!filtered[key] || filtered[key] === MASK) delete filtered[key]
   }
 
-  await updateSettings(filtered)
+  try {
+    const normalized = normalizeSettingsPayload(filtered, EMAIL_SETTINGS_KEYS)
+    await updateSettings(normalized)
+  } catch (error) {
+    if (isSettingsValidationError(error)) {
+      return NextResponse.json(
+        {
+          success: false,
+          code: 'VALIDATION_ERROR',
+          message: error.message,
+        },
+        { status: 400 },
+      )
+    }
+    throw error
+  }
+
   return NextResponse.json({ success: true })
 }

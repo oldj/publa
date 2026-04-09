@@ -22,7 +22,7 @@ export async function initJwtSecret(): Promise<void> {
   const { getSetting, setSetting } = await import('@/server/services/settings')
 
   const stored = await getSetting('jwtSecret')
-  if (stored) {
+  if (typeof stored === 'string' && stored) {
     process.env.JWT_SECRET = stored
     console.log('JWT secret loaded from database.')
     return

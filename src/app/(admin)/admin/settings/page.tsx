@@ -39,8 +39,8 @@ const DEFAULT_FAVICON: FaviconState = {
 export default function SettingsPage() {
   const router = useRouter()
   const currentUser = useCurrentUser()
-  const [settings, setSettings] = useState<Record<string, string>>({})
-  const initialSettingsRef = useRef<Record<string, string>>({})
+  const [settings, setSettings] = useState<Record<string, unknown>>({})
+  const initialSettingsRef = useRef<Record<string, unknown>>({})
   const [favicon, setFavicon] = useState<FaviconState>(DEFAULT_FAVICON)
   const [faviconUrlInput, setFaviconUrlInput] = useState('')
   const [faviconAction, setFaviconAction] = useState<'url' | 'upload' | 'reset' | null>(null)
@@ -87,15 +87,16 @@ export default function SettingsPage() {
     return null
   }
 
-  const setField = (key: string, value: string) => {
+  const setField = (key: string, value: unknown) => {
     setSettings((prev) => ({ ...prev, [key]: value }))
   }
 
   const handleSave = async () => {
     // 检查 customHeadHtml 中是否存在不支持的标签
-    if (settings.customHeadHtml) {
+    const headHtml = String(settings.customHeadHtml ?? '')
+    if (headHtml) {
       const supportedTags = new Set(['script', 'meta', 'link', 'style'])
-      const allTags = settings.customHeadHtml.match(/<([a-zA-Z][\w-]*)/g) || []
+      const allTags = headHtml.match(/<([a-zA-Z][\w-]*)/g) || []
       const unsupported = allTags
         .map((t) => t.slice(1))
         .filter((name) => !supportedTags.has(name.toLowerCase()))
@@ -201,7 +202,8 @@ export default function SettingsPage() {
   }
 
   const isDirty = Object.keys(settings).some(
-    (key) => settings[key] !== (initialSettingsRef.current[key] ?? ''),
+    (key) =>
+      JSON.stringify(settings[key]) !== JSON.stringify(initialSettingsRef.current[key] ?? ''),
   )
 
   const faviconModeLabel =
@@ -216,25 +218,25 @@ export default function SettingsPage() {
         <TextInput
           label="站点标题"
           placeholder="Publa"
-          value={settings.siteTitle || ''}
+          value={String(settings.siteTitle ?? '')}
           onChange={(e) => setField('siteTitle', e.target.value)}
         />
         <TextInput
           label="站点 Slogan"
           placeholder="Yet Another Amazing Blog"
-          value={settings.siteSlogan || ''}
+          value={String(settings.siteSlogan ?? '')}
           onChange={(e) => setField('siteSlogan', e.target.value)}
         />
         <TextInput
           label="站点描述"
-          value={settings.siteDescription || ''}
+          value={String(settings.siteDescription ?? '')}
           onChange={(e) => setField('siteDescription', e.target.value)}
         />
         <TextInput
           label="站点 URL"
           description="如 https://www.example.com，结尾不带斜杠，在生成 RSS 和 Atom 链接等场景会用到"
           placeholder="https://example.com"
-          value={settings.siteUrl || ''}
+          value={String(settings.siteUrl ?? '')}
           onChange={(e) => setField('siteUrl', e.target.value)}
         />
 
@@ -320,42 +322,40 @@ export default function SettingsPage() {
         <Switch
           label="全局显示评论列表"
           description="关闭后，全站所有文章都不显示已有评论列表"
-          checked={settings.showCommentsGlobally === 'true'}
-          onChange={(e) =>
-            setField('showCommentsGlobally', e.currentTarget.checked ? 'true' : 'false')
-          }
+          checked={settings.showCommentsGlobally === true}
+          onChange={(e) => setField('showCommentsGlobally', e.currentTarget.checked)}
         />
         <Switch
           label="全局启用评论"
           description="关闭后，全站所有文章都不允许提交新评论"
-          checked={settings.enableComment === 'true'}
-          disabled={settings.showCommentsGlobally === 'false'}
-          onChange={(e) => setField('enableComment', e.currentTarget.checked ? 'true' : 'false')}
+          checked={settings.enableComment === true}
+          disabled={settings.showCommentsGlobally === false}
+          onChange={(e) => setField('enableComment', e.currentTarget.checked)}
         />
         <Switch
           label="评论默认通过审核"
-          checked={settings.defaultApprove === 'true'}
-          onChange={(e) => setField('defaultApprove', e.currentTarget.checked ? 'true' : 'false')}
+          checked={settings.defaultApprove === true}
+          onChange={(e) => setField('defaultApprove', e.currentTarget.checked)}
         />
 
         <Divider label="留言设置" labelPosition="left" mt="md" />
         <Switch
           label="启用留言板"
           description={<>留言板路径：/guestbook</>}
-          checked={settings.enableGuestbook === 'true'}
-          onChange={(e) => setField('enableGuestbook', e.currentTarget.checked ? 'true' : 'false')}
+          checked={settings.enableGuestbook === true}
+          onChange={(e) => setField('enableGuestbook', e.currentTarget.checked)}
         />
         <TextInput
           label="留言板欢迎语"
           placeholder="欢迎给我留言！"
-          value={settings.guestbookWelcome || ''}
+          value={String(settings.guestbookWelcome ?? '')}
           onChange={(e) => setField('guestbookWelcome', e.target.value)}
         />
 
         <Divider label="RSS 设置" labelPosition="left" mt="md" />
         <Radio.Group
           label="RSS 输出内容"
-          value={settings.rssContent || 'full'}
+          value={String(settings.rssContent ?? 'full')}
           onChange={(v) => setField('rssContent', v)}
         >
           <Group mt="xs">
@@ -367,8 +367,8 @@ export default function SettingsPage() {
           label="RSS 条数"
           min={1}
           max={100}
-          value={parseInt(settings.rssLimit || '10')}
-          onChange={(v) => setField('rssLimit', String(v || 10))}
+          value={Number(settings.rssLimit) || 10}
+          onChange={(v) => setField('rssLimit', Number(v) || 10)}
           style={{ width: 120 }}
         />
 
@@ -376,8 +376,8 @@ export default function SettingsPage() {
         <Switch
           label="启用搜索"
           description="关闭后，页脚的搜索框将不再显示"
-          checked={settings.enableSearch === 'true'}
-          onChange={(e) => setField('enableSearch', e.currentTarget.checked ? 'true' : 'false')}
+          checked={settings.enableSearch === true}
+          onChange={(e) => setField('enableSearch', e.currentTarget.checked)}
         />
 
         <Divider label="底部版权" labelPosition="left" mt="md" />
@@ -387,7 +387,7 @@ export default function SettingsPage() {
           description="支持 HTML，可用 {SITE_NAME} 引用站点名，{FULL_YEAR} 引用当前年份"
           autosize
           minRows={2}
-          value={settings.footerCopyright || ''}
+          value={String(settings.footerCopyright ?? '')}
           onChange={(e) => setField('footerCopyright', e.target.value)}
           styles={{ input: { maxHeight: 400, overflow: 'auto' } }}
         />
@@ -399,7 +399,7 @@ export default function SettingsPage() {
           placeholder="<div>...</div>"
           autosize
           minRows={3}
-          value={settings.customAfterPostHtml || ''}
+          value={String(settings.customAfterPostHtml ?? '')}
           onChange={(e) => setField('customAfterPostHtml', e.target.value)}
           styles={{ input: { fontFamily: 'monospace', maxHeight: 400, overflow: 'auto' } }}
         />
@@ -409,7 +409,7 @@ export default function SettingsPage() {
           placeholder="<script>...</script>"
           autosize
           minRows={3}
-          value={settings.customHeadHtml || ''}
+          value={String(settings.customHeadHtml ?? '')}
           onChange={(e) => setField('customHeadHtml', e.target.value)}
           styles={{ input: { fontFamily: 'monospace', maxHeight: 400, overflow: 'auto' } }}
         />
@@ -419,7 +419,7 @@ export default function SettingsPage() {
           placeholder="<script>...</script>"
           autosize
           minRows={3}
-          value={settings.customBodyStartHtml || ''}
+          value={String(settings.customBodyStartHtml ?? '')}
           onChange={(e) => setField('customBodyStartHtml', e.target.value)}
           styles={{ input: { fontFamily: 'monospace', maxHeight: 400, overflow: 'auto' } }}
         />
@@ -429,7 +429,7 @@ export default function SettingsPage() {
           placeholder="<script>...</script>"
           autosize
           minRows={3}
-          value={settings.customBodyEndHtml || ''}
+          value={String(settings.customBodyEndHtml ?? '')}
           onChange={(e) => setField('customBodyEndHtml', e.target.value)}
           styles={{ input: { fontFamily: 'monospace', maxHeight: 400, overflow: 'auto' } }}
         />

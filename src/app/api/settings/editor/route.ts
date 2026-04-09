@@ -1,9 +1,5 @@
 import { requireCurrentUser } from '@/server/auth'
-import {
-  EDITOR_SETTINGS_KEYS,
-  getAllSettings,
-  pickSettings,
-} from '@/server/services/settings'
+import { EDITOR_SETTINGS_KEYS, getAllSettings, pickSettings } from '@/server/services/settings'
 import { NextResponse } from 'next/server'
 
 export async function GET() {

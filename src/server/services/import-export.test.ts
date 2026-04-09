@@ -245,6 +245,23 @@ describe('exportSettingsData', () => {
     expect(keys).not.toContain('jwtSecret')
   })
 
+  it('导出设置数据会按真实类型输出 value', async () => {
+    await testDb.insert(schema.settings).values([
+      { key: 'siteTitle', value: '"我的博客"' },
+      { key: 'enableComment', value: 'false' },
+      { key: 'rssLimit', value: '20' },
+      { key: 'emailNotifyNewComment', value: '{"enabled":true,"userIds":[1]}' },
+    ])
+
+    const data = await exportSettingsData()
+    const map = Object.fromEntries(data.settings.map((item) => [item.key, item.value]))
+
+    expect(map.siteTitle).toBe('我的博客')
+    expect(map.enableComment).toBe(false)
+    expect(map.rssLimit).toBe(20)
+    expect(map.emailNotifyNewComment).toEqual({ enabled: true, userIds: [1] })
+  })
+
   it('用户数据不包含密码', async () => {
     const data = await exportSettingsData()
     for (const u of data.users) {
@@ -850,6 +867,28 @@ describe('importSettingsData', () => {
     expect(map.jwtSecret).toBe('EXISTING_JWT_SECRET')
   })
 
+  it('导入设置时兼容旧格式字符串值并规范化为真实类型', async () => {
+    await importSettingsData(
+      {
+        settings: [
+          { key: 'siteTitle', value: '新站点' },
+          { key: 'enableComment', value: 'false' },
+          { key: 'rssLimit', value: '20' },
+          { key: 'emailNotifyNewComment', value: '{"enabled":true,"userIds":[1]}' },
+        ],
+      },
+      1,
+    )
+
+    const allSettings = await testDb.select().from(schema.settings)
+    const map = Object.fromEntries(allSettings.map((s) => [s.key, s.value]))
+
+    expect(map.siteTitle).toBe('新站点')
+    expect(map.enableComment).toBe('false')
+    expect(map.rssLimit).toBe('20')
+    expect(map.emailNotifyNewComment).toBe('{"enabled":true,"userIds":[1]}')
+  })
+
   it('覆盖导入菜单和跳转规则', async () => {
     await seedSettingsData()
 
@@ -1038,14 +1077,36 @@ describe('importSettingsData', () => {
   })
 
   it('导出后再导入设置数据一致', async () => {
-    await seedSettingsData()
+    await testDb.insert(schema.settings).values([
+      { key: 'siteTitle', value: '"我的博客"' },
+      { key: 'enableComment', value: 'false' },
+      { key: 'rssLimit', value: '20' },
+      { key: 'emailNotifyNewComment', value: '{"enabled":true,"userIds":[1]}' },
+    ])
+    await testDb.insert(schema.menus).values([{ id: 60, title: '首页', url: '/' }])
+    await testDb.insert(schema.redirectRules).values([
+      {
+        id: 70,
+        sortOrder: 1,
+        pathRegex: '^/old/(\\d+)$',
+        redirectTo: '/posts/$1',
+        redirectType: '301',
+        memo: '旧路径跳转',
+      },
+    ])
+
     const exported = await exportSettingsData()
 
     await importSettingsData(exported, 1)
 
     const allSettings = await testDb.select().from(schema.settings)
-    expect(allSettings).toHaveLength(2)
+    expect(allSettings).toHaveLength(4)
     expect(allSettings.find((s) => s.key === 'siteTitle')?.value).toBe('我的博客')
+    expect(allSettings.find((s) => s.key === 'enableComment')?.value).toBe('false')
+    expect(allSettings.find((s) => s.key === 'rssLimit')?.value).toBe('20')
+    expect(allSettings.find((s) => s.key === 'emailNotifyNewComment')?.value).toBe(
+      '{"enabled":true,"userIds":[1]}',
+    )
 
     const allRedirectRules = await testDb.select().from(schema.redirectRules)
     expect(allRedirectRules).toHaveLength(1)
