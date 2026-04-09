@@ -64,7 +64,8 @@ export async function proxy(request: NextRequest) {
       }
 
       // rewrite 到内部 /admin 路由，设置 x-pathname 为内部路径
-      const rewriteUrl = new URL(internalPath, request.url)
+      const rewriteUrl = request.nextUrl.clone()
+      rewriteUrl.pathname = internalPath
       return NextResponse.rewrite(rewriteUrl, {
         request: {
           headers: new Headers([...request.headers.entries(), ['x-pathname', internalPath]]),
