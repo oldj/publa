@@ -43,7 +43,7 @@ export async function getFrontendCategories(): Promise<ICategory[]> {
       ),
     )
     .groupBy(categories.id)
-    .orderBy(asc(categories.id))
+    .orderBy(asc(categories.sortOrder), asc(categories.id))
 
   return rows
 }
