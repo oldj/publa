@@ -15,6 +15,11 @@ export const theme = createTheme({
         label: { textBoxTrim: 'none' },
       },
     },
+    Combobox: {
+      defaultProps: {
+        shadow: 'md',
+      },
+    },
     Modal: {
       defaultProps: {
         centered: true,
