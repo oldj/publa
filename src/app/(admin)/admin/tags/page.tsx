@@ -4,10 +4,27 @@ import { NowrapBadge } from '../../_components/NowrapBadge'
 import adminStyles from '../../_components/AdminShell.module.scss'
 
 import { notify } from '@/lib/notify'
-import { ActionIcon, Box, Button, Group, Modal, Table, Text, TextInput, Title } from '@mantine/core'
+import {
+  ActionIcon,
+  Box,
+  Button,
+  Group,
+  Modal,
+  Table,
+  Text,
+  TextInput,
+  Title,
+  UnstyledButton,
+} from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
-import { IconPencil, IconPlus, IconTrash } from '@tabler/icons-react'
-import { useCallback, useEffect, useState } from 'react'
+import {
+  IconChevronDown,
+  IconChevronUp,
+  IconPencil,
+  IconPlus,
+  IconTrash,
+} from '@tabler/icons-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 interface Tag {
   id: number
@@ -32,12 +49,37 @@ const emptyForm: FormData = {
   seoDescription: '',
 }
 
+type SortKey = 'name' | 'slug' | 'postCount'
+
 export default function TagsPage() {
   const [tagList, setTagList] = useState<Tag[]>([])
   const [opened, { open, close }] = useDisclosure(false)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [form, setForm] = useState<FormData>(emptyForm)
   const [loading, setLoading] = useState(false)
+  const [sortBy, setSortBy] = useState<SortKey>('postCount')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+
+  const sortedTags = useMemo(() => {
+    return [...tagList].sort((a, b) => {
+      let cmp: number
+      if (sortBy === 'postCount') {
+        cmp = a.postCount - b.postCount
+      } else {
+        cmp = a[sortBy].localeCompare(b[sortBy], 'zh')
+      }
+      return sortDir === 'asc' ? cmp : -cmp
+    })
+  }, [tagList, sortBy, sortDir])
+
+  const toggleSort = (key: SortKey) => {
+    if (sortBy === key) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortBy(key)
+      setSortDir(key === 'postCount' ? 'desc' : 'asc')
+    }
+  }
 
   const fetchTags = useCallback(async () => {
     const res = await fetch('/api/tags')
@@ -127,17 +169,35 @@ export default function TagsPage() {
         <Table highlightOnHover>
           <Table.Thead>
             <Table.Tr>
-              <Table.Th>ID</Table.Th>
-              <Table.Th>名称</Table.Th>
-              <Table.Th>Slug</Table.Th>
-              <Table.Th>文章数</Table.Th>
+              {(
+                [
+                  ['name', '名称'],
+                  ['slug', 'Slug'],
+                  ['postCount', '文章数'],
+                ] as const
+              ).map(([key, label]) => (
+                <Table.Th key={key}>
+                  <UnstyledButton onClick={() => toggleSort(key)}>
+                    <Group gap={4} wrap="nowrap">
+                      <Text fw={700} size="sm">
+                        {label}
+                      </Text>
+                      {sortBy === key &&
+                        (sortDir === 'asc' ? (
+                          <IconChevronUp size={14} />
+                        ) : (
+                          <IconChevronDown size={14} />
+                        ))}
+                    </Group>
+                  </UnstyledButton>
+                </Table.Th>
+              ))}
               <Table.Th>操作</Table.Th>
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
-            {tagList.map((tag) => (
+            {sortedTags.map((tag) => (
               <Table.Tr key={tag.id}>
-                <Table.Td>{tag.id}</Table.Td>
                 <Table.Td>{tag.name}</Table.Td>
                 <Table.Td>
                   <Text size="sm" c="dimmed">
@@ -165,7 +225,7 @@ export default function TagsPage() {
             ))}
             {tagList.length === 0 && (
               <Table.Tr>
-                <Table.Td colSpan={5}>
+                <Table.Td colSpan={4}>
                   <Text ta="center" c="dimmed" py="md">
                     暂无标签
                   </Text>
