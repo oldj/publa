@@ -7,6 +7,7 @@ import '@mantine/tiptap/styles.css'
 import { IconMath, IconMathFunction, IconPhoto, IconTable } from '@tabler/icons-react'
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
 import TiptapImage from '@tiptap/extension-image'
+import Link from '@tiptap/extension-link'
 import Mathematics from '@tiptap/extension-mathematics'
 import Placeholder from '@tiptap/extension-placeholder'
 import { TableKit } from '@tiptap/extension-table'
@@ -75,7 +76,12 @@ export default function RichTextEditorWrapper({
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
-      StarterKit.configure({ codeBlock: false, link: { openOnClick: false } }),
+      StarterKit.configure({ codeBlock: false, link: false }),
+      Link.extend({ addPasteRules: () => [] }).configure({
+        openOnClick: false,
+        autolink: false,
+        linkOnPaste: false,
+      }),
       CodeBlockLowlight.extend({
         addNodeView() {
           return ReactNodeViewRenderer(CodeBlockView)
