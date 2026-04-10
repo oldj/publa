@@ -19,6 +19,7 @@ import {
   Tooltip,
 } from '@mantine/core'
 import { IconInfoCircle, IconSend } from '@tabler/icons-react'
+import { useAdminUrl } from '@/app/(admin)/_components/AdminPathContext'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useCurrentUser } from '../../_components/AdminCountsContext'
@@ -51,6 +52,7 @@ function parseNotifyConfig(value: unknown): NotifyConfig {
 
 export default function EmailSettingsPage() {
   const router = useRouter()
+  const adminUrl = useAdminUrl()
   const currentUser = useCurrentUser()
   const [settings, setSettings] = useState<Record<string, unknown>>({})
   const [users, setUsers] = useState<User[]>([])
@@ -105,9 +107,9 @@ export default function EmailSettingsPage() {
 
   useEffect(() => {
     if (currentUser && !['owner', 'admin'].includes(currentUser.role)) {
-      router.replace('/admin')
+      router.replace(adminUrl())
     }
-  }, [currentUser, router])
+  }, [currentUser, router, adminUrl])
 
   useEffect(() => {
     if (!currentUser || !['owner', 'admin'].includes(currentUser.role)) return

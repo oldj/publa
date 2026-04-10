@@ -34,12 +34,29 @@ DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/publa
 | `DATABASE_AUTH_TOKEN` | 否 | - | Turso 数据库认证 Token，仅 Turso 需要 |
 | `JWT_SECRET` | 视情况 | - | JWT 签名密钥。生成方式：`openssl rand -base64 32`。详见下方说明 |
 | `CRON_SECRET` | 视情况 | - | 保护定时任务 API 的密钥。自托管部署不需要（使用进程内调度）；Vercel 部署必填 |
+| `ADMIN_PATH` | 否 | `admin` | 自定义后台管理路径。详见下方说明 |
 
 **关于 `JWT_SECRET`：**
 
 - **本地开发**：无需配置，使用内置默认值
 - **Docker 自托管**：可不配置，首次启动时自动生成随机密钥并持久化到数据库，后续重启自动加载，不影响已登录用户。如需要指定值也可手动配置
 - **Vercel**：**必须配置**！Vercel 的中间件运行在 Edge Runtime（与服务端 Node.js 隔离的环境），无法读取数据库中自动生成的密钥，只能通过环境变量获取
+
+**关于 `ADMIN_PATH`：**
+
+默认后台地址为 `/admin`，通过设置 `ADMIN_PATH` 可自定义为任意路径，减少自动化扫描和机器人攻击：
+
+```env
+ADMIN_PATH=my-secret-panel
+```
+
+设置后，后台入口变为 `/my-secret-panel`，直接访问 `/admin` 将返回 404。API 路由 `/api/admin/*` 不受影响。
+
+注意事项：
+- 值为单段路径，不含斜杠（如 `backstage`、`my-admin-1234`）
+- 不能使用保留路径（`api`、`setup`、`posts`、`category`、`tag` 等）
+- 修改后需要重启服务生效
+- 不设置或设置为 `admin` 时行为与默认完全一致
 
 ### Docker — SQLite
 

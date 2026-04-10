@@ -3,12 +3,14 @@
 import { notify } from '@/lib/notify'
 import { normalizePassword, normalizeUsername } from '@/lib/user-input'
 import { version } from '@/lib/version'
+import { useAdminUrl } from '@/app/(admin)/_components/AdminPathContext'
 import { Button, Container, Paper, PasswordInput, Text, TextInput, Title } from '@mantine/core'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
 export default function AdminLoginPage() {
   const router = useRouter()
+  const adminUrl = useAdminUrl()
   const [loading, setLoading] = useState(false)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -34,7 +36,7 @@ export default function AdminLoginPage() {
       const data = await res.json()
 
       if (data.success) {
-        router.push('/admin')
+        router.push(adminUrl())
       } else {
         notify({ color: 'red', message: data.message || '登录失败' })
       }

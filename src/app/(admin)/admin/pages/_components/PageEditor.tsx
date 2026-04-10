@@ -1,5 +1,6 @@
 'use client'
 
+import { useAdminUrl } from '@/app/(admin)/_components/AdminPathContext'
 import { EditorHeader } from '@/app/(admin)/_components/EditorHeader'
 import myModal from '@/app/(admin)/_components/myModals'
 import PublishSettings from '@/app/(admin)/_components/PublishSettings'
@@ -23,14 +24,10 @@ import { buildPageDraftPayload, buildPageSaveBody } from './page-save-payload'
 
 const AUTO_SAVE_FAIL_ID = 'auto-save-fail'
 
-const RESERVED_PATHS = ['admin', 'api', 'setup', 'rss.xml', 'sitemap.xml', 'uploads']
-
 function validatePath(path: string): string | null {
   if (!path) return '路径不能为空'
   if (path.startsWith('/')) return '路径不能以 / 开头'
   if (path.endsWith('/')) return '路径不能以 / 结尾'
-  const top = path.split('/')[0]
-  if (RESERVED_PATHS.includes(top)) return `"${top}" 是保留路径，不能使用`
   return null
 }
 
@@ -50,6 +47,7 @@ interface PageDraftContent {
 
 export default function PageEditor({ pageId }: { pageId?: number }) {
   const router = useRouter()
+  const adminUrl = useAdminUrl()
   const [loading, setLoading] = useState(false)
   const [pathError, setPathError] = useState<string | null>(null)
   const [dirty, setDirty] = useState(false)
@@ -361,7 +359,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
         clearAutoSaveFail()
         redirected = true
         pendingCreatedPageIdRef.current = null
-        router.replace(`/admin/pages/${newId}`)
+        router.replace(adminUrl(`/pages/${newId}`))
       } catch {
         if (silent) {
           onAutoSaveFail()
@@ -542,7 +540,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
           const nextId = targetPageId ?? json.data.id
           pendingCreatedPageIdRef.current = null
           notify({ color: 'green', message: '创建成功' })
-          router.push(`/admin/pages/${nextId}`)
+          router.push(adminUrl(`/pages/${nextId}`))
         } else {
           const newPublishedAt =
             overrides?.publishedAt !== undefined
@@ -571,6 +569,10 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
           setAutoSaveTime(null)
         }
       } else {
+        // 服务端路径校验错误回填到输入框
+        if (json.code === 'INVALID_PATH' && json.message) {
+          setPathError(json.message)
+        }
         notify({ color: 'red', message: json.message || '操作失败' })
       }
     } catch {
@@ -622,7 +624,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
       <EditorHeader
         entityId={pageId}
         entityLabel="页面"
-        backUrl="/admin/pages"
+        backUrl={adminUrl('/pages')}
         status={form.status}
         dirty={dirty}
         loading={loading}

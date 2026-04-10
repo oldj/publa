@@ -1,5 +1,6 @@
 'use client'
 
+import { useAdminUrl } from '@/app/(admin)/_components/AdminPathContext'
 import { EditorHeader } from '@/app/(admin)/_components/EditorHeader'
 import myModal from '@/app/(admin)/_components/myModals'
 import PublishSettings from '@/app/(admin)/_components/PublishSettings'
@@ -107,6 +108,7 @@ interface FormState {
 
 export default function PostEditor({ postId }: { postId?: number }) {
   const router = useRouter()
+  const adminUrl = useAdminUrl()
   const [loading, setLoading] = useState(false)
   const [categories, setCategories] = useState<Category[]>([])
   const [allTags, setAllTags] = useState<Tag[]>([])
@@ -260,7 +262,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
       .then((json) => {
         if (!json.success) {
           notify({ color: 'red', message: '文章不存在' })
-          router.push('/admin/posts')
+          router.push(adminUrl('/posts'))
           return
         }
 
@@ -490,7 +492,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
         clearAutoSaveFail()
         redirected = true
         pendingCreatedPostIdRef.current = null
-        router.replace(`/admin/posts/${newId}`)
+        router.replace(adminUrl(`/posts/${newId}`))
       } catch {
         if (silent) {
           onAutoSaveFail()
@@ -691,7 +693,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
         if (!postId) {
           const nextId = targetPostId ?? json.data.id
           pendingCreatedPostIdRef.current = null
-          router.push(`/admin/posts/${nextId}`)
+          router.push(adminUrl(`/posts/${nextId}`))
         }
       } else {
         notify({ color: 'red', message: json.message || '操作失败' })
@@ -716,7 +718,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
       <EditorHeader
         entityId={postId}
         entityLabel="文章"
-        backUrl="/admin/posts"
+        backUrl={adminUrl('/posts')}
         status={form.status}
         dirty={dirty}
         loading={loading}

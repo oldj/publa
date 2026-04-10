@@ -1,13 +1,7 @@
 'use client'
 
 import { Badge, Button, Group, Text, Title } from '@mantine/core'
-import {
-  IconArrowLeft,
-  IconDeviceFloppy,
-  IconEye,
-  IconSend,
-  IconX,
-} from '@tabler/icons-react'
+import { IconArrowLeft, IconDeviceFloppy, IconEye, IconSend, IconX } from '@tabler/icons-react'
 import dayjs from 'dayjs'
 import Link from 'next/link'
 import myModal from './myModals'
@@ -15,7 +9,7 @@ import myModal from './myModals'
 interface EditorHeaderProps {
   entityId?: number
   entityLabel: string // "文章" | "页面"
-  backUrl: string // "/admin/posts" | "/admin/pages"
+  backUrl: string // 如 "/{adminPath}/posts" | "/{adminPath}/pages"
   status: string // 'draft' | 'scheduled' | 'published'
   dirty: boolean
   loading: boolean

@@ -1,3 +1,4 @@
+import { adminUrl } from '@/lib/admin-path'
 import { db } from '@/server/db'
 import { maybeFirst } from '@/server/db/query'
 import { contents } from '@/server/db/schema'
@@ -82,7 +83,7 @@ export async function notifyNewComment(data: {
     title: `文章「${escapeHtml(contentTitle)}」收到新评论`,
     body: `<p style="margin: 0 0 8px;"><strong>${escapeHtml(data.authorName)}</strong> 说：</p>
 <p style="margin: 0; white-space: pre-wrap;">${escapeHtml(truncate(data.content, 500))}</p>`,
-    linkUrl: `${siteUrl}/admin/comments`,
+    linkUrl: `${siteUrl}${adminUrl('/comments')}`,
     linkText: '查看评论',
   })
 
@@ -110,7 +111,7 @@ export async function notifyNewGuestbook(data: { authorName: string; content: st
     title: '收到新的留言',
     body: `<p style="margin: 0 0 8px;"><strong>${escapeHtml(data.authorName)}</strong> 说：</p>
 <p style="margin: 0; white-space: pre-wrap;">${escapeHtml(truncate(data.content, 500))}</p>`,
-    linkUrl: `${siteUrl}/admin/guestbook`,
+    linkUrl: `${siteUrl}${adminUrl('/guestbook')}`,
     linkText: '查看留言',
   })
 

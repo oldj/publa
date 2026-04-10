@@ -1,4 +1,5 @@
 'use client'
+import { useAdminUrl } from '@/app/(admin)/_components/AdminPathContext'
 import myModal from '@/app/(admin)/_components/myModals'
 import adminStyles from '../../_components/AdminShell.module.scss'
 
@@ -47,6 +48,7 @@ const statusMap: Record<string, { label: string; color: string }> = {
 }
 
 export default function PagesAdminPage() {
+  const adminUrl = useAdminUrl()
   const [data, setData] = useState<PageListResult | null>(null)
   const [page, setPage] = useState(1)
   const [status, setStatus] = useState('')
@@ -84,7 +86,7 @@ export default function PagesAdminPage() {
     <Box mt="md">
       <Group justify="space-between" mb="lg">
         <Title order={3}>页面管理</Title>
-        <Button component={Link} href="/admin/pages/new" leftSection={<IconPlus size={16} />}>
+        <Button component={Link} href={adminUrl('/pages/new')} leftSection={<IconPlus size={16} />}>
           新建页面
         </Button>
       </Group>
@@ -124,10 +126,18 @@ export default function PagesAdminPage() {
           <Table.Thead>
             <Table.Tr>
               <Table.Th className={adminStyles.cellFill}>标题</Table.Th>
-              <Table.Th className={clsx(adminStyles.cellFit, adminStyles.cellCenter)}>路径</Table.Th>
-              <Table.Th className={clsx(adminStyles.cellFit, adminStyles.cellCenter)}>类型</Table.Th>
-              <Table.Th className={clsx(adminStyles.cellFit, adminStyles.cellCenter)}>状态</Table.Th>
-              <Table.Th className={clsx(adminStyles.cellFit, adminStyles.cellCenter)}>操作</Table.Th>
+              <Table.Th className={clsx(adminStyles.cellFit, adminStyles.cellCenter)}>
+                路径
+              </Table.Th>
+              <Table.Th className={clsx(adminStyles.cellFit, adminStyles.cellCenter)}>
+                类型
+              </Table.Th>
+              <Table.Th className={clsx(adminStyles.cellFit, adminStyles.cellCenter)}>
+                状态
+              </Table.Th>
+              <Table.Th className={clsx(adminStyles.cellFit, adminStyles.cellCenter)}>
+                操作
+              </Table.Th>
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
@@ -138,7 +148,7 @@ export default function PagesAdminPage() {
                   <Table.Td>
                     <Group gap="xs">
                       <Link
-                        href={`/admin/pages/${p.id}`}
+                        href={adminUrl(`/pages/${p.id}`)}
                         style={{
                           color: 'inherit',
                           textDecoration: 'none',
@@ -194,7 +204,11 @@ export default function PagesAdminPage() {
                       >
                         <IconEye size={16} />
                       </ActionIcon>
-                      <ActionIcon variant="subtle" component={Link} href={`/admin/pages/${p.id}`}>
+                      <ActionIcon
+                        variant="subtle"
+                        component={Link}
+                        href={adminUrl(`/pages/${p.id}`)}
+                      >
                         <IconPencil size={16} />
                       </ActionIcon>
                       <ActionIcon

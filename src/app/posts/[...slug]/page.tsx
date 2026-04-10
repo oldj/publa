@@ -1,6 +1,7 @@
 import Post from '@/app/posts/[...slug]/components/Post'
 import PreviewNotice from '@/components/PreviewNotice'
 import BasicLayout from '@/layouts/basic'
+import { getAdminPath } from '@/lib/admin-path'
 import getHeadersFromHTML, { IHeader } from '@/lib/getHeadersFromHTML'
 import { getCurrentUser } from '@/server/auth'
 import { db } from '@/server/db'
@@ -198,6 +199,7 @@ export default async function Page({
         html={data.html}
         headers={data.headers}
         afterPostHtml={String(afterPostHtml ?? '') || undefined}
+        adminPath={getAdminPath()}
       />
     </BasicLayout>
   )
