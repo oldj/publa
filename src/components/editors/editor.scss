@@ -163,3 +163,8 @@
   /* 防止溢出容器 */
   max-width: calc(100vw - 40px);
 }
+
+/* 行内代码字号与正文保持一致 */
+.ProseMirror code {
+  font-size: inherit;
+}
