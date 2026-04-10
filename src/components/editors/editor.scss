@@ -1,3 +1,9 @@
+/* 编辑器中的链接 */
+.ProseMirror a {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 /* 编辑器中的图片 */
 .ProseMirror img {
   max-width: 100%;
