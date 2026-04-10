@@ -9,8 +9,8 @@ test.describe('文章编辑器自动保存焦点', () => {
     app = await setupPerTestApp(testInfo)
   })
 
-  test.afterEach(async () => {
-    await app.cleanup()
+  test.afterEach(async ({ browserName: _browserName }, testInfo) => {
+    await app.cleanup({ removeArtifacts: testInfo.status === 'passed' })
   })
 
   test('首次自动保存后富文本编辑器不会丢失焦点', async ({ browser }) => {

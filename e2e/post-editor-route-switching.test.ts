@@ -9,6 +9,7 @@ test.describe('文章编辑器路由切换', () => {
   let app: TestAppInstance | null = null
   let context: BrowserContext | null = null
   let page: Page | null = null
+  let hasFailed = false
   let postA: CreatedPost
   let postB: CreatedPost
 
@@ -27,7 +28,7 @@ test.describe('文章编辑器路由切换', () => {
   })
 
   test.afterAll(async () => {
-    await app?.cleanup()
+    await app?.cleanup({ removeArtifacts: !hasFailed })
   })
 
   test.beforeEach(async ({ browser }) => {
@@ -35,7 +36,8 @@ test.describe('文章编辑器路由切换', () => {
     page = await context.newPage()
   })
 
-  test.afterEach(async () => {
+  test.afterEach(async ({ browserName: _browserName }, testInfo) => {
+    if (testInfo.status !== 'passed') hasFailed = true
     await page?.close()
     await context?.close()
     page = null

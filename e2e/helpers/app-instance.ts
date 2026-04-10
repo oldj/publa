@@ -33,7 +33,7 @@ export interface TestAppInstance {
   browserContextOptions: BrowserContextOptions
   credentials: OwnerCredentials
   adminUrl: (subpath?: string) => string
-  cleanup: () => Promise<void>
+  cleanup: (options?: { removeArtifacts?: boolean }) => Promise<void>
 }
 
 interface CreateAppInstanceOptions {
@@ -308,11 +308,27 @@ export async function createAppInstance(
       },
       credentials,
       adminUrl: (subpath?: string) => makeAdminUrl(adminPath, subpath),
-      cleanup: async () => {
+      cleanup: async (options?: { removeArtifacts?: boolean }) => {
         if (cleanedUp) return
         cleanedUp = true
         await apiContext?.dispose()
         await stopServer(server, logStream)
+        if (options?.removeArtifacts) {
+          for (const f of [
+            dbFile,
+            `${dbFile}-wal`,
+            `${dbFile}-shm`,
+            `${dbFile}-journal`,
+            storageStatePath,
+            logFile,
+          ]) {
+            try {
+              fs.unlinkSync(f)
+            } catch {
+              // 文件可能不存在，忽略
+            }
+          }
+        }
       },
     }
   } catch (error) {

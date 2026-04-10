@@ -8,8 +8,8 @@ test.describe('后台登录', () => {
     app = await setupPerTestApp(testInfo)
   })
 
-  test.afterEach(async () => {
-    await app.cleanup()
+  test.afterEach(async ({ browserName: _browserName }, testInfo) => {
+    await app.cleanup({ removeArtifacts: testInfo.status === 'passed' })
   })
 
   test('登录页可以登录到后台首页', async ({ browser }) => {
