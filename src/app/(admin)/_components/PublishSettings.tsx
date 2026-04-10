@@ -105,10 +105,20 @@ export default function PublishSettings({
                 popoverProps={{ shadow: 'md' }}
                 highlightToday
                 presets={[
-                  { value: dayjs().format('YYYY-MM-DD'), label: '今天' },
+                  { value: dayjs().format('YYYY-MM-DD') + ' 10:30', label: '今天 10:30' },
+                  { value: dayjs().format('YYYY-MM-DD') + ' 16:30', label: '今天 16:30' },
+                  { value: dayjs().format('YYYY-MM-DD') + ' 22:30', label: '今天 22:30' },
                   {
-                    value: dayjs().add(1, 'day').format('YYYY-MM-DD'),
-                    label: '明天',
+                    value: dayjs().add(1, 'day').format('YYYY-MM-DD') + ' 10:30',
+                    label: '明天 10:30',
+                  },
+                  {
+                    value: dayjs().add(1, 'day').format('YYYY-MM-DD') + ' 16:30',
+                    label: '明天 16:30',
+                  },
+                  {
+                    value: dayjs().add(1, 'day').format('YYYY-MM-DD') + ' 22:30',
+                    label: '明天 22:30',
                   },
                 ]}
                 timePickerProps={{ withDropdown: true, popoverProps: { withinPortal: false } }}
