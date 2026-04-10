@@ -140,8 +140,8 @@ export default function PublishSettings({
                   const isPast = d.isBefore(dayjs())
                   const timeStr = d.format('YYYY-MM-DD HH:mm:ss')
                   const message = isPast
-                    ? `所选时间已过，${entityLabel}将立即发布。\n\n发布时间：${timeStr}`
-                    : `确定要将${entityLabel}设为定时发布吗？\n\n发布时间：${timeStr}`
+                    ? `所选时间已过，${entityLabel}将立即发布。\n发布时间：${timeStr}`
+                    : `确定要将${entityLabel}设为定时发布吗？\n发布时间：${timeStr}`
                   if (!(await myModal.confirm({ message }))) return
                   onSetScheduled(d.toISOString())
                 }}

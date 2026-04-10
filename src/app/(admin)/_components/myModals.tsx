@@ -8,6 +8,13 @@ interface ModalOptions {
   cancelText?: string
 }
 
+function renderMessage(message: React.ReactNode): React.ReactNode {
+  if (typeof message !== 'string') return message
+  return message.split('\n').flatMap((part, i) =>
+    i === 0 ? [part] : [<br key={i} />, part],
+  )
+}
+
 function getTitle(title: string | null | undefined): string | undefined {
   if (title === null) return undefined
   return title || '提示'
@@ -22,7 +29,7 @@ async function alert(options: ModalOptions): Promise<boolean> {
       withCloseButton: false,
       children: (
         <Stack>
-          <div>{options.message}</div>
+          <div>{renderMessage(options.message)}</div>
           <Button
             fullWidth
             onClick={() => {
@@ -47,7 +54,7 @@ async function confirm(options: ModalOptions): Promise<boolean> {
       title: getTitle(options.title),
       centered: true,
       withCloseButton: options.title !== null,
-      children: <div>{options.message}</div>,
+      children: <div>{renderMessage(options.message)}</div>,
       labels: {
         confirm: options.okText || '确定',
         cancel: options.cancelText || '取消',
