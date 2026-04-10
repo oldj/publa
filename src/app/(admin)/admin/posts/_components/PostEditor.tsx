@@ -949,7 +949,8 @@ export default function PostEditor({ postId }: { postId?: number }) {
                 await handleSave('draft', { publishedAt: null })
               }}
               onSetScheduled={async (publishedAt) => {
-                await handleSave('scheduled', { publishedAt })
+                const isPast = new Date(publishedAt) <= new Date()
+                await handleSave(isPast ? 'published' : 'scheduled', { publishedAt })
               }}
               entityLabel="文章"
             />

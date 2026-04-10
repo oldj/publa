@@ -102,7 +102,6 @@ export default function PublishSettings({
                 value={scheduledTime}
                 valueFormat={'YYYY-MM-DD HH:mm'}
                 onChange={(v) => onScheduledTimeChange(v as Date | null)}
-                minDate={new Date()}
                 popoverProps={{ shadow: 'md' }}
                 highlightToday
                 presets={[
@@ -127,14 +126,14 @@ export default function PublishSettings({
                 disabled={!scheduledTime}
                 onClick={async () => {
                   if (!scheduledTime) return
-                  const timeStr = dayjs(scheduledTime).format('YYYY-MM-DD HH:mm:ss')
-                  if (
-                    !(await myModal.confirm({
-                      message: `确定要将${entityLabel}设为定时发布吗？\n\n发布时间：${timeStr}`,
-                    }))
-                  )
-                    return
-                  onSetScheduled(scheduledTime.toISOString())
+                  const d = dayjs(scheduledTime)
+                  const isPast = d.isBefore(dayjs())
+                  const timeStr = d.format('YYYY-MM-DD HH:mm:ss')
+                  const message = isPast
+                    ? `所选时间已过，${entityLabel}将立即发布。\n\n发布时间：${timeStr}`
+                    : `确定要将${entityLabel}设为定时发布吗？\n\n发布时间：${timeStr}`
+                  if (!(await myModal.confirm({ message }))) return
+                  onSetScheduled(d.toISOString())
                 }}
                 loading={loading}
               >
