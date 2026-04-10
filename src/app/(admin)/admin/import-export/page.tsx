@@ -323,7 +323,24 @@ export default function ImportExportPage() {
         size="xl"
       >
         <ScrollArea h="calc(100vh - 100px)">
-          <div className="post-content" dangerouslySetInnerHTML={{ __html: formatHtml }} />
+          <div className="format-doc" dangerouslySetInnerHTML={{ __html: formatHtml }} />
+          <style>{`
+            .format-doc { font-size: 14px; line-height: 1.7; color: var(--mantine-color-text); }
+            .format-doc h1 { font-size: 1.4em; font-weight: 600; margin: 1.5em 0 0.6em; padding-bottom: 0.3em; border-bottom: 1px solid var(--mantine-color-default-border); }
+            .format-doc h2 { font-size: 1.2em; font-weight: 600; margin: 1.3em 0 0.5em; }
+            .format-doc h3 { font-size: 1.05em; font-weight: 600; margin: 1.1em 0 0.4em; }
+            .format-doc p { margin: 0.5em 0; }
+            .format-doc ul, .format-doc ol { padding-left: 1.5em; margin: 0.4em 0; }
+            .format-doc li { margin: 0.2em 0; }
+            .format-doc code { font-size: 0.9em; padding: 0.15em 0.4em; border-radius: 4px; background: var(--mantine-color-default-hover); }
+            .format-doc pre { margin: 0.6em 0; padding: 0.8em 1em; border-radius: 6px; background: var(--mantine-color-default-hover); overflow-x: auto; }
+            .format-doc pre code { padding: 0; background: none; }
+            .format-doc table { width: 100%; border-collapse: collapse; margin: 0.6em 0; font-size: 0.9em; }
+            .format-doc th, .format-doc td { padding: 0.4em 0.8em; border: 1px solid var(--mantine-color-default-border); text-align: left; }
+            .format-doc th { background: var(--mantine-color-default-hover); font-weight: 600; }
+            .format-doc blockquote { margin: 0.5em 0; padding: 0.3em 1em; border-left: 3px solid var(--mantine-color-default-border); color: var(--mantine-color-dimmed); }
+            .format-doc hr { border: none; border-top: 1px solid var(--mantine-color-default-border); margin: 1.2em 0; }
+          `}</style>
         </ScrollArea>
       </Drawer>
     </Box>
