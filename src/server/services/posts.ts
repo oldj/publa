@@ -45,7 +45,7 @@ export interface PostListOptions {
 
 /** 文章列表（后台，含所有状态） */
 export async function listPostsAdmin(options: PostListOptions = {}) {
-  const { page = 1, pageSize = 20, status, categoryId, search } = options
+  const { page = 1, pageSize = 20, status, categoryId, tagId, search } = options
 
   // 基础条件（不含 status 筛选，用于计算各状态计数）
   const baseConditions: ReturnType<typeof eq>[] = [
@@ -53,6 +53,16 @@ export async function listPostsAdmin(options: PostListOptions = {}) {
     isNull(contents.deletedAt),
   ]
   if (categoryId) baseConditions.push(eq(contents.categoryId, categoryId))
+  if (tagId) {
+    baseConditions.push(
+      exists(
+        db
+          .select({ value: sql`1` })
+          .from(contentTags)
+          .where(and(eq(contentTags.contentId, contents.id), eq(contentTags.tagId, tagId))),
+      ),
+    )
+  }
   if (search) {
     // 同时匹配标题、slug 和草稿标题
     baseConditions.push(

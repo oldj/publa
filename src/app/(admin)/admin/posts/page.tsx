@@ -12,12 +12,21 @@ import {
   Group,
   Pagination,
   SegmentedControl,
+  Select,
+  type SelectProps,
   Table,
   Text,
   TextInput,
   Title,
 } from '@mantine/core'
-import { IconEye, IconPencil, IconPlus, IconSearch, IconTrash } from '@tabler/icons-react'
+import {
+  IconCheck,
+  IconEye,
+  IconPencil,
+  IconPlus,
+  IconSearch,
+  IconTrash,
+} from '@tabler/icons-react'
 import clsx from 'clsx'
 import dayjs from 'dayjs'
 import Link from 'next/link'
@@ -58,16 +67,61 @@ export default function PostsPage() {
   const [page, setPage] = useState(1)
   const [status, setStatus] = useState('')
   const [search, setSearch] = useState('')
+  const [categoryId, setCategoryId] = useState('')
+  const [tagId, setTagId] = useState('')
+  const [categoryOptions, setCategoryOptions] = useState<
+    { value: string; label: string; count: number }[]
+  >([])
+  const [tagOptions, setTagOptions] = useState<{ value: string; label: string; count: number }[]>(
+    [],
+  )
+
+  useEffect(() => {
+    Promise.all([
+      fetch('/api/categories').then((r) => r.json()),
+      fetch('/api/tags').then((r) => r.json()),
+    ]).then(([catData, tagData]) => {
+      if (catData.success)
+        setCategoryOptions(
+          catData.data.map((c: any) => ({
+            value: String(c.id),
+            label: c.name,
+            count: c.postCount,
+          })),
+        )
+      if (tagData.success)
+        setTagOptions(
+          [...tagData.data]
+            .sort((a: any, b: any) => b.postCount - a.postCount)
+            .map((t: any) => ({ value: String(t.id), label: t.name, count: t.postCount })),
+        )
+    })
+  }, [])
+
+  const renderCountOption: SelectProps['renderOption'] = ({ option, checked }) => (
+    <Group gap={6} justify="space-between" wrap="nowrap" flex={1}>
+      <Text span size="sm" fw={checked ? 600 : undefined}>
+        {option.label}
+      </Text>
+      <Text size="xs" c="dimmed">
+        {(option as any).count}
+      </Text>
+      <div style={{ flex: 1 }} />
+      {checked && <IconCheck size={14} />}
+    </Group>
+  )
 
   const fetchPosts = useCallback(async () => {
     const params = new URLSearchParams({ page: String(page) })
     if (status) params.set('status', status)
     if (search) params.set('search', search)
+    if (categoryId) params.set('categoryId', categoryId)
+    if (tagId) params.set('tagId', tagId)
 
     const res = await fetch(`/api/posts?${params}`)
     const json = await res.json()
     if (json.success) setData(json.data)
-  }, [page, status, search])
+  }, [page, status, search, categoryId, tagId])
 
   useEffect(() => {
     fetchPosts()
@@ -109,33 +163,61 @@ export default function PostsPage() {
       </Group>
 
       <Group mb="md" justify="space-between">
-        <SegmentedControl
-          value={status}
-          onChange={(v) => {
-            setStatus(v)
-            setPage(1)
-          }}
-          data={(() => {
-            const c = data?.statusCounts ?? { draft: 0, scheduled: 0, published: 0 }
-            const total = Object.values(c).reduce((a, b) => a + b, 0)
-            return [
-              { value: '', label: `全部 (${total})` },
-              { value: 'draft', label: `草稿 (${c.draft})` },
-              { value: 'scheduled', label: `定时 (${c.scheduled})` },
-              { value: 'published', label: `已发布 (${c.published})` },
-            ]
-          })()}
-        />
-        <TextInput
-          placeholder="搜索标题或 slug..."
-          leftSection={<IconSearch size={16} />}
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value)
-            setPage(1)
-          }}
-          style={{ maxWidth: 300 }}
-        />
+        <Group gap="sm">
+          <SegmentedControl
+            value={status}
+            onChange={(v) => {
+              setStatus(v)
+              setPage(1)
+            }}
+            data={(() => {
+              const c = data?.statusCounts ?? { draft: 0, scheduled: 0, published: 0 }
+              const total = Object.values(c).reduce((a, b) => a + b, 0)
+              return [
+                { value: '', label: `全部 (${total})` },
+                { value: 'draft', label: `草稿 (${c.draft})` },
+                { value: 'scheduled', label: `定时 (${c.scheduled})` },
+                { value: 'published', label: `已发布 (${c.published})` },
+              ]
+            })()}
+          />
+        </Group>
+        <Group gap="sm">
+          <Select
+            placeholder="分类"
+            clearable
+            data={categoryOptions}
+            value={categoryId || null}
+            onChange={(v) => {
+              setCategoryId(v || '')
+              setPage(1)
+            }}
+            renderOption={renderCountOption}
+            style={{ width: 140 }}
+          />
+          <Select
+            placeholder="标签"
+            clearable
+            data={tagOptions}
+            value={tagId || null}
+            onChange={(v) => {
+              setTagId(v || '')
+              setPage(1)
+            }}
+            renderOption={renderCountOption}
+            style={{ width: 140 }}
+          />
+          <TextInput
+            placeholder="搜索标题或 slug..."
+            leftSection={<IconSearch size={16} />}
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value)
+              setPage(1)
+            }}
+            style={{ maxWidth: 300 }}
+          />
+        </Group>
       </Group>
 
       <Table.ScrollContainer minWidth={500} className={adminStyles.tableContainer}>
