@@ -106,6 +106,25 @@ interface FormState {
   seoDescription: string
 }
 
+function createEmptyPostForm(): FormState {
+  return {
+    title: '',
+    slug: '',
+    contentRaw: '',
+    excerpt: '',
+    status: 'draft',
+    categoryId: '',
+    tagNames: [],
+    allowComment: true,
+    showComments: true,
+    pinned: false,
+    coverImage: '',
+    publishedAt: null,
+    seoTitle: '',
+    seoDescription: '',
+  }
+}
+
 export default function PostEditor({ postId }: { postId?: number }) {
   const router = useRouter()
   const adminUrl = useAdminUrl()
@@ -133,6 +152,8 @@ export default function PostEditor({ postId }: { postId?: number }) {
   const [historyOpen, setHistoryOpen] = useState(false)
   const creatingRef = useRef(false) // 防止重复创建空草稿
   const pendingCreatedPostIdRef = useRef<number | null>(null)
+  const skipInitialLoadForCreatedPostIdRef = useRef<number | null>(null)
+  const routePostIdRef = useRef<number | undefined>(postId)
 
   // 自动保存失败计数
   const autoSaveFailCountRef = useRef(0)
@@ -181,23 +202,10 @@ export default function PostEditor({ postId }: { postId?: number }) {
   const richTextRef = useRef<RichTextEditorHandle>(null)
   const pendingEditorContent = useRef<string | null>(null)
 
-  const [form, setForm] = useState<FormState>({
-    title: '',
-    slug: '',
-    contentRaw: '',
-    excerpt: '',
-    status: 'draft',
-    categoryId: '',
-    tagNames: [],
-    allowComment: true,
-    showComments: true,
-    pinned: false,
-    coverImage: '',
-    publishedAt: null,
-    seoTitle: '',
-    seoDescription: '',
-  })
+  const [form, setForm] = useState<FormState>(createEmptyPostForm)
   const formRef = useRef(form)
+  const textContentRef = useRef(textContent)
+  const contentTypeRef = useRef(contentType)
 
   // 生成元数据快照，用于自动保存变更检测
   const getMetaSnapshot = useCallback(
@@ -233,6 +241,40 @@ export default function PostEditor({ postId }: { postId?: number }) {
   // 获取富文本编辑器实例的辅助函数
   const getEditor = useCallback(() => richTextRef.current?.getEditor() ?? null, [])
 
+  const resetEditorState = useCallback(
+    ({ keepLoading = false }: { keepLoading?: boolean } = {}) => {
+      const nextForm = createEmptyPostForm()
+      const editor = getEditor()
+
+      if (editor) {
+        editor.commands.setContent('')
+      }
+
+      pendingEditorContent.current = null
+      setForm(nextForm)
+      formRef.current = nextForm
+      setContentType('richtext')
+      contentTypeRef.current = 'richtext'
+      setTextContent('')
+      textContentRef.current = ''
+      lastAutoSaveContent.current = ''
+      lastAutoSaveMetaRef.current = getMetaSnapshot(nextForm)
+      savedSnapshot.current = makeSnapshot(nextForm, '')
+      editorDirty.current = false
+      pendingCreatedPostIdRef.current = null
+      skipInitialLoadForCreatedPostIdRef.current = null
+      creatingRef.current = false
+      setDirty(false)
+      setAutoSaveTime(null)
+      setScheduledTime(null)
+      setPublishTab('draft')
+      setHistoryOpen(false)
+      setLoading(keepLoading)
+      clearAutoSaveFail()
+    },
+    [clearAutoSaveFail, getEditor, getMetaSnapshot, makeSnapshot],
+  )
+
   // 加载分类、标签和全局设置
   useEffect(() => {
     Promise.all([
@@ -255,11 +297,35 @@ export default function PostEditor({ postId }: { postId?: number }) {
 
   // 加载文章数据
   useEffect(() => {
-    if (!postId) return
+    const previousPostId = routePostIdRef.current
+    routePostIdRef.current = postId
 
-    fetch(`/api/posts/${postId}`)
+    if (skipInitialLoadForCreatedPostIdRef.current === postId) {
+      skipInitialLoadForCreatedPostIdRef.current = null
+      pendingCreatedPostIdRef.current = null
+      setLoading(false)
+      return
+    }
+
+    if (!postId) {
+      resetEditorState()
+      return
+    }
+
+    if (previousPostId !== undefined && previousPostId !== postId) {
+      resetEditorState({ keepLoading: true })
+    } else {
+      setLoading(true)
+    }
+
+    const controller = new AbortController()
+    let active = true
+
+    fetch(`/api/posts/${postId}`, { signal: controller.signal })
       .then((r) => r.json())
       .then((json) => {
+        if (!active) return
+
         if (!json.success) {
           notify({ color: 'red', message: '文章不存在' })
           router.push(adminUrl('/posts'))
@@ -353,11 +419,26 @@ export default function PostEditor({ postId }: { postId?: number }) {
         // 有未发布的草稿时显示「已修改」
         setDirty(!!draft)
       })
-  }, [postId, getEditor, makeSnapshot])
+      .catch((error: unknown) => {
+        if (!active) return
+        if (error instanceof Error && error.name === 'AbortError') return
+
+        notify({ color: 'red', message: '加载文章失败' })
+        router.push(adminUrl('/posts'))
+      })
+      .finally(() => {
+        if (active) {
+          setLoading(false)
+        }
+      })
+
+    return () => {
+      active = false
+      controller.abort()
+    }
+  }, [postId, adminUrl, router, getEditor, getMetaSnapshot, makeSnapshot, resetEditorState])
 
   // 同步 ref 以供定时器读取最新值
-  const textContentRef = useRef(textContent)
-  const contentTypeRef = useRef(contentType)
   useEffect(() => {
     textContentRef.current = textContent
   }, [textContent])
@@ -460,24 +541,26 @@ export default function PostEditor({ postId }: { postId?: number }) {
     return json.data.id as number
   }, [])
 
-  // 创建空草稿并保存完整草稿快照后跳转到编辑页
+  const getTargetPostId = useCallback(() => postId ?? pendingCreatedPostIdRef.current, [postId])
+
+  // 创建空草稿并保存完整草稿快照后跳转到真实编辑页
   const createAndRedirect = useCallback(
     async ({ silent = false }: { silent?: boolean } = {}) => {
-      if (creatingRef.current) return
+      const targetPostId = getTargetPostId()
+      if (targetPostId) return targetPostId
+      if (creatingRef.current) return pendingCreatedPostIdRef.current
+
       creatingRef.current = true
-      let redirected = false
 
       try {
-        // 1. 创建空草稿记录，失败重试时复用同一条记录
         const newId = await ensurePendingPostId(silent)
         if (!newId) {
           if (silent) onAutoSaveFail()
-          return
+          return null
         }
         const formState = formRef.current
         const content = getCurrentContent()
 
-        // 2. 保存完整草稿快照，允许 slug 重复或暂时不合法
         const draftSave = await saveDraftRevision(newId, formState, content)
         if (!draftSave.json.success) {
           if (silent) {
@@ -485,32 +568,46 @@ export default function PostEditor({ postId }: { postId?: number }) {
           } else {
             notify({ color: 'red', message: draftSave.json.message || '保存草稿失败' })
           }
-          return
+          return null
         }
 
-        // 3. 跳转到编辑页
         clearAutoSaveFail()
-        redirected = true
-        pendingCreatedPostIdRef.current = null
+        pendingCreatedPostIdRef.current = newId
+        lastAutoSaveContent.current = content.contentRaw
+        lastAutoSaveMetaRef.current = getMetaSnapshot(formState)
+        textContentRef.current = content.contentRaw
+        setTextContent(content.contentRaw)
+        savedSnapshot.current = makeSnapshot(
+          { ...formState, contentRaw: content.contentRaw },
+          content.contentRaw,
+        )
+        setAutoSaveTime(draftSave.json.data.updatedAt)
+        setDirty(true)
+        skipInitialLoadForCreatedPostIdRef.current = newId
         router.replace(adminUrl(`/posts/${newId}`))
+        return newId
       } catch {
         if (silent) {
           onAutoSaveFail()
         } else {
           notify({ color: 'red', message: '网络错误' })
         }
-      }
-      if (!redirected) {
+        return null
+      } finally {
         creatingRef.current = false
       }
     },
     [
+      getTargetPostId,
       ensurePendingPostId,
       getCurrentContent,
-      router,
       saveDraftRevision,
       onAutoSaveFail,
       clearAutoSaveFail,
+      getMetaSnapshot,
+      makeSnapshot,
+      router,
+      adminUrl,
     ],
   )
 
@@ -520,8 +617,10 @@ export default function PostEditor({ postId }: { postId?: number }) {
       if (autoSavingRef.current) return
       const content = getCurrentContent()
 
-      // 新文章：首次有实际内容时创建记录并跳转
-      if (!postId) {
+      const targetPostId = getTargetPostId()
+
+      // 新文章：首次有实际内容时创建记录并跳转到真实编辑页
+      if (!targetPostId) {
         if (
           shouldCreateDraftRecord({
             title: formRef.current.title,
@@ -542,7 +641,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
       if (!contentChanged && !metaChanged) return
 
       autoSavingRef.current = true
-      saveDraftRevision(postId, formRef.current, content)
+      saveDraftRevision(targetPostId, formRef.current, content)
         .then(({ json }) => {
           if (json.success) {
             clearAutoSaveFail()
@@ -563,7 +662,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
 
     return () => clearInterval(timer)
   }, [
-    postId,
+    getTargetPostId,
     createAndRedirect,
     getCurrentContent,
     getMetaSnapshot,
@@ -574,7 +673,8 @@ export default function PostEditor({ postId }: { postId?: number }) {
 
   // 预览：先保存草稿，再在新窗口打开预览
   const handlePreview = async () => {
-    if (!postId) {
+    const targetPostId = getTargetPostId()
+    if (!targetPostId) {
       await createAndRedirect()
       return
     }
@@ -582,12 +682,12 @@ export default function PostEditor({ postId }: { postId?: number }) {
     setLoading(true)
     try {
       const formState = formRef.current
-      const draftSave = await saveDraftRevision(postId, formState)
+      const draftSave = await saveDraftRevision(targetPostId, formState)
       if (draftSave.json.success) {
         lastAutoSaveContent.current = draftSave.content.contentRaw
         lastAutoSaveMetaRef.current = getMetaSnapshot(formState)
         setAutoSaveTime(draftSave.json.data.updatedAt)
-        window.open(`/posts/--preview-${postId}`, '_blank')
+        window.open(`/posts/--preview-${targetPostId}`, '_blank')
       } else {
         notify({ color: 'red', message: draftSave.json.message || '保存失败' })
       }
@@ -600,8 +700,8 @@ export default function PostEditor({ postId }: { postId?: number }) {
 
   // 手动保存草稿：仅保存完整草稿快照，不阻塞于 slug 校验
   const handleSaveDraft = async () => {
-    if (!postId) {
-      // 新文章：创建空记录并保存当前内容后跳转
+    const targetPostId = getTargetPostId()
+    if (!targetPostId) {
       await createAndRedirect()
       return
     }
@@ -609,7 +709,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
     setLoading(true)
     try {
       const formState = formRef.current
-      const draftSave = await saveDraftRevision(postId, formState)
+      const draftSave = await saveDraftRevision(targetPostId, formState)
       if (draftSave.json.success) {
         clearAutoSaveFail()
         lastAutoSaveContent.current = draftSave.content.contentRaw
@@ -651,7 +751,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
         now: new Date().toISOString(),
       })
 
-      const targetPostId = postId ?? pendingCreatedPostIdRef.current
+      const targetPostId = getTargetPostId()
       const url = targetPostId ? `/api/posts/${targetPostId}` : '/api/posts'
       const method = targetPostId ? 'PUT' : 'POST'
 
@@ -727,9 +827,12 @@ export default function PostEditor({ postId }: { postId?: number }) {
         onSaveDraft={handleSaveDraft}
         onPublish={handleSave}
         onDiscardDraft={async () => {
+          const targetPostId = getTargetPostId()
+          if (!targetPostId) return
+
           // 先删除草稿，再重新加载已发布内容
-          await fetch(`/api/posts/${postId}/draft`, { method: 'DELETE' })
-          const res = await fetch(`/api/posts/${postId}`)
+          await fetch(`/api/posts/${targetPostId}/draft`, { method: 'DELETE' })
+          const res = await fetch(`/api/posts/${targetPostId}`)
           const json = await res.json()
           if (!json.success) return
           const postData = json.data
@@ -761,9 +864,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
                 : 'draft',
           )
           setScheduledTime(
-            postData.publishedAt && postData.status === 'scheduled'
-              ? postData.publishedAt
-              : null,
+            postData.publishedAt && postData.status === 'scheduled' ? postData.publishedAt : null,
           )
           if (restoreCT === 'richtext') {
             const ed = getEditor()
@@ -856,8 +957,9 @@ export default function PostEditor({ postId }: { postId?: number }) {
                   // 标记为已修改并立即保存草稿
                   setDirty(true)
                   setAutoSaveTime(null)
-                  if (postId) {
-                    fetch(`/api/posts/${postId}/draft`, {
+                  const targetPostId = getTargetPostId()
+                  if (targetPostId) {
+                    fetch(`/api/posts/${targetPostId}/draft`, {
                       method: 'PUT',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({

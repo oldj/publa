@@ -45,6 +45,19 @@ interface PageDraftContent {
   updatedAt: string
 }
 
+function createEmptyPageForm() {
+  return {
+    title: '',
+    path: '',
+    template: 'default',
+    mimeType: '',
+    status: 'draft',
+    publishedAt: null as string | null,
+    seoTitle: '',
+    seoDescription: '',
+  }
+}
+
 export default function PageEditor({ pageId }: { pageId?: number }) {
   const router = useRouter()
   const adminUrl = useAdminUrl()
@@ -63,6 +76,8 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
   const lastAutoSaveMetaRef = useRef<string>('')
   const creatingRef = useRef(false)
   const pendingCreatedPageIdRef = useRef<number | null>(null)
+  const skipInitialLoadForCreatedPageIdRef = useRef<number | null>(null)
+  const routePageIdRef = useRef<number | undefined>(pageId)
 
   // 自动保存失败计数
   const autoSaveFailCountRef = useRef(0)
@@ -89,16 +104,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
   const richTextRef = useRef<RichTextEditorHandle>(null)
   // 编辑器就绪前暂存待加载的 HTML 内容
   const pendingEditorContent = useRef<string | null>(null)
-  const [form, setForm] = useState({
-    title: '',
-    path: '',
-    template: 'default',
-    mimeType: '',
-    status: 'draft',
-    publishedAt: null as string | null,
-    seoTitle: '',
-    seoDescription: '',
-  })
+  const [form, setForm] = useState(createEmptyPageForm)
   const formRef = useRef(form)
 
   type FormState = typeof form
@@ -133,6 +139,41 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
   )
 
   const getEditor = useCallback(() => richTextRef.current?.getEditor() ?? null, [])
+
+  const resetEditorState = useCallback(
+    ({ keepLoading = false }: { keepLoading?: boolean } = {}) => {
+      const nextForm = createEmptyPageForm()
+      const editor = getEditor()
+
+      if (editor) {
+        editor.commands.setContent('')
+      }
+
+      pendingEditorContent.current = null
+      setForm(nextForm)
+      formRef.current = nextForm
+      setPathError(null)
+      setContentType('richtext')
+      contentTypeRef.current = 'richtext'
+      setTextContent('')
+      textContentRef.current = ''
+      lastAutoSaveContent.current = ''
+      lastAutoSaveMetaRef.current = getMetaSnapshot(nextForm)
+      savedSnapshot.current = makeSnapshot(nextForm, '')
+      editorDirty.current = false
+      pendingCreatedPageIdRef.current = null
+      skipInitialLoadForCreatedPageIdRef.current = null
+      creatingRef.current = false
+      setDirty(false)
+      setAutoSaveTime(null)
+      setScheduledTime(null)
+      setPublishTab('draft')
+      setHistoryOpen(false)
+      setLoading(keepLoading)
+      clearAutoSaveFail()
+    },
+    [clearAutoSaveFail, getEditor, getMetaSnapshot, makeSnapshot],
+  )
 
   const setField = <K extends keyof FormState>(field: K, value: FormState[K]) => {
     setForm((prev) => {
@@ -169,10 +210,35 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
 
   // 加载页面数据（编辑模式）
   useEffect(() => {
-    if (!pageId) return
-    fetch(`/api/pages/${pageId}`)
+    const previousPageId = routePageIdRef.current
+    routePageIdRef.current = pageId
+
+    if (skipInitialLoadForCreatedPageIdRef.current === pageId) {
+      skipInitialLoadForCreatedPageIdRef.current = null
+      pendingCreatedPageIdRef.current = null
+      setLoading(false)
+      return
+    }
+
+    if (!pageId) {
+      resetEditorState()
+      return
+    }
+
+    if (previousPageId !== undefined && previousPageId !== pageId) {
+      resetEditorState({ keepLoading: true })
+    } else {
+      setLoading(true)
+    }
+
+    const controller = new AbortController()
+    let active = true
+
+    fetch(`/api/pages/${pageId}`, { signal: controller.signal })
       .then((r) => r.json())
       .then((json) => {
+        if (!active) return
+
         if (json.success) {
           const p = json.data
           const draft = p.draftContent as PageDraftContent | null
@@ -253,7 +319,24 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
           setDirty(!!draft)
         }
       })
-  }, [pageId, makeSnapshot])
+      .catch((error: unknown) => {
+        if (!active) return
+        if (error instanceof Error && error.name === 'AbortError') return
+
+        notify({ color: 'red', message: '加载页面失败' })
+        router.push(adminUrl('/pages'))
+      })
+      .finally(() => {
+        if (active) {
+          setLoading(false)
+        }
+      })
+
+    return () => {
+      active = false
+      controller.abort()
+    }
+  }, [pageId, adminUrl, router, getMetaSnapshot, makeSnapshot, resetEditorState])
 
   // 同步 ref
   useEffect(() => {
@@ -329,18 +412,22 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
     return json.data.id as number
   }, [])
 
-  // 创建空草稿并保存完整草稿快照后跳转到编辑页
+  const getTargetPageId = useCallback(() => pageId ?? pendingCreatedPageIdRef.current, [pageId])
+
+  // 创建空草稿并保存完整草稿快照后跳转到真实编辑页
   const createAndRedirect = useCallback(
     async ({ silent = false }: { silent?: boolean } = {}) => {
-      if (creatingRef.current) return
+      const targetPageId = getTargetPageId()
+      if (targetPageId) return targetPageId
+      if (creatingRef.current) return pendingCreatedPageIdRef.current
+
       creatingRef.current = true
-      let redirected = false
 
       try {
         const newId = await ensurePendingPageId(silent)
         if (!newId) {
           if (silent) onAutoSaveFail()
-          return
+          return null
         }
         const formState = formRef.current
         const content = getCurrentContent()
@@ -353,32 +440,43 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
           } else {
             notify({ color: 'red', message: draftSave.json.message || '保存草稿失败' })
           }
-          return
+          return null
         }
 
         clearAutoSaveFail()
-        redirected = true
-        pendingCreatedPageIdRef.current = null
+        pendingCreatedPageIdRef.current = newId
+        lastAutoSaveContent.current = content.contentRaw
+        lastAutoSaveMetaRef.current = getMetaSnapshot(formState)
+        textContentRef.current = content.contentRaw
+        setTextContent(content.contentRaw)
+        savedSnapshot.current = makeSnapshot(formState, content.contentRaw)
+        setAutoSaveTime(draftSave.json.data.updatedAt)
+        setDirty(true)
+        skipInitialLoadForCreatedPageIdRef.current = newId
         router.replace(adminUrl(`/pages/${newId}`))
+        return newId
       } catch {
         if (silent) {
           onAutoSaveFail()
         } else {
           notify({ color: 'red', message: '网络错误' })
         }
-      }
-
-      if (!redirected) {
+        return null
+      } finally {
         creatingRef.current = false
       }
     },
     [
+      getTargetPageId,
       ensurePendingPageId,
       getCurrentContent,
-      router,
       saveDraftRevision,
       onAutoSaveFail,
       clearAutoSaveFail,
+      getMetaSnapshot,
+      makeSnapshot,
+      router,
+      adminUrl,
     ],
   )
 
@@ -388,8 +486,10 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
       if (autoSavingRef.current) return
       const content = getCurrentContent()
 
-      // 新页面：首次有实际内容时创建记录并跳转
-      if (!pageId) {
+      const targetPageId = getTargetPageId()
+
+      // 新页面：首次有实际内容时创建记录并跳转到真实编辑页
+      if (!targetPageId) {
         if (
           shouldCreateDraftRecord({
             title: formRef.current.title,
@@ -410,7 +510,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
       if (!contentChanged && !metaChanged) return
 
       autoSavingRef.current = true
-      saveDraftRevision(pageId, formRef.current, content)
+      saveDraftRevision(targetPageId, formRef.current, content)
         .then(({ json }) => {
           if (json.success) {
             clearAutoSaveFail()
@@ -431,7 +531,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
 
     return () => clearInterval(timer)
   }, [
-    pageId,
+    getTargetPageId,
     createAndRedirect,
     getCurrentContent,
     getMetaSnapshot,
@@ -447,7 +547,8 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
 
   // 预览：先保存草稿，再在新窗口打开预览
   const handlePreview = async () => {
-    if (!pageId) {
+    const targetPageId = getTargetPageId()
+    if (!targetPageId) {
       await createAndRedirect()
       return
     }
@@ -455,12 +556,12 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
     setLoading(true)
     try {
       const formState = formRef.current
-      const draftSave = await saveDraftRevision(pageId, formState)
+      const draftSave = await saveDraftRevision(targetPageId, formState)
       if (draftSave.json.success) {
         lastAutoSaveContent.current = draftSave.content.contentRaw
         lastAutoSaveMetaRef.current = getMetaSnapshot(formState)
         setAutoSaveTime(draftSave.json.data.updatedAt)
-        window.open(`/--preview-${pageId}`, '_blank')
+        window.open(`/--preview-${targetPageId}`, '_blank')
       } else {
         notify({ color: 'red', message: draftSave.json.message || '保存失败' })
       }
@@ -473,7 +574,8 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
 
   // 手动保存草稿：仅保存完整草稿快照，不阻塞于 path 校验
   const handleSaveDraft = async () => {
-    if (!pageId) {
+    const targetPageId = getTargetPageId()
+    if (!targetPageId) {
       await createAndRedirect()
       return
     }
@@ -481,7 +583,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
     setLoading(true)
     try {
       const formState = formRef.current
-      const draftSave = await saveDraftRevision(pageId, formState)
+      const draftSave = await saveDraftRevision(targetPageId, formState)
       if (draftSave.json.success) {
         clearAutoSaveFail()
         lastAutoSaveContent.current = draftSave.content.contentRaw
@@ -519,7 +621,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
 
     setLoading(true)
     try {
-      const targetPageId = pageId ?? pendingCreatedPageIdRef.current
+      const targetPageId = getTargetPageId()
       const url = targetPageId ? `/api/pages/${targetPageId}` : '/api/pages'
       const method = targetPageId ? 'PUT' : 'POST'
 
@@ -633,9 +735,12 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
         onSaveDraft={handleSaveDraft}
         onPublish={handleSave}
         onDiscardDraft={async () => {
+          const targetPageId = getTargetPageId()
+          if (!targetPageId) return
+
           // 先删除草稿，再重新加载已发布内容
-          await fetch(`/api/pages/${pageId}/draft`, { method: 'DELETE' })
-          const res = await fetch(`/api/pages/${pageId}`)
+          await fetch(`/api/pages/${targetPageId}/draft`, { method: 'DELETE' })
+          const res = await fetch(`/api/pages/${targetPageId}`)
           const json = await res.json()
           if (!json.success) return
           const pageData = json.data
