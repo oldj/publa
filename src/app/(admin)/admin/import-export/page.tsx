@@ -1,5 +1,6 @@
 'use client'
 
+import { useAdminUrl } from '@/app/(admin)/_components/AdminPathContext'
 import myModal from '@/app/(admin)/_components/myModals'
 import { notify } from '@/lib/notify'
 import {
@@ -17,15 +18,22 @@ import {
   Title,
 } from '@mantine/core'
 import { IconDownload, IconEye, IconUpload } from '@tabler/icons-react'
-import { useAdminUrl } from '@/app/(admin)/_components/AdminPathContext'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { useAdminCounts, useCurrentUser } from '../../_components/AdminCountsContext'
 
+type DataType = 'content' | 'settings'
+
 interface ImportFile {
   name: string
-  type: 'content' | 'settings'
+  type: DataType
   data: any
+}
+
+interface BlockImportState {
+  file: ImportFile | null
+  importing: boolean
+  results: string[]
 }
 
 const typeLabel: Record<string, string> = {
@@ -33,14 +41,103 @@ const typeLabel: Record<string, string> = {
   settings: '设置数据',
 }
 
+interface DataBlockProps {
+  type: DataType
+  title: string
+  description: string
+  extraNote?: string
+  state: BlockImportState
+  onExport: () => void
+  onSelectFile: () => void
+  onImport: (mode: 'overwrite' | 'merge') => void
+}
+
+function DataBlock({
+  type,
+  title,
+  description,
+  extraNote,
+  state,
+  onExport,
+  onSelectFile,
+  onImport,
+}: DataBlockProps) {
+  return (
+    <Paper withBorder p="md">
+      <Text fw={500} mb="sm">
+        {title}
+      </Text>
+      <Text size="sm" c="dimmed" mb={extraNote ? 'xs' : 'md'}>
+        包含：{description}
+      </Text>
+      {extraNote && (
+        <Text size="sm" c="orange" mb="md">
+          注意：{extraNote}
+        </Text>
+      )}
+
+      <Group>
+        <Button leftSection={<IconDownload size={16} />} onClick={onExport}>
+          导出
+        </Button>
+        <Button variant="light" leftSection={<IconUpload size={16} />} onClick={onSelectFile}>
+          导入
+        </Button>
+      </Group>
+
+      {state.file && (
+        <div style={{ marginTop: 16 }}>
+          <Divider mb="sm" />
+          <Group gap="sm" mb="md">
+            <Text size="sm">已选择：{state.file.name}</Text>
+            <Badge variant="light">{typeLabel[state.file.type]}</Badge>
+          </Group>
+          <Group>
+            <Button onClick={() => onImport('overwrite')} loading={state.importing} color="orange">
+              覆盖导入
+            </Button>
+            {type === 'content' && (
+              <Button disabled title="合并导入功能即将推出">
+                合并导入
+              </Button>
+            )}
+          </Group>
+        </div>
+      )}
+
+      {state.results.length > 0 && (
+        <div style={{ marginTop: 16 }}>
+          <Divider mb="sm" />
+          <Text size="sm" fw={500} mb="xs">
+            导入结果：
+          </Text>
+          <List size="sm">
+            {state.results.map((r, i) => (
+              <List.Item key={i}>{r}</List.Item>
+            ))}
+          </List>
+        </div>
+      )}
+    </Paper>
+  )
+}
+
 export default function ImportExportPage() {
   const router = useRouter()
   const adminUrl = useAdminUrl()
   const currentUser = useCurrentUser()
   const { refreshCounts } = useAdminCounts()
-  const [importing, setImporting] = useState(false)
-  const [importResults, setImportResults] = useState<string[]>([])
-  const [importFile, setImportFile] = useState<ImportFile | null>(null)
+  const [importStates, setImportStates] = useState<Record<DataType, BlockImportState>>({
+    content: { file: null, importing: false, results: [] },
+    settings: { file: null, importing: false, results: [] },
+  })
+
+  const updateImportState = (type: DataType, patch: Partial<BlockImportState>) => {
+    setImportStates((prev) => ({
+      ...prev,
+      [type]: { ...prev[type], ...patch },
+    }))
+  }
 
   // 数据格式文档
   const [formatHtml, setFormatHtml] = useState('')
@@ -74,7 +171,7 @@ export default function ImportExportPage() {
     window.open(`/api/import-export?type=${type}`, '_blank')
   }
 
-  const handleSelectFile = () => {
+  const handleSelectFile = (expectedType: DataType) => {
     const input = document.createElement('input')
     input.type = 'file'
     input.accept = '.json'
@@ -91,8 +188,18 @@ export default function ImportExportPage() {
           return
         }
 
-        setImportFile({ name: file.name, type: data.meta.type, data })
-        setImportResults([])
+        if (data.meta.type !== expectedType) {
+          notify({
+            color: 'red',
+            message: `该文件包含的是${typeLabel[data.meta.type as DataType]}，请在对应区域导入`,
+          })
+          return
+        }
+
+        updateImportState(expectedType, {
+          file: { name: file.name, type: data.meta.type, data },
+          results: [],
+        })
       } catch {
         notify({ color: 'red', message: '文件解析失败，请检查 JSON 格式' })
       }
@@ -100,10 +207,11 @@ export default function ImportExportPage() {
     input.click()
   }
 
-  const handleImport = async (mode: 'overwrite' | 'merge') => {
-    if (!importFile) return
+  const handleImport = async (mode: 'overwrite' | 'merge', type: DataType) => {
+    const file = importStates[type].file
+    if (!file) return
 
-    const typeText = typeLabel[importFile.type]
+    const typeText = typeLabel[type]
     if (mode === 'overwrite') {
       const confirmed = await myModal.confirm({
         message: `覆盖导入将清空现有${typeText}后重新导入，确定继续吗？`,
@@ -111,28 +219,27 @@ export default function ImportExportPage() {
       if (!confirmed) return
     }
 
-    setImporting(true)
-    setImportResults([])
+    updateImportState(type, { importing: true, results: [] })
 
     try {
       const res = await fetch('/api/import-export', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(importFile.data),
+        body: JSON.stringify(file.data),
       })
       const json = await res.json()
 
       if (json.success) {
-        setImportResults(json.data.results)
+        updateImportState(type, { importing: false, results: json.data.results })
         await refreshCounts()
         notify({ color: 'green', message: '导入完成' })
       } else {
+        updateImportState(type, { importing: false })
         notify({ color: 'red', message: json.message || '导入失败' })
       }
     } catch {
+      updateImportState(type, { importing: false })
       notify({ color: 'red', message: '导入失败' })
-    } finally {
-      setImporting(false)
     }
   }
 
@@ -183,83 +290,28 @@ export default function ImportExportPage() {
       </Group>
 
       <Stack>
-        {/* 导出 */}
-        <Paper withBorder p="md">
-          <Text fw={500} mb="sm">
-            导出数据
-          </Text>
-          <Text size="sm" c="dimmed" mb="md">
-            将数据导出为 JSON
-            文件。内容数据包含文章、页面、分类、标签、评论、留言、附件、历史记录；设置数据包含用户、菜单、系统设置、跳转规则。
-          </Text>
-          <Group>
-            <Button
-              leftSection={<IconDownload size={16} />}
-              onClick={() => handleExport('content')}
-            >
-              导出内容数据
-            </Button>
-            <Button
-              variant="light"
-              leftSection={<IconDownload size={16} />}
-              onClick={() => handleExport('settings')}
-            >
-              导出设置数据
-            </Button>
-          </Group>
-        </Paper>
+        {/* 内容数据 */}
+        <DataBlock
+          type="content"
+          title="内容数据"
+          description="文章、页面、分类、标签、评论、留言、附件、历史记录"
+          state={importStates.content}
+          onExport={() => handleExport('content')}
+          onSelectFile={() => handleSelectFile('content')}
+          onImport={(mode) => handleImport(mode, 'content')}
+        />
 
-        {/* 导入 */}
-        <Paper withBorder p="md">
-          <Text fw={500} mb="sm">
-            导入数据
-          </Text>
-          <Text size="sm" c="dimmed" mb="md">
-            选择 JSON 文件后，系统会自动识别数据类型。覆盖导入会先清空对应的现有数据。
-          </Text>
-
-          <Button leftSection={<IconUpload size={16} />} onClick={handleSelectFile} variant="light">
-            选择文件
-          </Button>
-
-          {importFile && (
-            <div style={{ marginTop: 16 }}>
-              <Divider mb="sm" />
-              <Group gap="sm" mb="md">
-                <Text size="sm">已选择：{importFile.name}</Text>
-                <Badge variant="light">{typeLabel[importFile.type]}</Badge>
-              </Group>
-              <Group>
-                <Button
-                  onClick={() => handleImport('overwrite')}
-                  loading={importing}
-                  color="orange"
-                >
-                  覆盖导入
-                </Button>
-                {importFile.type === 'content' && (
-                  <Button disabled title="合并导入功能即将推出">
-                    合并导入
-                  </Button>
-                )}
-              </Group>
-            </div>
-          )}
-
-          {importResults.length > 0 && (
-            <div style={{ marginTop: 16 }}>
-              <Divider mb="sm" />
-              <Text size="sm" fw={500} mb="xs">
-                导入结果：
-              </Text>
-              <List size="sm">
-                {importResults.map((r, i) => (
-                  <List.Item key={i}>{r}</List.Item>
-                ))}
-              </List>
-            </div>
-          )}
-        </Paper>
+        {/* 设置数据 */}
+        <DataBlock
+          type="settings"
+          title="设置数据"
+          description="用户、菜单、系统设置、跳转规则"
+          extraNote="密码、存储密钥等敏感信息不会被导出"
+          state={importStates.settings}
+          onExport={() => handleExport('settings')}
+          onSelectFile={() => handleSelectFile('settings')}
+          onImport={(mode) => handleImport(mode, 'settings')}
+        />
       </Stack>
 
       {/* 数据格式文档 Drawer */}
