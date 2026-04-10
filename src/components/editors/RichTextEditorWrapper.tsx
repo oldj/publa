@@ -1,86 +1,28 @@
 'use client'
 
 import myModal from '@/app/(admin)/_components/myModals'
-import { codeHighlightAliases, codeHighlightLanguages } from '@/lib/code-highlight'
-import { notify } from '@/lib/notify'
-import { Button, Group, Modal, Stack, Text, TextInput, Textarea, Tooltip } from '@mantine/core'
+import { Text } from '@mantine/core'
 import { RichTextEditor } from '@mantine/tiptap'
 import '@mantine/tiptap/styles.css'
-import {
-  IconAlignCenter,
-  IconAlignLeft,
-  IconAlignRight,
-  IconArrowsMaximize,
-  IconColumnInsertLeft,
-  IconColumnInsertRight,
-  IconColumnRemove,
-  IconLink,
-  IconMath,
-  IconMath1Divide2,
-  IconMathFunction,
-  IconMaximizeOff,
-  IconPhoto,
-  IconRowInsertBottom,
-  IconRowInsertTop,
-  IconRowRemove,
-  IconRuler,
-  IconTable,
-  IconTableOff,
-} from '@tabler/icons-react'
+import { IconMath, IconMathFunction, IconPhoto, IconTable } from '@tabler/icons-react'
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
 import TiptapImage from '@tiptap/extension-image'
+import Link from '@tiptap/extension-link'
 import Mathematics from '@tiptap/extension-mathematics'
 import Placeholder from '@tiptap/extension-placeholder'
 import { TableKit } from '@tiptap/extension-table'
 import type { Editor } from '@tiptap/react'
-import { NodeViewContent, NodeViewWrapper, ReactNodeViewRenderer, useEditor } from '@tiptap/react'
+import { ReactNodeViewRenderer, useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import 'katex/dist/katex.min.css'
-import { createLowlight } from 'lowlight'
 import { useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react'
+
+import CodeBlockView, { lowlight } from './CodeBlockView'
+import ImageToolbar from './ImageToolbar'
+import LinkPopoverControl from './LinkPopover'
+import MathModal from './MathModal'
+import TableToolbar from './TableToolbar'
 import './editor.scss'
-
-// 代码高亮初始化
-const lowlight = createLowlight()
-lowlight.register(codeHighlightLanguages)
-lowlight.registerAlias(codeHighlightAliases)
-const languages = lowlight.listLanguages()
-
-// 代码块自定义组件，左上角显示语言选择器
-function CodeBlockView({ node, updateAttributes }: any) {
-  return (
-    <NodeViewWrapper style={{ position: 'relative' }}>
-      <select
-        contentEditable={false}
-        value={node.attrs.language || ''}
-        onChange={(e) => updateAttributes({ language: e.target.value })}
-        style={{
-          position: 'absolute',
-          right: 8,
-          top: 8,
-          zIndex: 1,
-          fontSize: 12,
-          padding: '2px 4px',
-          borderRadius: 4,
-          border: '1px solid #ddd',
-          background: '#f5f5f5',
-          color: '#555',
-          cursor: 'pointer',
-        }}
-      >
-        <option value="">auto</option>
-        {languages.map((lang) => (
-          <option key={lang} value={lang}>
-            {lang}
-          </option>
-        ))}
-      </select>
-      <pre>
-        <NodeViewContent as={'code' as any} />
-      </pre>
-    </NodeViewWrapper>
-  )
-}
 
 export interface RichTextEditorHandle {
   getEditor: () => Editor | null
@@ -134,7 +76,12 @@ export default function RichTextEditorWrapper({
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
-      StarterKit.configure({ codeBlock: false, link: { openOnClick: false } }),
+      StarterKit.configure({ codeBlock: false, link: false }),
+      Link.extend({ addPasteRules: () => [] }).configure({
+        openOnClick: false,
+        autolink: false,
+        linkOnPaste: false,
+      }),
       CodeBlockLowlight.extend({
         addNodeView() {
           return ReactNodeViewRenderer(CodeBlockView)
@@ -415,8 +362,7 @@ export default function RichTextEditorWrapper({
             </RichTextEditor.ControlsGroup>
 
             <RichTextEditor.ControlsGroup>
-              <RichTextEditor.Link />
-              <RichTextEditor.Unlink />
+              <LinkPopoverControl editor={editor} />
             </RichTextEditor.ControlsGroup>
 
             <RichTextEditor.ControlsGroup>
@@ -486,444 +432,33 @@ export default function RichTextEditorWrapper({
 
         {/* 图片浮动工具栏 */}
         {imageToolbar && editor && (
-          <div
-            style={{
-              position: 'absolute',
-              top: imageToolbar.top,
-              left: 0,
-              right: 0,
-              display: 'flex',
-              justifyContent: 'center',
-              zIndex: 20,
-              pointerEvents: 'none',
-            }}
-          >
-            <div
-              style={{
-                pointerEvents: 'auto',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: 4,
-              }}
-            >
-              {/* 自定义尺寸输入面板 */}
-              {customSizeOpen && (
-                <div
-                  className="image-bubble-menu"
-                  onMouseDown={(e) => {
-                    if ((e.target as HTMLElement).tagName === 'INPUT') return
-                    e.preventDefault()
-                  }}
-                >
-                  <Text size="xs" c="dimmed" style={{ userSelect: 'none' }}>
-                    宽
-                  </Text>
-                  <TextInput
-                    size="xs"
-                    value={customWidth}
-                    onChange={(e) => setCustomWidth(e.target.value)}
-                    placeholder="auto"
-                    styles={{
-                      input: { height: 22, minHeight: 22, fontSize: 12, width: 56 },
-                    }}
-                  />
-                  <Text size="xs" c="dimmed" style={{ userSelect: 'none' }}>
-                    高
-                  </Text>
-                  <TextInput
-                    size="xs"
-                    value={customHeight}
-                    onChange={(e) => setCustomHeight(e.target.value)}
-                    placeholder="auto"
-                    styles={{
-                      input: { height: 22, minHeight: 22, fontSize: 12, width: 56 },
-                    }}
-                  />
-                  <Button
-                    size="compact-xs"
-                    onClick={() => {
-                      const imgEl = selectedImgRef.current
-                      if (!imgEl || !editor) return
-                      const parseVal = (v: string) => {
-                        if (!v) return null
-                        return /^\d+$/.test(v) ? parseInt(v) : v
-                      }
-                      const w = parseVal(customWidth)
-                      const h = parseVal(customHeight)
-                      editor
-                        .chain()
-                        .focus()
-                        .updateAttributes('image', {
-                          width: typeof w === 'number' ? w : null,
-                          height: typeof h === 'number' ? h : null,
-                        })
-                        .run()
-                      imgEl.style.width = w ? (typeof w === 'number' ? `${w}px` : w) : ''
-                      imgEl.style.height = h ? (typeof h === 'number' ? `${h}px` : h) : ''
-                      const wrapper = imgEl.closest('[data-node-view-wrapper]') as HTMLElement
-                      if (wrapper) {
-                        wrapper.style.width = w ? (typeof w === 'number' ? `${w}px` : w) : ''
-                        wrapper.style.height = h ? (typeof h === 'number' ? `${h}px` : h) : ''
-                      }
-                      setCustomSizeOpen(false)
-                    }}
-                  >
-                    确认
-                  </Button>
-                </div>
-              )}
-              {/* 主工具栏 */}
-              <div className="image-bubble-menu" onMouseDown={(e) => e.preventDefault()}>
-                <Tooltip label="自动尺寸" withArrow>
-                  <Button
-                    size="compact-xs"
-                    variant="subtle"
-                    onClick={() => {
-                      const imgEl = selectedImgRef.current
-                      if (!imgEl) return
-                      editor
-                        .chain()
-                        .focus()
-                        .updateAttributes('image', { width: null, height: null })
-                        .run()
-                      imgEl.style.width = ''
-                      imgEl.style.height = ''
-                      const wrapper = imgEl.closest('[data-node-view-wrapper]') as HTMLElement
-                      if (wrapper) {
-                        wrapper.style.width = ''
-                        wrapper.style.height = ''
-                      }
-                    }}
-                  >
-                    <IconMaximizeOff size={14} />
-                  </Button>
-                </Tooltip>
-                <Tooltip label="原始尺寸" withArrow>
-                  <Button
-                    size="compact-xs"
-                    variant="subtle"
-                    onClick={() => {
-                      const imgEl = selectedImgRef.current
-                      if (!imgEl) return
-                      const w = imgEl.naturalWidth
-                      if (!w) return
-                      editor
-                        .chain()
-                        .focus()
-                        .updateAttributes('image', { width: w, height: null })
-                        .run()
-                      imgEl.style.width = `${w}px`
-                      imgEl.style.height = ''
-                      const wrapper = imgEl.closest('[data-node-view-wrapper]') as HTMLElement
-                      if (wrapper) {
-                        wrapper.style.width = `${w}px`
-                        wrapper.style.height = ''
-                      }
-                    }}
-                  >
-                    <IconArrowsMaximize size={14} />
-                  </Button>
-                </Tooltip>
-                <Tooltip label="1/2 尺寸" withArrow>
-                  <Button
-                    size="compact-xs"
-                    variant="subtle"
-                    onClick={() => {
-                      const imgEl = selectedImgRef.current
-                      if (!imgEl) return
-                      const w = Math.round(imgEl.naturalWidth / 2)
-                      if (!w) return
-                      editor
-                        .chain()
-                        .focus()
-                        .updateAttributes('image', { width: w, height: null })
-                        .run()
-                      imgEl.style.width = `${w}px`
-                      imgEl.style.height = ''
-                      const wrapper = imgEl.closest('[data-node-view-wrapper]') as HTMLElement
-                      if (wrapper) {
-                        wrapper.style.width = `${w}px`
-                        wrapper.style.height = ''
-                      }
-                    }}
-                  >
-                    <IconMath1Divide2 size={14} />
-                  </Button>
-                </Tooltip>
-                <Tooltip label="自定义尺寸" withArrow>
-                  <Button
-                    size="compact-xs"
-                    variant={customSizeOpen ? 'filled' : 'subtle'}
-                    onClick={() => {
-                      if (!customSizeOpen) {
-                        const imgEl = selectedImgRef.current
-                        setCustomWidth(imgEl?.style.width?.replace('px', '') || '')
-                        setCustomHeight(imgEl?.style.height?.replace('px', '') || '')
-                      }
-                      setCustomSizeOpen(!customSizeOpen)
-                    }}
-                  >
-                    <IconRuler size={14} />
-                  </Button>
-                </Tooltip>
-
-                <div
-                  style={{
-                    width: 1,
-                    alignSelf: 'stretch',
-                    background: 'var(--mantine-color-gray-3)',
-                  }}
-                />
-
-                <Tooltip label="居左" withArrow>
-                  <Button
-                    size="compact-xs"
-                    variant="subtle"
-                    onClick={() => {
-                      editor.chain().focus().updateAttributes('image', { align: null }).run()
-                      const imgEl = selectedImgRef.current
-                      if (imgEl) {
-                        imgEl.removeAttribute('data-align')
-                        const c = imgEl.closest('[data-resize-container]') as HTMLElement
-                        if (c) c.style.justifyContent = ''
-                      }
-                    }}
-                  >
-                    <IconAlignLeft size={14} />
-                  </Button>
-                </Tooltip>
-                <Tooltip label="居中" withArrow>
-                  <Button
-                    size="compact-xs"
-                    variant="subtle"
-                    onClick={() => {
-                      editor.chain().focus().updateAttributes('image', { align: 'center' }).run()
-                      const imgEl = selectedImgRef.current
-                      if (imgEl) {
-                        imgEl.setAttribute('data-align', 'center')
-                        const c = imgEl.closest('[data-resize-container]') as HTMLElement
-                        if (c) c.style.justifyContent = 'center'
-                      }
-                    }}
-                  >
-                    <IconAlignCenter size={14} />
-                  </Button>
-                </Tooltip>
-                <Tooltip label="居右" withArrow>
-                  <Button
-                    size="compact-xs"
-                    variant="subtle"
-                    onClick={() => {
-                      editor.chain().focus().updateAttributes('image', { align: 'right' }).run()
-                      const imgEl = selectedImgRef.current
-                      if (imgEl) {
-                        imgEl.setAttribute('data-align', 'right')
-                        const c = imgEl.closest('[data-resize-container]') as HTMLElement
-                        if (c) c.style.justifyContent = 'flex-end'
-                      }
-                    }}
-                  >
-                    <IconAlignRight size={14} />
-                  </Button>
-                </Tooltip>
-
-                <div
-                  style={{
-                    width: 1,
-                    alignSelf: 'stretch',
-                    background: 'var(--mantine-color-gray-3)',
-                  }}
-                />
-
-                <Tooltip label="复制图片链接" withArrow>
-                  <Button
-                    size="compact-xs"
-                    variant="subtle"
-                    onClick={() => {
-                      const src = editor.getAttributes('image').src
-                      if (src) {
-                        navigator.clipboard.writeText(src)
-                        notify({ color: 'green', message: '已复制链接' })
-                      }
-                    }}
-                  >
-                    <IconLink size={14} />
-                  </Button>
-                </Tooltip>
-              </div>
-            </div>
-          </div>
+          <ImageToolbar
+            editor={editor}
+            imageToolbar={imageToolbar}
+            selectedImgRef={selectedImgRef}
+            customSizeOpen={customSizeOpen}
+            setCustomSizeOpen={setCustomSizeOpen}
+            customWidth={customWidth}
+            setCustomWidth={setCustomWidth}
+            customHeight={customHeight}
+            setCustomHeight={setCustomHeight}
+          />
         )}
 
         {/* 表格浮动工具栏 */}
-        {tableToolbar && editor && (
-          <div
-            style={{
-              position: 'absolute',
-              top: tableToolbar.top,
-              left: 0,
-              right: 0,
-              display: 'flex',
-              justifyContent: 'center',
-              zIndex: 20,
-              pointerEvents: 'none',
-            }}
-          >
-            <div className="image-bubble-menu" style={{ pointerEvents: 'auto' }}>
-              <Tooltip label="前方插入列" position="top" withArrow>
-                <Button
-                  size="compact-xs"
-                  variant="subtle"
-                  color="gray"
-                  onClick={() => editor.chain().focus().addColumnBefore().run()}
-                >
-                  <IconColumnInsertLeft size={16} />
-                </Button>
-              </Tooltip>
-              <Tooltip label="后方插入列" position="top" withArrow>
-                <Button
-                  size="compact-xs"
-                  variant="subtle"
-                  color="gray"
-                  onClick={() => editor.chain().focus().addColumnAfter().run()}
-                >
-                  <IconColumnInsertRight size={16} />
-                </Button>
-              </Tooltip>
-              <Tooltip label="删除列" position="top" withArrow>
-                <Button
-                  size="compact-xs"
-                  variant="subtle"
-                  color="red"
-                  onClick={() => editor.chain().focus().deleteColumn().run()}
-                >
-                  <IconColumnRemove size={16} />
-                </Button>
-              </Tooltip>
-
-              <div style={{ width: 1, height: 16, background: 'var(--mantine-color-gray-3)' }} />
-
-              <Tooltip label="上方插入行" position="top" withArrow>
-                <Button
-                  size="compact-xs"
-                  variant="subtle"
-                  color="gray"
-                  onClick={() => editor.chain().focus().addRowBefore().run()}
-                >
-                  <IconRowInsertTop size={16} />
-                </Button>
-              </Tooltip>
-              <Tooltip label="下方插入行" position="top" withArrow>
-                <Button
-                  size="compact-xs"
-                  variant="subtle"
-                  color="gray"
-                  onClick={() => editor.chain().focus().addRowAfter().run()}
-                >
-                  <IconRowInsertBottom size={16} />
-                </Button>
-              </Tooltip>
-              <Tooltip label="删除行" position="top" withArrow>
-                <Button
-                  size="compact-xs"
-                  variant="subtle"
-                  color="red"
-                  onClick={() => editor.chain().focus().deleteRow().run()}
-                >
-                  <IconRowRemove size={16} />
-                </Button>
-              </Tooltip>
-
-              <div style={{ width: 1, height: 16, background: 'var(--mantine-color-gray-3)' }} />
-
-              <Tooltip label="删除表格" position="top" withArrow>
-                <Button
-                  size="compact-xs"
-                  variant="subtle"
-                  color="red"
-                  onClick={() => editor.chain().focus().deleteTable().run()}
-                >
-                  <IconTableOff size={16} />
-                </Button>
-              </Tooltip>
-            </div>
-          </div>
-        )}
+        {tableToolbar && editor && <TableToolbar editor={editor} tableToolbar={tableToolbar} />}
       </div>
 
       {/* 公式编辑弹窗 */}
-      <Modal
+      <MathModal
+        editor={editor}
         opened={mathModalOpen}
         onClose={() => setMathModalOpen(false)}
-        title={mathEditType.current === 'inlineMath' ? '编辑行内公式' : '编辑公式块'}
-        size="lg"
-        centered
-      >
-        <Stack>
-          {mathEditType.current === 'blockMath' ? (
-            <Textarea
-              label="LaTeX"
-              placeholder="输入 LaTeX 公式，如 \int_0^\infty x^2 dx"
-              autosize
-              minRows={3}
-              value={mathLatex}
-              onChange={(e) => setMathLatex(e.target.value)}
-              styles={{ input: { fontFamily: 'monospace' } }}
-              data-autofocus
-            />
-          ) : (
-            <TextInput
-              label="LaTeX"
-              placeholder="输入 LaTeX 公式，如 E=mc^2"
-              value={mathLatex}
-              onChange={(e) => setMathLatex(e.target.value)}
-              styles={{ input: { fontFamily: 'monospace' } }}
-              data-autofocus
-            />
-          )}
-          <Group justify="flex-end">
-            <Button variant="default" onClick={() => setMathModalOpen(false)}>
-              取消
-            </Button>
-            <Button
-              onClick={() => {
-                if (!editor || !mathLatex.trim()) return
-                const type = mathEditType.current
-                const pos = mathEditPos.current
-
-                if (pos !== null) {
-                  const node = editor.state.doc.nodeAt(pos)
-                  if (node) {
-                    editor
-                      .chain()
-                      .focus()
-                      .command(({ tr }) => {
-                        tr.replaceWith(
-                          pos,
-                          pos + node.nodeSize,
-                          editor.schema.nodes[type].create({ latex: mathLatex.trim() }),
-                        )
-                        return true
-                      })
-                      .run()
-                  }
-                } else {
-                  editor
-                    .chain()
-                    .focus()
-                    .insertContent({ type, attrs: { latex: mathLatex.trim() } })
-                    .run()
-                }
-
-                setMathModalOpen(false)
-              }}
-            >
-              确定
-            </Button>
-          </Group>
-        </Stack>
-      </Modal>
+        mathLatex={mathLatex}
+        setMathLatex={setMathLatex}
+        mathEditType={mathEditType}
+        mathEditPos={mathEditPos}
+      />
     </>
   )
 }

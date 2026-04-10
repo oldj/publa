@@ -1,3 +1,9 @@
+/* 编辑器中的链接 */
+.ProseMirror a {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 /* 编辑器中的图片 */
 .ProseMirror img {
   max-width: 100%;
@@ -156,4 +162,9 @@
 
   /* 防止溢出容器 */
   max-width: calc(100vw - 40px);
+}
+
+/* 行内代码字号与正文保持一致 */
+.ProseMirror code {
+  font-size: inherit;
 }

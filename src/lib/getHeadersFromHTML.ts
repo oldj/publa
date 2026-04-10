@@ -22,7 +22,7 @@ export default (html: string): { html: string; headers: IHeader[] } => {
   let normalLevel = 1
   let number = '1'
 
-  html = html.replace(/<h([1-6])(.*)>(.+)<\/h[1-6]>/g, (match, level, attrs, title) => {
+  html = html.replace(/<h([1-6])([^>]*)>(.+)<\/h[1-6]>/g, (match, level, attrs, title) => {
     let rawLevel = parseInt(level)
     let rawTitle = title.replace(/<[^>]*>/g, '')
     rawTitle = rawTitle.replace(/^\s*\d+[\s.、]/g, '')
