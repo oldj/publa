@@ -13,8 +13,8 @@ export interface PublishSettingsProps {
   publishTab: string
   onPublishTabChange: (tab: string) => void
   /** 定时发布时间 */
-  scheduledTime: Date | null
-  onScheduledTimeChange: (time: Date | null) => void
+  scheduledTime: string | null
+  onScheduledTimeChange: (time: string | null) => void
   /** 发布时间 */
   publishedAt: string | null
   /** 是否有未保存的修改 */
@@ -100,22 +100,50 @@ export default function PublishSettings({
                 label="发布时间"
                 placeholder="选择日期和时间"
                 value={scheduledTime}
-                onChange={(v) => onScheduledTimeChange(v as Date | null)}
-                minDate={new Date()}
+                valueFormat={'YYYY-MM-DD HH:mm'}
+                onChange={(v) => onScheduledTimeChange(v as string | null)}
+                popoverProps={{ shadow: 'md' }}
+                highlightToday
+                presets={[
+                  { value: dayjs().format('YYYY-MM-DD') + ' 10:30', label: '今天 10:30' },
+                  { value: dayjs().format('YYYY-MM-DD') + ' 16:30', label: '今天 16:30' },
+                  { value: dayjs().format('YYYY-MM-DD') + ' 22:30', label: '今天 22:30' },
+                  {
+                    value: dayjs().add(1, 'day').format('YYYY-MM-DD') + ' 10:30',
+                    label: '明天 10:30',
+                  },
+                  {
+                    value: dayjs().add(1, 'day').format('YYYY-MM-DD') + ' 16:30',
+                    label: '明天 16:30',
+                  },
+                  {
+                    value: dayjs().add(1, 'day').format('YYYY-MM-DD') + ' 22:30',
+                    label: '明天 22:30',
+                  },
+                ]}
+                timePickerProps={{ withDropdown: true, popoverProps: { withinPortal: false } }}
+                styles={{
+                  day: {
+                    '&[data-today][data-highlight-today]:not([data-selected], [data-in-range])': {
+                      backgroundColor: 'var(--mantine-color-gray-1)',
+                      border: 'none',
+                    },
+                  },
+                }}
               />
               <Button
                 fullWidth
                 disabled={!scheduledTime}
                 onClick={async () => {
                   if (!scheduledTime) return
-                  const timeStr = dayjs(scheduledTime).format('YYYY-MM-DD HH:mm:ss')
-                  if (
-                    !(await myModal.confirm({
-                      message: `确定要将${entityLabel}设为定时发布吗？\n\n发布时间：${timeStr}`,
-                    }))
-                  )
-                    return
-                  onSetScheduled(scheduledTime.toISOString())
+                  const d = dayjs(scheduledTime)
+                  const isPast = d.isBefore(dayjs())
+                  const timeStr = d.format('YYYY-MM-DD HH:mm:ss')
+                  const message = isPast
+                    ? `所选时间已过，${entityLabel}将立即发布。\n发布时间：${timeStr}`
+                    : `确定要将${entityLabel}设为定时发布吗？\n发布时间：${timeStr}`
+                  if (!(await myModal.confirm({ message }))) return
+                  onSetScheduled(d.toISOString())
                 }}
                 loading={loading}
               >

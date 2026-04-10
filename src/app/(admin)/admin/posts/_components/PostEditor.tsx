@@ -122,7 +122,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
   const editorDirty = useRef(false)
 
   // 发布设置面板
-  const [scheduledTime, setScheduledTime] = useState<Date | null>(null)
+  const [scheduledTime, setScheduledTime] = useState<string | null>(null)
   const [publishTab, setPublishTab] = useState<string>('draft')
 
   // 自动保存状态
@@ -338,7 +338,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
               : 'draft',
         )
         if (postData.publishedAt && postData.status === 'scheduled') {
-          setScheduledTime(new Date(postData.publishedAt))
+          setScheduledTime(postData.publishedAt)
         } else {
           setScheduledTime(null)
         }
@@ -762,7 +762,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
           )
           setScheduledTime(
             postData.publishedAt && postData.status === 'scheduled'
-              ? new Date(postData.publishedAt)
+              ? postData.publishedAt
               : null,
           )
           if (restoreCT === 'richtext') {
@@ -949,7 +949,8 @@ export default function PostEditor({ postId }: { postId?: number }) {
                 await handleSave('draft', { publishedAt: null })
               }}
               onSetScheduled={async (publishedAt) => {
-                await handleSave('scheduled', { publishedAt })
+                const isPast = new Date(publishedAt) <= new Date()
+                await handleSave(isPast ? 'published' : 'scheduled', { publishedAt })
               }}
               entityLabel="文章"
             />
