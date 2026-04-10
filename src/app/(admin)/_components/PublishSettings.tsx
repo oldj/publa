@@ -100,8 +100,27 @@ export default function PublishSettings({
                 label="发布时间"
                 placeholder="选择日期和时间"
                 value={scheduledTime}
+                valueFormat={'YYYY-MM-DD HH:mm'}
                 onChange={(v) => onScheduledTimeChange(v as Date | null)}
                 minDate={new Date()}
+                popoverProps={{ shadow: 'md' }}
+                highlightToday
+                presets={[
+                  { value: dayjs().format('YYYY-MM-DD'), label: '今天' },
+                  {
+                    value: dayjs().add(1, 'day').format('YYYY-MM-DD'),
+                    label: '明天',
+                  },
+                ]}
+                timePickerProps={{ withDropdown: true, popoverProps: { withinPortal: false } }}
+                styles={{
+                  day: {
+                    '&[data-today][data-highlight-today]:not([data-selected], [data-in-range])': {
+                      backgroundColor: 'var(--mantine-color-gray-1)',
+                      border: 'none',
+                    },
+                  },
+                }}
               />
               <Button
                 fullWidth
