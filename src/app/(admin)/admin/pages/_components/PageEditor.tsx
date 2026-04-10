@@ -57,7 +57,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
   const [historyOpen, setHistoryOpen] = useState(false)
 
   // 发布设置面板
-  const [scheduledTime, setScheduledTime] = useState<Date | null>(null)
+  const [scheduledTime, setScheduledTime] = useState<string | null>(null)
   const [publishTab, setPublishTab] = useState<string>('draft')
   const lastAutoSaveContent = useRef<string>('')
   const lastAutoSaveMetaRef = useRef<string>('')
@@ -200,7 +200,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
                 : 'draft',
           )
           if (p.status === 'scheduled' && p.publishedAt) {
-            setScheduledTime(new Date(p.publishedAt))
+            setScheduledTime(p.publishedAt)
           } else {
             setScheduledTime(null)
           }
@@ -674,7 +674,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
                 : 'draft',
           )
           if (pageData.status === 'scheduled' && pageData.publishedAt) {
-            setScheduledTime(new Date(pageData.publishedAt))
+            setScheduledTime(pageData.publishedAt)
           } else {
             setScheduledTime(null)
           }

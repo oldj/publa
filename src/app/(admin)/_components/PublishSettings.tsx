@@ -13,8 +13,8 @@ export interface PublishSettingsProps {
   publishTab: string
   onPublishTabChange: (tab: string) => void
   /** 定时发布时间 */
-  scheduledTime: Date | null
-  onScheduledTimeChange: (time: Date | null) => void
+  scheduledTime: string | null
+  onScheduledTimeChange: (time: string | null) => void
   /** 发布时间 */
   publishedAt: string | null
   /** 是否有未保存的修改 */
@@ -101,7 +101,7 @@ export default function PublishSettings({
                 placeholder="选择日期和时间"
                 value={scheduledTime}
                 valueFormat={'YYYY-MM-DD HH:mm'}
-                onChange={(v) => onScheduledTimeChange(v as Date | null)}
+                onChange={(v) => onScheduledTimeChange(v as string | null)}
                 popoverProps={{ shadow: 'md' }}
                 highlightToday
                 presets={[
