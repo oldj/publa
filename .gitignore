@@ -10,6 +10,7 @@ tsconfig.tsbuildinfo
 next-env.d.ts
 .env
 deploy.settings.json
+e2e/tmp
 
 scripts/.env
 _pages

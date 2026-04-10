@@ -315,6 +315,7 @@ export default function RichTextEditorWrapper({
     <>
       <div
         ref={editorContainerRef}
+        data-role="rich-text-editor-container"
         style={{ position: 'relative', display: hidden ? 'none' : undefined }}
       >
         <Text size="sm" fw={500} mb={4}>
@@ -421,7 +422,7 @@ export default function RichTextEditorWrapper({
             </RichTextEditor.ControlsGroup>
           </RichTextEditor.Toolbar>
 
-          <RichTextEditor.Content />
+          <RichTextEditor.Content data-role="rich-text-editor" />
         </RichTextEditor>
 
         {/* 图片浮动工具栏 */}

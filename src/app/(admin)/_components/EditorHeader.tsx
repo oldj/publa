@@ -123,7 +123,7 @@ export function EditorHeader({
           </Group>
         )}
         {autoSaveTime && (
-          <Text size="sm" c="dimmed">
+          <Text size="sm" c="dimmed" data-role="editor-autosave-time">
             自动保存：{dayjs(autoSaveTime).format('YYYY-MM-DD HH:mm:ss')}
           </Text>
         )}

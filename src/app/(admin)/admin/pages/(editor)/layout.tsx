@@ -1,5 +1,6 @@
 'use client'
 
+import { E2ERouterBridge } from '@/app/(admin)/_components/E2ERouterBridge'
 import { Box } from '@mantine/core'
 import { useSelectedLayoutSegment } from 'next/navigation'
 import type { ReactNode } from 'react'
@@ -19,6 +20,7 @@ export default function PageEditorLayout({ children }: { children: ReactNode }) 
 
   return (
     <Box mt="md">
+      <E2ERouterBridge />
       <PageEditor pageId={parsePageId(segment)} />
       {children}
     </Box>

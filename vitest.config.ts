@@ -1,6 +1,6 @@
 import { resolve } from 'path'
 import { loadEnvConfig } from '@next/env'
-import { defineConfig } from 'vitest/config'
+import { configDefaults, defineConfig } from 'vitest/config'
 
 export default defineConfig(() => {
   const { combinedEnv } = loadEnvConfig(process.cwd(), false, console, true)
@@ -20,6 +20,7 @@ export default defineConfig(() => {
     test: {
       globals: true,
       env: testEnv,
+      exclude: [...configDefaults.exclude, 'e2e/**/*'],
     },
   }
 })
