@@ -359,13 +359,7 @@ export default function RichTextEditorWrapper({
               >
                 <IconTable size={16} />
               </RichTextEditor.Control>
-            </RichTextEditor.ControlsGroup>
-
-            <RichTextEditor.ControlsGroup>
               <LinkPopoverControl editor={editor} />
-            </RichTextEditor.ControlsGroup>
-
-            <RichTextEditor.ControlsGroup>
               <RichTextEditor.Control
                 onClick={async () => {
                   const configured = await checkStorageConfig()
