@@ -64,6 +64,20 @@ const defaultAboutPage = {
   publishedAt: new Date().toISOString(),
 }
 
+/** 默认 robots.txt 页面 */
+const defaultRobotsTxt = {
+  type: 'page' as const,
+  title: 'robots.txt',
+  path: 'robots.txt',
+  contentType: 'html' as const,
+  contentRaw: 'User-agent: *\nDisallow:',
+  contentHtml: 'User-agent: *\nDisallow:',
+  template: 'blank' as const,
+  mimeType: 'text/plain',
+  status: 'published' as const,
+  publishedAt: new Date().toISOString(),
+}
+
 export async function seed(tx?: BaseSQLiteDatabase<any, any, any>) {
   // 未传入事务时，CLI 脚本和非 Next.js 入口需要等待数据库初始化完成
   if (!tx) {
@@ -86,7 +100,7 @@ export async function seed(tx?: BaseSQLiteDatabase<any, any, any>) {
   // 检查是否已有关于页面
   const existingPages = await conn.select().from(contents)
   if (existingPages.length === 0) {
-    await conn.insert(contents).values(defaultAboutPage)
+    await conn.insert(contents).values([defaultAboutPage, defaultRobotsTxt])
   }
 
   console.log('Seed completed.')
