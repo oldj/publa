@@ -1,6 +1,6 @@
 {
   "name": "publa",
-  "version": "0.1.19",
+  "version": "0.1.20",
   "private": true,
   "scripts": {
     "test:unit": "npm run db:check-migrations && vitest --watch=false",
