@@ -120,9 +120,10 @@ function SortableThemeRow({
           <Radio
             checked={selected}
             onChange={() => onSelect(theme.id)}
+            styles={{ body: { alignItems: 'center' } }}
             label={
               <Group gap="xs">
-                <Text fw={600}>{theme.name}</Text>
+                <Text>{theme.name}</Text>
                 {isBuiltin && (
                   <Text size="xs" c="dimmed">
                     （内置）
@@ -202,7 +203,8 @@ function SortableCustomStyleRow({
           <Checkbox
             checked={checked}
             onChange={() => onToggle(item.id)}
-            label={<Text fw={600}>{item.name}</Text>}
+            styles={{ body: { alignItems: 'center' } }}
+            label={<Text>{item.name}</Text>}
           />
         </Group>
 
