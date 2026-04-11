@@ -4,8 +4,10 @@
  */
 import { serializeSettingValue } from '@/server/services/settings'
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core'
+import { eq } from 'drizzle-orm'
 import { db, dbReady } from './index'
-import { contents, menus, settings } from './schema'
+import { contents, menus, settings, themes } from './schema'
+import { isoNow } from './schema/shared'
 
 /** 默认系统设置（原生类型，插入时自动 JSON 序列化） */
 const defaultSettings = (
@@ -40,8 +42,17 @@ const defaultSettings = (
     { key: 'customHeadHtml', value: '' },
     { key: 'customBodyStartHtml', value: '' },
     { key: 'customBodyEndHtml', value: '' },
+    // 主题与自定义 CSS 选中状态。activeThemeId 在内置主题插入后写入
+    { key: 'activeCustomStyleIds', value: [] },
   ] as { key: string; value: unknown }[]
 ).map(({ key, value }) => ({ key, value: serializeSettingValue(key, value) }))
+
+/** 内置主题。三项均不可编辑、不可删除，仅可参与排序和被选中 */
+const BUILTIN_THEMES = [
+  { name: '浅色', builtinKey: 'light', sortOrder: 1 },
+  { name: '深色', builtinKey: 'dark', sortOrder: 2 },
+  { name: '空白', builtinKey: 'blank', sortOrder: 3 },
+] as const
 
 /** 默认菜单项 */
 const defaultMenus = [
@@ -103,7 +114,53 @@ export async function seed(tx?: BaseSQLiteDatabase<any, any, any>) {
     await conn.insert(contents).values([defaultAboutPage, defaultRobotsTxt])
   }
 
+  // 幂等写入内置主题与默认 activeThemeId
+  await ensureBuiltinThemes(conn)
+
   console.log('Seed completed.')
+}
+
+/**
+ * 幂等确保内置主题（浅色/深色/空白）存在，并设置默认选中主题。
+ * 供 seed() 和应用启动（instrumentation）共同调用，支持已有数据库平滑升级。
+ */
+export async function ensureBuiltinThemes(
+  conn: BaseSQLiteDatabase<any, any, any> | typeof db = db,
+) {
+  const now = isoNow()
+  for (const item of BUILTIN_THEMES) {
+    const existing = await conn
+      .select()
+      .from(themes)
+      .where(eq(themes.builtinKey, item.builtinKey))
+      .limit(1)
+    if (existing.length === 0) {
+      await conn.insert(themes).values({
+        name: item.name,
+        css: '',
+        sortOrder: item.sortOrder,
+        builtinKey: item.builtinKey,
+        createdAt: now,
+        updatedAt: now,
+      })
+    }
+  }
+
+  // 默认选中"浅色"主题（若尚未设置）
+  const lightTheme = await conn
+    .select()
+    .from(themes)
+    .where(eq(themes.builtinKey, 'light'))
+    .limit(1)
+  if (lightTheme.length > 0) {
+    await conn
+      .insert(settings)
+      .values({
+        key: 'activeThemeId',
+        value: serializeSettingValue('activeThemeId', lightTheme[0].id),
+      })
+      .onConflictDoNothing()
+  }
 }
 
 // 允许直接运行

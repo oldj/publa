@@ -30,6 +30,8 @@ const resetTableNames = [
   'attachments',
   'captchas',
   'rate_events',
+  'themes',
+  'custom_styles',
   'users',
   '__drizzle_migrations',
 ] as const
@@ -57,4 +59,9 @@ export async function setupTestDb() {
     { id: 1, username: 'admin', passwordHash: 'hash', role: 'owner' },
     { id: 2, username: 'editor', passwordHash: 'hash', role: 'editor' },
   ])
+
+  // 防御测试间状态泄漏：themes 表被 DROP 后，内置主题 id→key 的模块级缓存可能指向废弃 id；
+  // 在这里统一清空，让任何调用 setupTestDb 的测试都不用单独记得手动 reset。
+  const { _resetBuiltinThemeCache } = await import('@/server/services/builtin-themes')
+  _resetBuiltinThemeCache()
 }

@@ -1,10 +1,10 @@
 import PreviewNotice from '@/components/PreviewNotice'
 import BasicLayout from '@/layouts/basic'
+import BlankLayout from '@/layouts/blank'
 import { getCurrentUser } from '@/server/auth'
 import { redirectOrNotFound } from '@/server/lib/frontend-404'
 import { getPublishedPageByPath } from '@/server/services/pages'
 import { getPreviewPage, parsePreviewId } from '@/server/services/preview'
-import '@/styles/themes/oj-2025.css'
 import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 
@@ -56,14 +56,15 @@ export default async function DynamicPage({ params }: { params: Promise<{ path: 
     if (!page) notFound()
 
     if (page.template === 'blank') {
+      // blank 模板不渲染 Nav/Footer，但仍需经过 BlankLayout 注入主题 CSS 与 custom body HTML
       return (
-        <>
+        <BlankLayout>
           <PreviewNotice />
           <div
             className="dynamic-page-content"
             dangerouslySetInnerHTML={{ __html: page.contentHtml }}
           />
-        </>
+        </BlankLayout>
       )
     }
 
@@ -85,13 +86,15 @@ export default async function DynamicPage({ params }: { params: Promise<{ path: 
     return redirectOrNotFound(pathname)
   }
 
-  // blank 模板：不包含头尾
+  // blank 模板：不包含 Nav/Footer，但仍需 BlankLayout 注入主题 CSS 与 custom body HTML
   if (page.template === 'blank') {
     return (
-      <div
-        className="dynamic-page-content"
-        dangerouslySetInnerHTML={{ __html: page.contentHtml }}
-      />
+      <BlankLayout>
+        <div
+          className="dynamic-page-content"
+          dangerouslySetInnerHTML={{ __html: page.contentHtml }}
+        />
+      </BlankLayout>
     )
   }
 

@@ -305,7 +305,7 @@ export default function ImportExportPage() {
         <DataBlock
           type="settings"
           title="设置数据"
-          description="用户、菜单、系统设置、跳转规则"
+          description="用户、菜单、系统设置、跳转规则、主题、自定义样式"
           extraNote="密码、存储密钥等敏感信息不会被导出"
           state={importStates.settings}
           onExport={() => handleExport('settings')}

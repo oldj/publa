@@ -56,6 +56,7 @@ function NavLinks({ user }: { user: AuthUser | null }) {
       links: [
         ...(isOwner || isAdmin ? [{ label: '菜单', link: adminUrl('/menus') }] : []),
         ...(isOwner || isAdmin ? [{ label: '跳转', link: adminUrl('/redirects') }] : []),
+        ...(isOwner || isAdmin ? [{ label: '主题', link: adminUrl('/themes') }] : []),
       ],
     },
     ...(isOwner || isAdmin

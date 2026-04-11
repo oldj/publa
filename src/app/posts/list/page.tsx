@@ -34,10 +34,9 @@ export default async function Page({
     }
   }
 
-  let r_title: React.ReactNode = '文章列表'
+  let rTitle: React.ReactNode = '文章列表'
   if (filterBy) {
-    // title = `${filter_by}：${filter_key}`
-    r_title = (
+    rTitle = (
       <>
         <span className="posts-filter-by">{filterBy}：</span>
         <span>{filterKey}</span>
@@ -50,7 +49,7 @@ export default async function Page({
       <div className="posts-filter">
         {filterBy ? (
           <div className="posts-filter-bar">
-            <h1 className="page_title">{r_title}</h1>
+            <h1 className="page_title">{rTitle}</h1>
             <div className="posts-filter-back">
               <Link href="/posts/list">
                 <IconChevronLeft size={16} />

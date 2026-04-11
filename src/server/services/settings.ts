@@ -2,15 +2,16 @@ import { db } from '@/server/db'
 import { maybeFirst } from '@/server/db/query'
 import { settings } from '@/server/db/schema'
 import { eq } from 'drizzle-orm'
+import { cache } from 'react'
 
 export interface NotifySettingValue {
   enabled: boolean
   userIds: number[]
 }
 
-export type SettingValue = string | boolean | number | NotifySettingValue
+export type SettingValue = string | boolean | number | number[] | NotifySettingValue
 
-type SettingValueKind = 'string' | 'boolean' | 'number' | 'notify'
+type SettingValueKind = 'string' | 'boolean' | 'number' | 'numberArray' | 'notify'
 
 export const ADMIN_SETTINGS_KEYS = [
   'siteTitle',
@@ -36,6 +37,8 @@ export const ADMIN_SETTINGS_KEYS = [
   'customHeadHtml',
   'customBodyStartHtml',
   'customBodyEndHtml',
+  'activeThemeId',
+  'activeCustomStyleIds',
 ] as const
 
 export const EMAIL_SETTINGS_KEYS = [
@@ -84,7 +87,9 @@ const BOOLEAN_SETTING_KEYS = [
   'enableSearch',
 ] as const
 
-const NUMBER_SETTING_KEYS = ['rssLimit'] as const
+const NUMBER_SETTING_KEYS = ['rssLimit', 'activeThemeId'] as const
+
+const NUMBER_ARRAY_SETTING_KEYS = ['activeCustomStyleIds'] as const
 
 const NOTIFY_SETTING_KEYS = ['emailNotifyNewComment', 'emailNotifyNewGuestbook'] as const
 
@@ -126,6 +131,7 @@ const SETTING_VALUE_KINDS: Record<string, SettingValueKind> = Object.freeze({
   ...Object.fromEntries(STRING_SETTING_KEYS.map((key) => [key, 'string' as const])),
   ...Object.fromEntries(BOOLEAN_SETTING_KEYS.map((key) => [key, 'boolean' as const])),
   ...Object.fromEntries(NUMBER_SETTING_KEYS.map((key) => [key, 'number' as const])),
+  ...Object.fromEntries(NUMBER_ARRAY_SETTING_KEYS.map((key) => [key, 'numberArray' as const])),
   ...Object.fromEntries(NOTIFY_SETTING_KEYS.map((key) => [key, 'notify' as const])),
 })
 
@@ -161,6 +167,16 @@ function normalizeSettingValue(key: string, value: unknown): SettingValue {
         throw new SettingsValidationError({ invalidValueKeys: [key] })
       }
       return value
+    case 'numberArray':
+      if (!Array.isArray(value)) {
+        throw new SettingsValidationError({ invalidValueKeys: [key] })
+      }
+      for (const item of value) {
+        if (typeof item !== 'number' || !Number.isInteger(item)) {
+          throw new SettingsValidationError({ invalidValueKeys: [key] })
+        }
+      }
+      return value as number[]
     case 'notify':
       try {
         return validateNotifyValue(value)
@@ -285,15 +301,18 @@ export async function getSetting(key: string): Promise<unknown> {
   return deserializeSettingValue(key, row.value)
 }
 
-/** 获取所有设置 */
-export async function getAllSettings(): Promise<Record<string, unknown>> {
+/**
+ * 获取所有设置。使用 React cache 做请求级记忆化，同一次服务端渲染里无论被多少层布局调用，
+ * 都只会真正查询数据库一次；写入（setSetting/updateSettings）不会走这条缓存，因此不影响读写一致性。
+ */
+export const getAllSettings = cache(async (): Promise<Record<string, unknown>> => {
   const rows = await db.select().from(settings)
   const result: Record<string, unknown> = {}
   for (const row of rows) {
     result[row.key] = deserializeSettingValue(row.key, row.value)
   }
   return result
-}
+})
 
 export function pickSettings(
   allSettings: Record<string, unknown>,
@@ -307,7 +326,14 @@ export function pickSettings(
     } else {
       // 按 key 类型给合适的默认值，避免布尔/数值 key 拿到空字符串后校验失败
       const kind = getSettingValueKind(key)
-      result[key] = kind === 'boolean' ? false : kind === 'number' ? 0 : ''
+      result[key] =
+        kind === 'boolean'
+          ? false
+          : kind === 'number'
+            ? 0
+            : kind === 'numberArray'
+              ? []
+              : ''
     }
   }
 

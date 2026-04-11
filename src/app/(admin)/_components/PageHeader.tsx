@@ -46,12 +46,12 @@ export function PageHeader({
             {dirtyMessage}
           </Text>
         )}
+        {extra}
         {onSave && (
           <Button leftSection={<IconDeviceFloppy size={16} />} onClick={onSave} loading={loading}>
             保存
           </Button>
         )}
-        {extra}
       </Group>
     </Group>
   )

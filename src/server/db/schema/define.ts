@@ -340,6 +340,27 @@ export function defineSchema(kit: DialectKit) {
     (t: any) => [index('email_logs_created_idx').on(desc(t.createdAt))],
   )
 
+  // 前台主题。内置主题通过 builtin_key 标识（light/dark/blank），用户自定义主题 builtin_key 为 null
+  const themes = table('themes', {
+    id: autoId(),
+    name: text('name').notNull(),
+    css: text('css').notNull().default(''),
+    sortOrder: integer('sort_order').notNull().default(0),
+    builtinKey: text('builtin_key'),
+    createdAt: text('created_at').notNull().$defaultFn(isoNow),
+    updatedAt: text('updated_at').notNull().$defaultFn(isoNow),
+  })
+
+  // 用户自定义 CSS 片段，可多选叠加到前台页面
+  const customStyles = table('custom_styles', {
+    id: autoId(),
+    name: text('name').notNull(),
+    css: text('css').notNull().default(''),
+    sortOrder: integer('sort_order').notNull().default(0),
+    createdAt: text('created_at').notNull().$defaultFn(isoNow),
+    updatedAt: text('updated_at').notNull().$defaultFn(isoNow),
+  })
+
   return {
     activityLogs,
     attachments,
@@ -349,6 +370,7 @@ export function defineSchema(kit: DialectKit) {
     contents,
     contentRevisions,
     contentTags,
+    customStyles,
     emailLogs,
     guestbookMessages,
     menus,
@@ -357,6 +379,7 @@ export function defineSchema(kit: DialectKit) {
     settings,
     slugHistories,
     tags,
+    themes,
     users,
   }
 }

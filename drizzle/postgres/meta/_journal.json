@@ -71,6 +71,13 @@
       "when": 1775876481411,
       "tag": "0009_strong_iron_lad",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1775884463663,
+      "tag": "0010_nostalgic_slyde",
+      "breakpoints": true
     }
   ]
 }

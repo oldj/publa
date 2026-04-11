@@ -146,6 +146,32 @@ describe('validateImportData', () => {
     })
     expect(result).toEqual({ valid: true, type: 'settings' })
   })
+
+  it('设置数据中 themes / customStyles 必须是数组', () => {
+    expect(
+      validateImportData({
+        meta: { type: 'settings', version: '2.0' },
+        settings: [],
+        themes: 'not-array',
+      }).valid,
+    ).toBe(false)
+    expect(
+      validateImportData({
+        meta: { type: 'settings', version: '2.0' },
+        settings: [],
+        customStyles: 123,
+      }).valid,
+    ).toBe(false)
+  })
+
+  it('设置数据中 themes / customStyles 缺失时仍可通过', () => {
+    expect(
+      validateImportData({
+        meta: { type: 'settings', version: '2.0' },
+        settings: [],
+      }),
+    ).toEqual({ valid: true, type: 'settings' })
+  })
 })
 
 describe('exportContentData', () => {
@@ -267,6 +293,22 @@ describe('exportSettingsData', () => {
     for (const u of data.users) {
       expect(u).not.toHaveProperty('passwordHash')
     }
+  })
+
+  it('导出设置数据包含 themes 与 customStyles', async () => {
+    await testDb.insert(schema.themes).values([
+      { id: 101, name: '浅色', css: '', sortOrder: 1, builtinKey: 'light' },
+      { id: 102, name: '自定义主题', css: 'body{color:red}', sortOrder: 10, builtinKey: null },
+    ])
+    await testDb.insert(schema.customStyles).values([
+      { id: 201, name: '片段 A', css: '.a{}', sortOrder: 1 },
+    ])
+
+    const data = await exportSettingsData()
+    expect(data.themes).toHaveLength(2)
+    expect(data.themes.find((t: any) => t.id === 102)?.name).toBe('自定义主题')
+    expect(data.customStyles).toHaveLength(1)
+    expect(data.customStyles[0].name).toBe('片段 A')
   })
 })
 
@@ -1129,6 +1171,59 @@ describe('importSettingsData', () => {
     expect(results).toContain('跳转规则: 1 条')
     expect(results.find((r) => r.includes('用户'))).toContain('新建 1 个')
     expect(results.find((r) => r.includes('用户'))).toContain('更新 1 个')
+  })
+
+  it('导入覆盖 themes 与 customStyles，并补齐内置主题', async () => {
+    // 预置一条自定义主题，期望导入后被清空
+    await testDb.insert(schema.themes).values([
+      { id: 800, name: '旧主题', css: 'body{}', sortOrder: 1, builtinKey: null },
+    ])
+
+    await importSettingsData(
+      {
+        settings: [
+          { key: 'activeThemeId', value: 500 },
+          { key: 'activeCustomStyleIds', value: [600] },
+        ],
+        themes: [
+          { id: 500, name: '新主题', css: 'body{color:#000}', sortOrder: 10, builtinKey: null },
+        ],
+        customStyles: [{ id: 600, name: '自定义片段', css: '.x{}', sortOrder: 1 }],
+      },
+      1,
+    )
+
+    const allThemes = await testDb.select().from(schema.themes)
+    // 三个内置主题 + 导入的 1 个自定义主题
+    expect(allThemes.find((t) => t.id === 500)?.name).toBe('新主题')
+    expect(allThemes.find((t) => t.id === 800)).toBeUndefined()
+    expect(allThemes.filter((t) => t.builtinKey !== null)).toHaveLength(3)
+
+    const allCustomStyles = await testDb.select().from(schema.customStyles)
+    expect(allCustomStyles).toHaveLength(1)
+    expect(allCustomStyles[0].id).toBe(600)
+
+    // activeThemeId / activeCustomStyleIds 指向新插入的主题 id
+    const settingsRows = await testDb.select().from(schema.settings)
+    const active = settingsRows.find((s) => s.key === 'activeThemeId')
+    expect(active?.value).toBe('500')
+    const ids = settingsRows.find((s) => s.key === 'activeCustomStyleIds')
+    expect(ids?.value).toBe('[600]')
+  })
+
+  it('导入数据缺失 themes 时自动补齐内置主题', async () => {
+    await importSettingsData(
+      {
+        settings: [{ key: 'siteTitle', value: '测试站' }],
+      },
+      1,
+    )
+
+    const builtin = await testDb
+      .select()
+      .from(schema.themes)
+      .where(eq(schema.themes.builtinKey, 'light'))
+    expect(builtin).toHaveLength(1)
   })
 
   it('导出后再导入设置数据一致', async () => {

@@ -49,6 +49,16 @@ export const activityAction = [
   'export_data',
   'recount_categories',
   'recount_tags',
+  'create_theme',
+  'update_theme',
+  'delete_theme',
+  'create_custom_style',
+  'update_custom_style',
+  'delete_custom_style',
+  'export_themes',
+  'import_themes',
+  'export_custom_styles',
+  'import_custom_styles',
 ] as const
 
 export function isoNow() {
