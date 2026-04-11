@@ -8,14 +8,18 @@ import {
   contentRevisions,
   contents,
   contentTags,
+  customStyles,
   guestbookMessages,
   menus,
   redirectRules,
   settings,
   slugHistories,
   tags,
+  themes,
   users,
 } from '@/server/db/schema'
+import { ensureBuiltinThemes } from '@/server/db/seed'
+import { isoNow } from '@/server/db/schema/shared'
 import { syncPrimaryKeySequences } from '@/server/db/sequences'
 import { htmlToText } from '@/server/lib/markdown'
 import { recountCategoriesAndTags } from '@/server/services/post-count'
@@ -115,6 +119,12 @@ export async function exportSettingsData() {
       .select()
       .from(redirectRules)
       .orderBy(asc(redirectRules.sortOrder), asc(redirectRules.id)),
+    // 主题与自定义 CSS 是持久化数据，随设置一起导出；保留原 id 以便 activeThemeId / activeCustomStyleIds 直接引用
+    themes: await db.select().from(themes).orderBy(asc(themes.sortOrder), asc(themes.id)),
+    customStyles: await db
+      .select()
+      .from(customStyles)
+      .orderBy(asc(customStyles.sortOrder), asc(customStyles.id)),
   }
 }
 
@@ -140,6 +150,12 @@ export function validateImportData(data: any): { valid: boolean; type?: string; 
     for (const key of ['settings']) {
       if (!Array.isArray(data[key])) {
         return { valid: false, message: `缺少必要字段: ${key}` }
+      }
+    }
+    // themes / customStyles 是后补的字段，兼容旧导出文件允许缺失，但出现时必须是数组
+    for (const key of ['themes', 'customStyles']) {
+      if (data[key] !== undefined && !Array.isArray(data[key])) {
+        return { valid: false, message: `字段格式错误: ${key}` }
       }
     }
     return { valid: true, type: 'settings' }
@@ -396,6 +412,42 @@ export async function importSettingsData(data: any, currentUserId: number) {
   const normalizedMenus = Array.isArray(data.menus) ? topologicalSort(data.menus) : null
 
   await db.transaction(async (tx) => {
+    // 主题与自定义 CSS 先于 settings 写入：activeThemeId / activeCustomStyleIds 指向的
+    // id 必须在 settings 落库前就存在，否则前台读到空数据。
+    if (Array.isArray(data.themes)) {
+      await tx.delete(themes)
+      for (const item of data.themes) {
+        await tx.insert(themes).values({
+          id: item.id,
+          name: item.name,
+          css: item.css ?? '',
+          sortOrder: Number.isInteger(item.sortOrder) ? item.sortOrder : 0,
+          builtinKey: item.builtinKey ?? null,
+          createdAt: item.createdAt ?? isoNow(),
+          updatedAt: item.updatedAt ?? isoNow(),
+        })
+      }
+      results.push(`主题: ${data.themes.length} 条`)
+    }
+
+    if (Array.isArray(data.customStyles)) {
+      await tx.delete(customStyles)
+      for (const item of data.customStyles) {
+        await tx.insert(customStyles).values({
+          id: item.id,
+          name: item.name,
+          css: item.css ?? '',
+          sortOrder: Number.isInteger(item.sortOrder) ? item.sortOrder : 0,
+          createdAt: item.createdAt ?? isoNow(),
+          updatedAt: item.updatedAt ?? isoNow(),
+        })
+      }
+      results.push(`自定义 CSS: ${data.customStyles.length} 条`)
+    }
+
+    // 若导入数据缺失内置主题（旧版本导出或空库恢复），补齐三项内置主题保证前台可用
+    await ensureBuiltinThemes(tx as any)
+
     if (Array.isArray(data.settings)) {
       const inputSettings: Record<string, unknown> = {}
       for (const item of data.settings) {

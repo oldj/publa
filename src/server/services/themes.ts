@@ -2,6 +2,7 @@ import { db } from '@/server/db'
 import { isoNow } from '@/server/db/schema/shared'
 import { insertOne, maybeFirst, updateOne } from '@/server/db/query'
 import { themes } from '@/server/db/schema'
+import { getSetting } from '@/server/services/settings'
 import { asc, eq, max } from 'drizzle-orm'
 
 export interface ThemeInput {
@@ -62,6 +63,13 @@ export class BuiltinThemeError extends Error {
   }
 }
 
+export class ActiveThemeError extends Error {
+  constructor(message = '无法删除当前正在使用的主题，请先切换到其他主题') {
+    super(message)
+    this.name = 'ActiveThemeError'
+  }
+}
+
 export async function updateTheme(id: number, input: Partial<ThemeInput>) {
   const current = await getThemeById(id)
   if (!current) return null
@@ -88,6 +96,11 @@ export async function deleteTheme(id: number) {
   if (!current) return { success: false as const, message: '主题不存在' }
   if (current.builtinKey) {
     throw new BuiltinThemeError()
+  }
+  // 禁止删除当前生效主题，避免前台进入无主题状态
+  const activeThemeId = await getSetting('activeThemeId')
+  if (typeof activeThemeId === 'number' && activeThemeId === id) {
+    throw new ActiveThemeError()
   }
   await db.delete(themes).where(eq(themes.id, id))
   return { success: true as const }

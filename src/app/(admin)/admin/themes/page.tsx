@@ -254,9 +254,13 @@ export default function ThemesPage() {
     if (themesRes.success) {
       const list = themesRes.data as Theme[]
       setThemes(list)
-      // 若 pending 主题被删除，回退到 saved 或首个内置主题
+      // 若 pending 主题被删除：优先回退到 saved；saved 自身若也失效则回退到内置 light
       const validIds = new Set(list.map((t) => t.id))
-      setPendingThemeId((prev) => (prev && !validIds.has(prev) ? savedThemeId : prev))
+      setPendingThemeId((prev) => {
+        if (!prev || validIds.has(prev)) return prev
+        if (savedThemeId && validIds.has(savedThemeId)) return savedThemeId
+        return list.find((t) => t.builtinKey === 'light')?.id ?? null
+      })
     }
     if (stylesRes.success) {
       const list = stylesRes.data as CustomStyle[]

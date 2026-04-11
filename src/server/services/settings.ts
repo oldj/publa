@@ -2,6 +2,7 @@ import { db } from '@/server/db'
 import { maybeFirst } from '@/server/db/query'
 import { settings } from '@/server/db/schema'
 import { eq } from 'drizzle-orm'
+import { cache } from 'react'
 
 export interface NotifySettingValue {
   enabled: boolean
@@ -300,15 +301,18 @@ export async function getSetting(key: string): Promise<unknown> {
   return deserializeSettingValue(key, row.value)
 }
 
-/** 获取所有设置 */
-export async function getAllSettings(): Promise<Record<string, unknown>> {
+/**
+ * 获取所有设置。使用 React cache 做请求级记忆化，同一次服务端渲染里无论被多少层布局调用，
+ * 都只会真正查询数据库一次；写入（setSetting/updateSettings）不会走这条缓存，因此不影响读写一致性。
+ */
+export const getAllSettings = cache(async (): Promise<Record<string, unknown>> => {
   const rows = await db.select().from(settings)
   const result: Record<string, unknown> = {}
   for (const row of rows) {
     result[row.key] = deserializeSettingValue(row.key, row.value)
   }
   return result
-}
+})
 
 export function pickSettings(
   allSettings: Record<string, unknown>,

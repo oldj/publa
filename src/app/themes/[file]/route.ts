@@ -47,6 +47,7 @@ async function renderThemeById(themeId: number): Promise<string> {
 async function renderActiveTheme(): Promise<string> {
   const activeThemeId = (await getSetting('activeThemeId')) as number | null
   if (!activeThemeId || typeof activeThemeId !== 'number') return ''
+  // 不做兜底：id 指向的主题在库中不存在时返回空，让前台立即显示异常，便于用户及时发现数据不一致
   return renderThemeById(activeThemeId)
 }
 

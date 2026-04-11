@@ -248,7 +248,7 @@
 
 ## 四、设置数据
 
-包含用户、系统设置、菜单、跳转规则等配置相关数据。
+包含用户、系统设置、菜单、跳转规则、主题与自定义 CSS 等配置相关数据。
 
 ```json
 {
@@ -260,7 +260,9 @@
   "users": [],
   "settings": [],
   "menus": [],
-  "redirectRules": []
+  "redirectRules": [],
+  "themes": [],
+  "customStyles": []
 }
 ```
 
@@ -309,6 +311,29 @@
 | redirectTo   | string | 是   | 跳转目标，支持站内路径或完整 `http` / `https` URL |
 | redirectType | string | 是   | 跳转类型：`301`、`302`、`307`、`308`              |
 | memo         | string | 否   | 备注                                              |
+
+### themes（主题）
+
+| 字段       | 类型   | 必填 | 说明                                                                       |
+| ---------- | ------ | ---- | -------------------------------------------------------------------------- |
+| id         | number | 是   | 主题 ID；导入时按原 id 写入，以便 `activeThemeId` 设置引用不变             |
+| name       | string | 是   | 主题名称                                                                   |
+| css        | string | 否   | 主题 CSS 内容；内置主题为空字符串，实际 CSS 由后端静态文件提供             |
+| sortOrder  | number | 否   | 排序序号，默认 `0`                                                         |
+| builtinKey | string | 否   | 内置主题标识：`light` / `dark` / `blank`；自定义主题为 `null`              |
+| createdAt  | string | 否   | 创建时间                                                                   |
+| updatedAt  | string | 否   | 更新时间                                                                   |
+
+### customStyles（自定义 CSS）
+
+| 字段      | 类型   | 必填 | 说明                                                                 |
+| --------- | ------ | ---- | -------------------------------------------------------------------- |
+| id        | number | 是   | 自定义 CSS ID；导入时按原 id 写入，以便 `activeCustomStyleIds` 引用不变 |
+| name      | string | 是   | 名称                                                                 |
+| css       | string | 否   | CSS 内容                                                             |
+| sortOrder | number | 否   | 排序序号，默认 `0`                                                   |
+| createdAt | string | 否   | 创建时间                                                             |
+| updatedAt | string | 否   | 更新时间                                                             |
 
 ---
 

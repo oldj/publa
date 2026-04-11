@@ -1,7 +1,12 @@
 import { requireRole } from '@/server/auth'
 import { parseIdParam, safeParseJson } from '@/server/lib/request'
 import { logActivity } from '@/server/services/activity-logs'
-import { BuiltinThemeError, deleteTheme, updateTheme } from '@/server/services/themes'
+import {
+  ActiveThemeError,
+  BuiltinThemeError,
+  deleteTheme,
+  updateTheme,
+} from '@/server/services/themes'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -64,6 +69,12 @@ export async function DELETE(
     if (err instanceof BuiltinThemeError) {
       return NextResponse.json(
         { success: false, code: 'BUILTIN_THEME', message: err.message },
+        { status: 400 },
+      )
+    }
+    if (err instanceof ActiveThemeError) {
+      return NextResponse.json(
+        { success: false, code: 'ACTIVE_THEME', message: err.message },
         { status: 400 },
       )
     }
