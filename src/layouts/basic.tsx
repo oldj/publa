@@ -3,10 +3,11 @@
  * @homepage: https://oldj.net
  */
 
+import PreviewStyles from '@/components/PreviewStyles'
 import { getMenuTree } from '@/server/services/menus'
 import { getFrontendCategories, getFrontendTags } from '@/server/services/posts-frontend'
 import { getSetting, toBool, toStr } from '@/server/services/settings'
-import React from 'react'
+import React, { Suspense } from 'react'
 import Footer from 'src/components/footer'
 import Nav from 'src/components/nav'
 
@@ -26,10 +27,19 @@ export default async function BasicLayout(props: IProps) {
     customBodyStartHtml,
     customBodyEndHtml,
     enableSearch,
+    themeHref,
+    customCssHref,
   } = await getData()
 
   return (
     <>
+      {/* React 19 的 stylesheet hoisting 会把这些 <link> 自动提升到 document.head */}
+      {themeHref && <link rel="stylesheet" href={themeHref} precedence="default" />}
+      {customCssHref && <link rel="stylesheet" href={customCssHref} precedence="default" />}
+      <Suspense fallback={null}>
+        <PreviewStyles />
+      </Suspense>
+
       {customBodyStartHtml && <div dangerouslySetInnerHTML={{ __html: customBodyStartHtml }} />}
 
       <div className="basic-layout">
@@ -64,6 +74,19 @@ async function getData() {
   const customBodyEndHtml = toStr(await getSetting('customBodyEndHtml'))
   const enableSearch = toBool(await getSetting('enableSearch'), false)
 
+  // 当前选中的主题 / 自定义 CSS，用 id 做 cache bust。
+  // 仅前台（走 BasicLayout）页面才会拉这些样式，admin 不受影响。
+  const rawThemeId = await getSetting('activeThemeId')
+  const themeId = typeof rawThemeId === 'number' && rawThemeId > 0 ? rawThemeId : 0
+  const themeHref = themeId > 0 ? `/themes/theme.css?v=${themeId}` : null
+
+  const rawStyleIds = await getSetting('activeCustomStyleIds')
+  const customStyleIds = Array.isArray(rawStyleIds) ? (rawStyleIds as number[]) : []
+  const customCssHref =
+    customStyleIds.length > 0
+      ? `/themes/custom.css?v=${encodeURIComponent(customStyleIds.join('-'))}`
+      : null
+
   return {
     categories: categories || [],
     tags: tags || [],
@@ -74,5 +97,7 @@ async function getData() {
     customBodyStartHtml,
     customBodyEndHtml,
     enableSearch,
+    themeHref,
+    customCssHref,
   }
 }

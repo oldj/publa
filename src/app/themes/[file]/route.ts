@@ -10,7 +10,8 @@ export const dynamic = 'force-dynamic'
 
 const CSS_HEADERS = {
   'Content-Type': 'text/css; charset=utf-8',
-  'Cache-Control': 'public, max-age=0, must-revalidate',
+  // private: 预览请求携带登录态，禁止 CDN / 共享代理缓存，避免跨用户泄漏
+  'Cache-Control': 'private, max-age=0, must-revalidate',
 }
 
 const builtinCache = new Map<string, string>()
