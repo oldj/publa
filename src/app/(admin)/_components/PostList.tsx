@@ -2,6 +2,7 @@
 import { notify } from '@/lib/notify'
 import {
   ActionIcon,
+  CloseButton,
   Group,
   Pagination,
   SegmentedControl,
@@ -68,9 +69,24 @@ export function PostList({
   const [data, setData] = useState<PostListResult | null>(null)
   const [page, setPage] = useState(1)
   const [status, setStatus] = useState(initialStatus)
+  // searchInput 是输入框的即时值，search 是提交后才用于查询的值
+  const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
   const [categoryId, setCategoryId] = useState(initialCategoryId)
   const [tagId, setTagId] = useState(initialTagId)
+
+  const commitSearch = () => {
+    setSearch(searchInput)
+    setPage(1)
+  }
+
+  const clearSearch = () => {
+    setSearchInput('')
+    if (search) {
+      setSearch('')
+      setPage(1)
+    }
+  }
   const [categoryOptions, setCategoryOptions] = useState<
     { value: string; label: string; count: number }[]
   >([])
@@ -204,11 +220,26 @@ export function PostList({
           />
           <TextInput
             placeholder="搜索标题或 slug..."
-            leftSection={<IconSearch size={16} />}
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value)
-              setPage(1)
+            rightSectionWidth={56}
+            rightSection={
+              <Group gap={0} wrap="nowrap">
+                <CloseButton
+                  size="sm"
+                  variant="transparent"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={clearSearch}
+                  aria-label="清除搜索"
+                  style={{ visibility: searchInput ? 'visible' : 'hidden' }}
+                />
+                <ActionIcon variant="subtle" onClick={commitSearch} aria-label="搜索">
+                  <IconSearch size={16} />
+                </ActionIcon>
+              </Group>
+            }
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.currentTarget.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') commitSearch()
             }}
             style={{ maxWidth: 300 }}
           />
