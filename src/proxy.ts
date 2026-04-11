@@ -68,7 +68,11 @@ export async function proxy(request: NextRequest) {
       rewriteUrl.pathname = internalPath
       return NextResponse.rewrite(rewriteUrl, {
         request: {
-          headers: new Headers([...request.headers.entries(), ['x-pathname', internalPath]]),
+          headers: new Headers([
+            ...request.headers.entries(),
+            ['x-pathname', internalPath],
+            ['x-search', request.nextUrl.search],
+          ]),
         },
       })
     }
@@ -111,10 +115,15 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  // 将路径传递给 Server Component，用于根布局条件渲染 customHeadHtml
+  // 将路径与查询串传递给 Server Component，用于根布局条件渲染 customHeadHtml
+  // 以及 i18n 的 setup 页面 ?lang= 覆盖解析
   return NextResponse.next({
     request: {
-      headers: new Headers([...request.headers.entries(), ['x-pathname', pathname]]),
+      headers: new Headers([
+        ...request.headers.entries(),
+        ['x-pathname', pathname],
+        ['x-search', request.nextUrl.search],
+      ]),
     },
   })
 }

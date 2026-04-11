@@ -1,5 +1,6 @@
 'use client'
 
+import { LOCALE_LABELS, SUPPORTED_LOCALES, isLocale } from '@/i18n/locales'
 import { notify } from '@/lib/notify'
 import {
   Box,
@@ -8,6 +9,7 @@ import {
   Group,
   NumberInput,
   Radio,
+  Select,
   Stack,
   Switch,
   Text,
@@ -15,6 +17,7 @@ import {
   Textarea,
 } from '@mantine/core'
 import { IconExclamationMark } from '@tabler/icons-react'
+import { useTranslations } from 'next-intl'
 import { useAdminUrl } from '@/app/(admin)/_components/AdminPathContext'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react'
@@ -38,6 +41,7 @@ const DEFAULT_FAVICON: FaviconState = {
 }
 
 export default function SettingsPage() {
+  const tLang = useTranslations('admin.settings.languageField')
   const router = useRouter()
   const adminUrl = useAdminUrl()
   const currentUser = useCurrentUser()
@@ -123,6 +127,9 @@ export default function SettingsPage() {
       if (json.success) {
         notify({ color: 'green', message: '保存成功' })
         initialSettingsRef.current = { ...settings }
+        // 触发 RSC 重新获取，让根布局基于新设置重新解析 locale，
+        // 从而无需手动刷新即可切换界面语言
+        router.refresh()
       } else {
         notify({ color: 'red', message: json.message || '保存失败' })
       }
@@ -217,6 +224,17 @@ export default function SettingsPage() {
 
       <Stack>
         <Divider label="站点信息" labelPosition="left" />
+        <Select
+          label={tLang('label')}
+          description={tLang('description')}
+          value={isLocale(settings.language) ? settings.language : 'en'}
+          onChange={(v) => {
+            if (v) setField('language', v)
+          }}
+          data={SUPPORTED_LOCALES.map((l) => ({ value: l, label: LOCALE_LABELS[l] }))}
+          allowDeselect={false}
+          styles={{ wrapper: { maxWidth: 240 } }}
+        />
         <TextInput
           label="站点标题"
           placeholder="Publa"

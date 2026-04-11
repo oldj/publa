@@ -1,0 +1,78 @@
+{
+  "setup": {
+    "title": "Publa Setup",
+    "subtitle": "Create an administrator account to get started",
+    "fields": {
+      "username": "Username",
+      "usernamePlaceholder": "admin",
+      "email": "Email",
+      "emailPlaceholder": "admin@example.com",
+      "password": "Password",
+      "passwordPlaceholder": "At least 6 characters",
+      "confirmPassword": "Confirm password",
+      "confirmPasswordPlaceholder": "Re-enter password",
+      "language": "Interface language"
+    },
+    "errors": {
+      "usernameOrPasswordEmpty": "Username and password are required",
+      "passwordTooShort": "Password must be at least 6 characters",
+      "passwordMismatch": "Passwords do not match",
+      "setupFailed": "Setup failed"
+    },
+    "success": "Setup succeeded, redirecting to the admin panel"
+  },
+  "login": {
+    "title": "Publa Admin",
+    "subtitle": "Please sign in with your administrator account",
+    "fields": {
+      "username": "Username",
+      "usernamePlaceholder": "Enter username",
+      "password": "Password",
+      "passwordPlaceholder": "Enter password"
+    },
+    "submit": "Sign in",
+    "errors": {
+      "emptyCredentials": "Please enter username and password",
+      "loginFailed": "Sign in failed"
+    }
+  },
+  "shell": {
+    "dashboard": "Dashboard",
+    "content": "Content",
+    "posts": "Posts",
+    "categories": "Categories",
+    "tags": "Tags",
+    "pages": "Pages",
+    "attachments": "Attachments",
+    "interactions": "Interactions",
+    "comments": "Comments",
+    "guestbook": "Guestbook",
+    "site": "Site",
+    "menus": "Menus",
+    "redirects": "Redirects",
+    "themes": "Themes",
+    "email": "Email",
+    "emailNotify": "Email notifications",
+    "emailLogs": "Email logs",
+    "system": "System",
+    "users": "Users",
+    "settings": "Settings",
+    "importExport": "Import / Export"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "stats": {
+      "posts": "Posts",
+      "comments": "Comments",
+      "pendingComments": "Pending comments",
+      "guestbook": "Guestbook",
+      "users": "Users"
+    }
+  },
+  "settings": {
+    "languageField": {
+      "label": "Interface language",
+      "description": "This setting only affects UI language for the frontend and admin panel. It does not affect the language of posts, comments or guestbook messages."
+    }
+  }
+}

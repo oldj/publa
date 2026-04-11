@@ -1,0 +1,18 @@
+{
+  "actions": {
+    "submit": "提交",
+    "save": "保存",
+    "cancel": "取消",
+    "confirm": "确认",
+    "delete": "删除"
+  },
+  "errors": {
+    "network": "网络错误",
+    "validation": "数据校验失败",
+    "unauthorized": "未授权"
+  },
+  "save": {
+    "success": "保存成功",
+    "failed": "保存失败"
+  }
+}

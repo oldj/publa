@@ -89,7 +89,15 @@ const defaultRobotsTxt = {
   publishedAt: new Date().toISOString(),
 }
 
-export async function seed(tx?: BaseSQLiteDatabase<any, any, any>) {
+export interface SeedOptions {
+  /** 初始化时选定的界面语言，会覆盖默认的 'zh' */
+  language?: string
+}
+
+export async function seed(
+  tx?: BaseSQLiteDatabase<any, any, any>,
+  options: SeedOptions = {},
+) {
   // 未传入事务时，CLI 脚本和非 Next.js 入口需要等待数据库初始化完成
   if (!tx) {
     await dbReady
@@ -97,8 +105,17 @@ export async function seed(tx?: BaseSQLiteDatabase<any, any, any>) {
 
   const conn = tx ?? db
 
+  // 按传入的 language 覆盖默认值（onConflictDoNothing 保证已有值不被覆盖）
+  const effectiveSettings = options.language
+    ? defaultSettings.map((item) =>
+        item.key === 'language'
+          ? { key: item.key, value: serializeSettingValue(item.key, options.language) }
+          : item,
+      )
+    : defaultSettings
+
   // 插入默认设置（跳过已存在的）
-  for (const item of defaultSettings) {
+  for (const item of effectiveSettings) {
     await conn.insert(settings).values(item).onConflictDoNothing()
   }
 

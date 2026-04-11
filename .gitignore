@@ -17,3 +17,7 @@ _pages
 
 # 数据库
 data/
+
+# Claude Code 本地/运行时文件
+.claude/scheduled_tasks.lock
+.claude/settings.local.json

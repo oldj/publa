@@ -1,3 +1,4 @@
+import { DEFAULT_LOCALE, isLocale } from '@/i18n/locales'
 import { normalizeEmail, normalizePassword, normalizeUsername } from '@/lib/user-input'
 import { createToken, hashPassword, setAuthCookie } from '@/server/auth'
 import { db, dbReady } from '@/server/db'
@@ -17,7 +18,7 @@ export async function POST(request: NextRequest) {
     )
     if (existingOwner) {
       return NextResponse.json(
-        { success: false, code: 'ALREADY_INITIALIZED', message: '系统已初始化' },
+        { success: false, code: 'ALREADY_INITIALIZED', message: 'System already initialized' },
         { status: 403 },
       )
     }
@@ -26,17 +27,18 @@ export async function POST(request: NextRequest) {
     const username = normalizeUsername(body?.username)
     const password = normalizePassword(body?.password)
     const email = normalizeEmail(body?.email)
+    const language = isLocale(body?.language) ? body.language : DEFAULT_LOCALE
 
     if (!username || !password) {
       return NextResponse.json(
-        { success: false, code: 'VALIDATION_ERROR', message: '用户名和密码不能为空' },
+        { success: false, code: 'VALIDATION_ERROR', message: 'Username and password are required' },
         { status: 400 },
       )
     }
 
     if (password.length < 6) {
       return NextResponse.json(
-        { success: false, code: 'VALIDATION_ERROR', message: '密码长度至少 6 位' },
+        { success: false, code: 'VALIDATION_ERROR', message: 'Password must be at least 6 characters' },
         { status: 400 },
       )
     }
@@ -56,8 +58,8 @@ export async function POST(request: NextRequest) {
           .returning(),
       )
 
-      // 填充默认数据
-      await seed(tx)
+      // 填充默认数据（把初始化时选中的界面语言写入 settings.language）
+      await seed(tx, { language })
 
       return owner
     })

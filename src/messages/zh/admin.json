@@ -1,0 +1,78 @@
+{
+  "setup": {
+    "title": "Publa 初始化",
+    "subtitle": "创建管理员账号以开始使用",
+    "fields": {
+      "username": "用户名",
+      "usernamePlaceholder": "admin",
+      "email": "邮箱",
+      "emailPlaceholder": "admin@example.com",
+      "password": "密码",
+      "passwordPlaceholder": "至少 6 位",
+      "confirmPassword": "确认密码",
+      "confirmPasswordPlaceholder": "再次输入密码",
+      "language": "界面语言"
+    },
+    "errors": {
+      "usernameOrPasswordEmpty": "用户名和密码不能为空",
+      "passwordTooShort": "密码长度至少 6 位",
+      "passwordMismatch": "两次密码输入不一致",
+      "setupFailed": "初始化失败"
+    },
+    "success": "初始化成功，即将跳转到后台"
+  },
+  "login": {
+    "title": "Publa 管理后台",
+    "subtitle": "请输入管理员账号登录",
+    "fields": {
+      "username": "用户名",
+      "usernamePlaceholder": "请输入用户名",
+      "password": "密码",
+      "passwordPlaceholder": "请输入密码"
+    },
+    "submit": "登录",
+    "errors": {
+      "emptyCredentials": "请输入用户名和密码",
+      "loginFailed": "登录失败"
+    }
+  },
+  "shell": {
+    "dashboard": "仪表盘",
+    "content": "内容",
+    "posts": "文章",
+    "categories": "分类",
+    "tags": "标签",
+    "pages": "页面",
+    "attachments": "附件",
+    "interactions": "互动",
+    "comments": "评论",
+    "guestbook": "留言",
+    "site": "站点",
+    "menus": "菜单",
+    "redirects": "跳转",
+    "themes": "主题",
+    "email": "邮件",
+    "emailNotify": "邮件通知",
+    "emailLogs": "邮件日志",
+    "system": "系统",
+    "users": "用户",
+    "settings": "设置",
+    "importExport": "导入导出"
+  },
+  "dashboard": {
+    "title": "仪表盘",
+    "stats": {
+      "posts": "文章",
+      "comments": "评论",
+      "pendingComments": "待审评论",
+      "guestbook": "留言",
+      "users": "用户"
+    }
+  },
+  "settings": {
+    "languageField": {
+      "label": "界面语言",
+      "description": "此设置仅影响前台和后台界面的语言，不影响文章、评论、留言的内容语言。"
+    }
+  }
+}

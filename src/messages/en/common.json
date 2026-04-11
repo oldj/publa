@@ -1,0 +1,18 @@
+{
+  "actions": {
+    "submit": "Submit",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "delete": "Delete"
+  },
+  "errors": {
+    "network": "Network error",
+    "validation": "Validation failed",
+    "unauthorized": "Unauthorized"
+  },
+  "save": {
+    "success": "Saved",
+    "failed": "Save failed"
+  }
+}

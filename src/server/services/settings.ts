@@ -1,3 +1,4 @@
+import { SUPPORTED_LOCALES } from '@/i18n/locales'
 import { db } from '@/server/db'
 import { maybeFirst } from '@/server/db/query'
 import { settings } from '@/server/db/schema'
@@ -156,6 +157,14 @@ function validateNotifyValue(value: unknown): NotifySettingValue {
 }
 
 function normalizeSettingValue(key: string, value: unknown): SettingValue {
+  // language 字段只允许受支持的 locale 枚举值，防止写脏值导致 UI 降级
+  if (key === 'language') {
+    if (typeof value !== 'string' || !(SUPPORTED_LOCALES as readonly string[]).includes(value)) {
+      throw new SettingsValidationError({ invalidValueKeys: [key] })
+    }
+    return value
+  }
+
   switch (getSettingValueKind(key)) {
     case 'boolean':
       if (typeof value !== 'boolean') {
