@@ -1,6 +1,12 @@
 import { requireCurrentUser } from '@/server/auth'
 import { isUniqueConstraintError, safeParseJson } from '@/server/lib/request'
-import { createCategory, getCategoryBySlug, listCategories } from '@/server/services/categories'
+import {
+  createCategory,
+  getCategoryBySlug,
+  listCategories,
+  reorderCategories,
+} from '@/server/services/categories'
+import { recountCategoriesAndTags } from '@/server/services/post-count'
 import { logActivity } from '@/server/services/activity-logs'
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -18,6 +24,34 @@ export async function POST(request: NextRequest) {
 
   const { data: body, error } = await safeParseJson(request)
   if (error) return error
+
+  // 批量排序
+  if (body.action === 'reorder') {
+    if (!Array.isArray(body.ids)) {
+      return NextResponse.json(
+        { success: false, code: 'VALIDATION_ERROR', message: '排序数据无效' },
+        { status: 400 },
+      )
+    }
+
+    try {
+      await reorderCategories(body.ids)
+      return NextResponse.json({ success: true })
+    } catch {
+      return NextResponse.json(
+        { success: false, code: 'VALIDATION_ERROR', message: '排序数据无效' },
+        { status: 400 },
+      )
+    }
+  }
+
+  // 重新计数
+  if (body.action === 'recount') {
+    await recountCategoriesAndTags()
+    await logActivity(request, guard.user.id, 'recount_categories')
+    return NextResponse.json({ success: true })
+  }
+
   const { name, slug } = body
 
   if (!name || !slug) {

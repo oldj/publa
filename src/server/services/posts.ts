@@ -10,6 +10,7 @@ import {
   tags,
 } from '@/server/db/schema'
 import { and, asc, count, desc, eq, exists, isNull, like, lte, ne, or, sql } from 'drizzle-orm'
+import { recountCategoriesAndTags } from './post-count'
 import { listDraftsByTargetIds } from './revisions'
 
 export interface PostInput {
@@ -45,7 +46,7 @@ export interface PostListOptions {
 
 /** 文章列表（后台，含所有状态） */
 export async function listPostsAdmin(options: PostListOptions = {}) {
-  const { page = 1, pageSize = 20, status, categoryId, search } = options
+  const { page = 1, pageSize = 20, status, categoryId, tagId, search } = options
 
   // 基础条件（不含 status 筛选，用于计算各状态计数）
   const baseConditions: ReturnType<typeof eq>[] = [
@@ -53,6 +54,16 @@ export async function listPostsAdmin(options: PostListOptions = {}) {
     isNull(contents.deletedAt),
   ]
   if (categoryId) baseConditions.push(eq(contents.categoryId, categoryId))
+  if (tagId) {
+    baseConditions.push(
+      exists(
+        db
+          .select({ value: sql`1` })
+          .from(contentTags)
+          .where(and(eq(contentTags.contentId, contents.id), eq(contentTags.tagId, tagId))),
+      ),
+    )
+  }
   if (search) {
     // 同时匹配标题、slug 和草稿标题
     baseConditions.push(
@@ -438,6 +449,11 @@ export async function createPost(input: PostInput) {
       .values(input.tagIds.map((tagId) => ({ contentId: post.id, tagId })))
   }
 
+  // 创建的是 published 文章时触发重算
+  if (input.status === 'published') {
+    await recountCategoriesAndTags()
+  }
+
   return post
 }
 
@@ -503,12 +519,41 @@ export async function updatePost(
       .returning(),
   )
 
+  // 判断是否需要触发重算：
+  // 1. 状态在 published 与非 published 之间切换 → 必重算
+  // 2. 持续处于 published 状态但 category/tag 真实变化 → 重算
+  //    （前端每次都会回传 categoryId/tagIds，不能仅凭 !== undefined 判定）
+  const wasPublished = existing.status === 'published'
+  const willBePublished = input.status === undefined ? wasPublished : input.status === 'published'
+  let shouldRecount = wasPublished !== willBePublished
+
+  // 仅当状态未切换且持续处于 published 时，才需要做更细的归属比较
+  if (!shouldRecount && willBePublished) {
+    if (input.categoryId !== undefined && (input.categoryId || null) !== existing.categoryId) {
+      shouldRecount = true
+    }
+    if (!shouldRecount && input.tagIds !== undefined) {
+      const oldRows = await tx
+        .select({ tagId: contentTags.tagId })
+        .from(contentTags)
+        .where(eq(contentTags.contentId, id))
+      const oldSet = new Set(oldRows.map((r) => r.tagId))
+      const newSet = new Set(input.tagIds)
+      shouldRecount =
+        oldSet.size !== newSet.size || [...newSet].some((tid) => !oldSet.has(tid))
+    }
+  }
+
   // 更新标签关联
   if (input.tagIds !== undefined) {
     await tx.delete(contentTags).where(eq(contentTags.contentId, id))
     if (input.tagIds.length > 0) {
       await tx.insert(contentTags).values(input.tagIds.map((tagId) => ({ contentId: id, tagId })))
     }
+  }
+
+  if (shouldRecount) {
+    await recountCategoriesAndTags(tx)
   }
 
   return result
@@ -518,11 +563,25 @@ export async function updatePost(
 export async function deletePost(id: number) {
   const { deleteRevisionsByTarget } = await import('./revisions')
   await db.transaction(async (tx) => {
+    // 先查旧状态，决定是否需要重算
+    const existing = await maybeFirst(
+      tx
+        .select({ status: contents.status, deletedAt: contents.deletedAt })
+        .from(contents)
+        .where(and(eq(contents.type, 'post'), eq(contents.id, id)))
+        .limit(1),
+    )
+
     await tx
       .update(contents)
       .set({ deletedAt: new Date().toISOString() })
       .where(and(eq(contents.type, 'post'), eq(contents.id, id)))
     await deleteRevisionsByTarget('post', id, tx)
+
+    // 只有"本来是已发布且未删除"的文章软删后才影响计数
+    if (existing && existing.status === 'published' && existing.deletedAt === null) {
+      await recountCategoriesAndTags(tx)
+    }
   })
   return { success: true }
 }
@@ -530,7 +589,7 @@ export async function deletePost(id: number) {
 /** 将到期的定时发布文章自动转为已发布 */
 export async function publishScheduledPosts() {
   const now = new Date().toISOString()
-  await db
+  const updated = await db
     .update(contents)
     .set({ status: 'published' })
     .where(
@@ -541,6 +600,11 @@ export async function publishScheduledPosts() {
         isNull(contents.deletedAt),
       ),
     )
+    .returning({ id: contents.id })
+
+  if (updated.length > 0) {
+    await recountCategoriesAndTags()
+  }
 }
 
 /** 校验 slug 格式 */

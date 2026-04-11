@@ -71,6 +71,13 @@
       "when": 1775560885381,
       "tag": "0009_low_wong",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1775876480799,
+      "tag": "0010_dizzy_wolverine",
+      "breakpoints": true
     }
   ]
 }

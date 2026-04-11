@@ -340,6 +340,61 @@ describe('importContentData', () => {
     expect(slugHist[0].slug).toBe('old-test-post')
   })
 
+  it('导入后自动重算分类/标签的 postCount', async () => {
+    await importContentData(
+      {
+        categories: [
+          { id: 1, name: '技术', slug: 'tech' },
+          { id: 2, name: '生活', slug: 'life' },
+        ],
+        tags: [
+          { id: 1, name: 'TS', slug: 'ts' },
+          { id: 2, name: 'JS', slug: 'js' },
+        ],
+        contents: [
+          {
+            id: 1,
+            type: 'post',
+            title: '已发布',
+            slug: 'pub',
+            authorId: 1,
+            contentRaw: '',
+            contentHtml: '',
+            contentText: '',
+            status: 'published',
+            categoryId: 1,
+            publishedAt: new Date().toISOString(),
+          },
+          {
+            id: 2,
+            type: 'post',
+            title: '草稿',
+            slug: 'draft',
+            authorId: 1,
+            contentRaw: '',
+            contentHtml: '',
+            contentText: '',
+            status: 'draft',
+            categoryId: 1,
+          },
+        ],
+        contentTags: [
+          { contentId: 1, tagId: 1 }, // published + TS
+          { contentId: 2, tagId: 2 }, // draft + JS（不应计入）
+        ],
+      },
+      1,
+    )
+
+    const cats = await testDb.select().from(schema.categories)
+    expect(cats.find((c) => c.slug === 'tech')?.postCount).toBe(1)
+    expect(cats.find((c) => c.slug === 'life')?.postCount).toBe(0)
+
+    const tagRows = await testDb.select().from(schema.tags)
+    expect(tagRows.find((t) => t.slug === 'ts')?.postCount).toBe(1)
+    expect(tagRows.find((t) => t.slug === 'js')?.postCount).toBe(0)
+  })
+
   it('导入内容包含文章和页面', async () => {
     await importContentData(
       {

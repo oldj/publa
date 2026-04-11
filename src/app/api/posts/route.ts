@@ -30,9 +30,12 @@ export async function GET(request: NextRequest) {
   const categoryId = searchParams.get('categoryId')
     ? parseIntParam(searchParams.get('categoryId'), 0, 1)
     : undefined
+  const tagId = searchParams.get('tagId')
+    ? parseIntParam(searchParams.get('tagId'), 0, 1)
+    : undefined
   const search = searchParams.get('search') || undefined
 
-  const result = await listPostsAdmin({ page, pageSize, status, categoryId, search })
+  const result = await listPostsAdmin({ page, pageSize, status, categoryId, tagId, search })
   return NextResponse.json({ success: true, data: result })
 }
 

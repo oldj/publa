@@ -47,6 +47,8 @@ export const activityAction = [
   'delete_redirect',
   'import_data',
   'export_data',
+  'recount_categories',
+  'recount_tags',
 ] as const
 
 export function isoNow() {

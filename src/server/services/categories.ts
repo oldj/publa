@@ -1,7 +1,7 @@
 import { db } from '@/server/db'
 import { insertOne, maybeFirst, updateOne } from '@/server/db/query'
 import { categories, contents } from '@/server/db/schema'
-import { and, asc, count, eq, isNull } from 'drizzle-orm'
+import { and, asc, count, eq, isNull, max } from 'drizzle-orm'
 
 export interface CategoryInput {
   name: string
@@ -23,7 +23,7 @@ export interface CategoryWithCount {
   postCount: number
 }
 
-/** 查询所有分类（含文章计数） */
+/** 查询所有分类（含文章计数，读取缓存字段） */
 export async function listCategories(): Promise<CategoryWithCount[]> {
   const rows = await db
     .select({
@@ -34,19 +34,9 @@ export async function listCategories(): Promise<CategoryWithCount[]> {
       sortOrder: categories.sortOrder,
       seoTitle: categories.seoTitle,
       seoDescription: categories.seoDescription,
-      postCount: count(contents.id),
+      postCount: categories.postCount,
     })
     .from(categories)
-    .leftJoin(
-      contents,
-      and(
-        eq(contents.categoryId, categories.id),
-        eq(contents.type, 'post'),
-        eq(contents.status, 'published'),
-        isNull(contents.deletedAt),
-      ),
-    )
-    .groupBy(categories.id)
     .orderBy(asc(categories.sortOrder), asc(categories.id))
 
   return rows
@@ -64,6 +54,13 @@ export async function getCategoryBySlug(slug: string) {
 
 /** 创建分类 */
 export async function createCategory(input: CategoryInput) {
+  let sortOrder = input.sortOrder
+  if (sortOrder === undefined || sortOrder === 0) {
+    // 新分类默认排在末尾
+    const [row] = await db.select({ maxOrder: max(categories.sortOrder) }).from(categories)
+    sortOrder = (row?.maxOrder ?? 0) + 1
+  }
+
   return insertOne(
     db
       .insert(categories)
@@ -71,7 +68,7 @@ export async function createCategory(input: CategoryInput) {
         name: input.name,
         slug: input.slug,
         description: input.description || null,
-        sortOrder: input.sortOrder ?? 0,
+        sortOrder,
         seoTitle: input.seoTitle || null,
         seoDescription: input.seoDescription || null,
       })
@@ -95,6 +92,34 @@ export async function updateCategory(id: number, input: Partial<CategoryInput>) 
       .where(eq(categories.id, id))
       .returning(),
   )
+}
+
+/** 批量更新分类排序 */
+export async function reorderCategories(ids: number[]) {
+  const normalizedIds = ids.map((id) => Number(id)).filter((id) => Number.isInteger(id) && id > 0)
+
+  const rows = await db
+    .select({ id: categories.id })
+    .from(categories)
+    .orderBy(asc(categories.sortOrder), asc(categories.id))
+
+  const existingIds = rows.map((row) => row.id)
+  if (
+    normalizedIds.length !== existingIds.length ||
+    new Set(normalizedIds).size !== normalizedIds.length ||
+    normalizedIds.some((id) => !existingIds.includes(id))
+  ) {
+    throw new Error('Invalid category reorder ids')
+  }
+
+  for (const [index, id] of normalizedIds.entries()) {
+    await db
+      .update(categories)
+      .set({ sortOrder: index + 1 })
+      .where(eq(categories.id, id))
+  }
+
+  return { success: true }
 }
 
 /** 删除分类（仅当无文章引用时） */

@@ -1,24 +1,42 @@
 'use client'
 import myModal from '@/app/(admin)/_components/myModals'
+import { PostList } from '@/app/(admin)/_components/PostList'
 import { NowrapBadge } from '../../_components/NowrapBadge'
-import adminStyles from '../../_components/AdminShell.module.scss'
 
 import { notify } from '@/lib/notify'
+import {
+  DndContext,
+  type DragEndEvent,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import type { Transform } from '@dnd-kit/utilities'
 import {
   ActionIcon,
   Box,
   Button,
+  Drawer,
   Group,
   Modal,
-  NumberInput,
-  Table,
+  Paper,
+  Stack,
   Text,
   TextInput,
   Textarea,
   Title,
 } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
-import { IconPencil, IconPlus, IconTrash } from '@tabler/icons-react'
+import { IconGripVertical, IconPencil, IconPlus, IconRefresh, IconTrash } from '@tabler/icons-react'
 import { useCallback, useEffect, useState } from 'react'
 
 interface Category {
@@ -36,7 +54,6 @@ interface FormData {
   name: string
   slug: string
   description: string
-  sortOrder: number
   seoTitle: string
   seoDescription: string
 }
@@ -45,9 +62,91 @@ const emptyForm: FormData = {
   name: '',
   slug: '',
   description: '',
-  sortOrder: 0,
   seoTitle: '',
   seoDescription: '',
+}
+
+// 只使用 translate，忽略 scale，避免不同高度的项拖拽时出现压缩效果
+function translateOnly(transform: Transform | null) {
+  if (!transform) return undefined
+  return `translate3d(${Math.round(transform.x)}px, ${Math.round(transform.y)}px, 0)`
+}
+
+function SortableCategoryRow({
+  item,
+  onEdit,
+  onDelete,
+  onShowPosts,
+}: {
+  item: Category
+  onEdit: (item: Category) => void
+  onDelete: (item: Category) => void
+  onShowPosts: (item: Category) => void
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: item.id,
+  })
+
+  return (
+    <Paper
+      ref={setNodeRef}
+      withBorder
+      p="md"
+      radius="md"
+      shadow={isDragging ? 'md' : undefined}
+      style={{
+        transform: translateOnly(transform),
+        transition,
+        opacity: isDragging ? 0.7 : 1,
+        zIndex: isDragging ? 10 : undefined,
+        position: isDragging ? 'relative' : undefined,
+        backgroundColor: '#fff',
+      }}
+    >
+      <Group justify="space-between" align="center" wrap="nowrap">
+        <Group align="center" wrap="nowrap" gap="sm" style={{ flex: 1 }}>
+          <ActionIcon
+            variant="subtle"
+            color="gray"
+            {...attributes}
+            {...listeners}
+            aria-label="拖拽排序"
+            style={{ cursor: 'grab', marginTop: 2 }}
+          >
+            <IconGripVertical size={18} />
+          </ActionIcon>
+
+          <div>
+            <Text fw={600}>{item.name}</Text>
+            <Text size="sm" c="dimmed">
+              {item.slug}
+            </Text>
+          </div>
+        </Group>
+
+        <Group gap="xs" wrap="nowrap">
+          <NowrapBadge
+            variant="light"
+            style={{ cursor: 'pointer' }}
+            onClick={() => onShowPosts(item)}
+          >
+            {item.postCount} 篇
+          </NowrapBadge>
+          <ActionIcon variant="subtle" onClick={() => onEdit(item)} aria-label="编辑分类">
+            <IconPencil size={16} />
+          </ActionIcon>
+          <ActionIcon
+            variant="subtle"
+            color="red"
+            onClick={() => onDelete(item)}
+            aria-label="删除分类"
+          >
+            <IconTrash size={16} />
+          </ActionIcon>
+        </Group>
+      </Group>
+    </Paper>
+  )
 }
 
 export default function CategoriesPage() {
@@ -56,6 +155,28 @@ export default function CategoriesPage() {
   const [editingId, setEditingId] = useState<number | null>(null)
   const [form, setForm] = useState<FormData>(emptyForm)
   const [loading, setLoading] = useState(false)
+  const [drawerCategory, setDrawerCategory] = useState<Category | null>(null)
+  const [drawerOpened, { open: openDrawer, close: closeDrawer }] = useDisclosure(false)
+
+  const showPostsByCategory = (category: Category) => {
+    setDrawerCategory(category)
+    openDrawer()
+  }
+
+  const handleDrawerClose = () => {
+    closeDrawer()
+    // 抽屉内可能删除了文章，关闭时刷新分类列表以同步文章数
+    fetchCategories()
+  }
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  )
 
   const fetchCategories = useCallback(async () => {
     const res = await fetch('/api/categories')
@@ -74,7 +195,6 @@ export default function CategoriesPage() {
         name: category.name,
         slug: category.slug,
         description: category.description || '',
-        sortOrder: category.sortOrder,
         seoTitle: category.seoTitle || '',
         seoDescription: category.seoDescription || '',
       })
@@ -116,10 +236,10 @@ export default function CategoriesPage() {
     }
   }
 
-  const handleDelete = async (id: number, name: string) => {
-    if (!(await myModal.confirm({ message: `确定要删除分类「${name}」吗？` }))) return
+  const handleDelete = async (item: Category) => {
+    if (!(await myModal.confirm({ message: `确定要删除分类「${item.name}」吗？` }))) return
 
-    const res = await fetch(`/api/categories/${id}`, { method: 'DELETE' })
+    const res = await fetch(`/api/categories/${item.id}`, { method: 'DELETE' })
     const data = await res.json()
 
     if (data.success) {
@@ -130,7 +250,69 @@ export default function CategoriesPage() {
     }
   }
 
-  const setField = (field: keyof FormData, value: string | number) => {
+  const [recounting, setRecounting] = useState(false)
+  const handleRecount = async () => {
+    setRecounting(true)
+    try {
+      const res = await fetch('/api/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'recount' }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        notify({ color: 'green', message: '重新计数成功' })
+        fetchCategories()
+      } else {
+        notify({ color: 'red', message: data.message || '重新计数失败' })
+      }
+    } catch {
+      notify({ color: 'red', message: '网络错误' })
+    } finally {
+      setRecounting(false)
+    }
+  }
+
+  const persistOrder = async (items: Category[]) => {
+    const response = await fetch('/api/categories', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'reorder',
+        ids: items.map((item) => item.id),
+      }),
+    })
+    const json = await response.json()
+    if (!json.success) {
+      throw new Error(json.message || 'Reorder failed')
+    }
+  }
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+
+    const oldIndex = categories.findIndex((item) => item.id === active.id)
+    const newIndex = categories.findIndex((item) => item.id === over.id)
+    if (oldIndex < 0 || newIndex < 0) return
+
+    const nextItems = arrayMove(categories, oldIndex, newIndex).map((item, index) => ({
+      ...item,
+      sortOrder: index + 1,
+    }))
+    const previousItems = categories
+
+    setCategories(nextItems)
+    try {
+      await persistOrder(nextItems)
+    } catch {
+      setCategories(previousItems)
+      notify({ color: 'red', message: '排序保存失败' })
+      await fetchCategories()
+    }
+  }
+
+  const setField = (field: keyof FormData, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }))
   }
 
@@ -138,63 +320,47 @@ export default function CategoriesPage() {
     <Box mt="md">
       <Group justify="space-between" mb="lg">
         <Title order={3}>分类管理</Title>
-        <Button leftSection={<IconPlus size={16} />} onClick={() => handleOpen()}>
-          新建分类
-        </Button>
+        <Group gap="sm">
+          <Button
+            variant="default"
+            leftSection={<IconRefresh size={16} />}
+            onClick={handleRecount}
+            loading={recounting}
+          >
+            重新计数
+          </Button>
+          <Button leftSection={<IconPlus size={16} />} onClick={() => handleOpen()}>
+            新建分类
+          </Button>
+        </Group>
       </Group>
 
-      <Table.ScrollContainer minWidth={500} className={adminStyles.tableContainer}>
-        <Table highlightOnHover>
-          <Table.Thead>
-            <Table.Tr>
-              <Table.Th>ID</Table.Th>
-              <Table.Th>名称</Table.Th>
-              <Table.Th>Slug</Table.Th>
-              <Table.Th>文章数</Table.Th>
-              <Table.Th>操作</Table.Th>
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
-            {categories.map((cat) => (
-              <Table.Tr key={cat.id}>
-                <Table.Td>{cat.id}</Table.Td>
-                <Table.Td>{cat.name}</Table.Td>
-                <Table.Td>
-                  <Text size="sm" c="dimmed">
-                    {cat.slug}
-                  </Text>
-                </Table.Td>
-                <Table.Td>
-                  <NowrapBadge variant="light">{cat.postCount}</NowrapBadge>
-                </Table.Td>
-                <Table.Td>
-                  <Group gap="xs">
-                    <ActionIcon variant="subtle" onClick={() => handleOpen(cat)}>
-                      <IconPencil size={16} />
-                    </ActionIcon>
-                    <ActionIcon
-                      variant="subtle"
-                      color="red"
-                      onClick={() => handleDelete(cat.id, cat.name)}
-                    >
-                      <IconTrash size={16} />
-                    </ActionIcon>
-                  </Group>
-                </Table.Td>
-              </Table.Tr>
-            ))}
-            {categories.length === 0 && (
-              <Table.Tr>
-                <Table.Td colSpan={5}>
-                  <Text ta="center" c="dimmed" py="md">
-                    暂无分类
-                  </Text>
-                </Table.Td>
-              </Table.Tr>
-            )}
-          </Table.Tbody>
-        </Table>
-      </Table.ScrollContainer>
+      {categories.length === 0 ? (
+        <Paper withBorder p="xl" radius="md">
+          <Text ta="center" c="dimmed">
+            暂无分类
+          </Text>
+        </Paper>
+      ) : (
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext
+            items={categories.map((item) => item.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            <Stack gap="sm">
+              {categories.map((item) => (
+                <SortableCategoryRow
+                  key={item.id}
+                  item={item}
+                  onEdit={handleOpen}
+                  onDelete={handleDelete}
+                  onShowPosts={showPostsByCategory}
+                />
+              ))}
+            </Stack>
+          </SortableContext>
+        </DndContext>
+      )}
 
       <Modal opened={opened} onClose={close} title={editingId ? '编辑分类' : '新建分类'}>
         <TextInput
@@ -219,13 +385,6 @@ export default function CategoriesPage() {
           value={form.description}
           onChange={(e) => setField('description', e.target.value)}
         />
-        <NumberInput
-          label="排序"
-          placeholder="数字越小越靠前"
-          mt="sm"
-          value={form.sortOrder}
-          onChange={(val) => setField('sortOrder', typeof val === 'number' ? val : 0)}
-        />
         <TextInput
           label="SEO 标题"
           placeholder="可选"
@@ -249,6 +408,18 @@ export default function CategoriesPage() {
           </Button>
         </Group>
       </Modal>
+
+      <Drawer
+        opened={drawerOpened}
+        onClose={handleDrawerClose}
+        position="right"
+        size="80%"
+        title={drawerCategory ? `分类「${drawerCategory.name}」下的文章` : '文章列表'}
+      >
+        {drawerCategory && (
+          <PostList key={drawerCategory.id} initialCategoryId={String(drawerCategory.id)} />
+        )}
+      </Drawer>
     </Box>
   )
 }

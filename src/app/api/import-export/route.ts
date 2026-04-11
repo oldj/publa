@@ -7,6 +7,7 @@ import {
   importSettingsData,
   validateImportData,
 } from '@/server/services/import-export'
+import { getSetting } from '@/server/services/settings'
 import { NextRequest, NextResponse } from 'next/server'
 
 function formatTimestamp() {
@@ -23,6 +24,21 @@ function getImportErrorMessage(error: unknown) {
   return '导入失败，请检查数据完整性和关联关系'
 }
 
+/** 获取文件名前缀：优先使用站点标题，回退到 "publa" */
+async function getFilenamePrefix(): Promise<string> {
+  const title = await getSetting('siteTitle')
+  if (typeof title === 'string' && title.trim()) {
+    return title.trim().replace(/[<>:"/\\|?*\s]+/g, '_')
+  }
+  return 'publa'
+}
+
+/** 构建 Content-Disposition，用 RFC 5987 的 filename* 支持非 ASCII 文件名 */
+function contentDisposition(filename: string): string {
+  const encoded = encodeURIComponent(filename)
+  return `attachment; filename="${encoded}"; filename*=UTF-8''${encoded}`
+}
+
 /** 导出数据 */
 export async function GET(request: NextRequest) {
   const guard = await requireRole(['owner', 'admin'], '仅站长和管理员可导出数据')
@@ -30,6 +46,7 @@ export async function GET(request: NextRequest) {
 
   const type = request.nextUrl.searchParams.get('type') || 'content'
   const ts = formatTimestamp()
+  const prefix = await getFilenamePrefix()
 
   if (type === 'settings') {
     const data = await exportSettingsData()
@@ -37,7 +54,7 @@ export async function GET(request: NextRequest) {
     return new NextResponse(JSON.stringify(data, null, 2), {
       headers: {
         'Content-Type': 'application/json',
-        'Content-Disposition': `attachment; filename="publa-settings-${ts}.json"`,
+        'Content-Disposition': contentDisposition(`${prefix}-settings-${ts}.json`),
       },
     })
   }
@@ -47,7 +64,7 @@ export async function GET(request: NextRequest) {
   return new NextResponse(JSON.stringify(data, null, 2), {
     headers: {
       'Content-Type': 'application/json',
-      'Content-Disposition': `attachment; filename="publa-content-${ts}.json"`,
+      'Content-Disposition': contentDisposition(`${prefix}-content-${ts}.json`),
     },
   })
 }
