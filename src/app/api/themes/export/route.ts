@@ -54,7 +54,9 @@ export async function POST(request: NextRequest) {
 
   const prefix = await getFilenamePrefix()
   const ts = formatTimestamp()
-  return new NextResponse(buf, {
+  // fflate 返回的 Uint8Array 的 backing 实际是新分配的 ArrayBuffer，但 TS 6 的 lib 把
+  // 默认泛型放宽到 ArrayBufferLike（含 SharedArrayBuffer），与 BodyInit 不兼容，这里做一次断言。
+  return new NextResponse(buf as unknown as BodyInit, {
     headers: {
       'Content-Type': 'application/zip',
       'Content-Disposition': contentDisposition(`${prefix}-themes-${ts}.zip`),

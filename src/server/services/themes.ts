@@ -160,12 +160,14 @@ export async function reorderThemes(ids: number[]) {
     throw new Error('Invalid theme reorder ids')
   }
 
-  for (const [index, id] of normalizedIds.entries()) {
-    await db
-      .update(themes)
-      .set({ sortOrder: index + 1 })
-      .where(eq(themes.id, id))
-  }
+  await db.transaction(async (tx) => {
+    for (const [index, id] of normalizedIds.entries()) {
+      await tx
+        .update(themes)
+        .set({ sortOrder: index + 1 })
+        .where(eq(themes.id, id))
+    }
+  })
 
   return { success: true }
 }

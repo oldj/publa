@@ -4,6 +4,7 @@
  */
 
 import PreviewStyles from '@/components/PreviewStyles'
+import { getBuiltinKeyById } from '@/server/services/builtin-themes'
 import { getAllSettings, toStr } from '@/server/services/settings'
 import React, { Suspense } from 'react'
 
@@ -37,10 +38,23 @@ async function getData() {
   // 通过 getAllSettings（React cache 包裹）共享根布局已经完成的查询
   const s = await getAllSettings()
 
-  // 当前选中的主题 / 自定义 CSS，用 id 做 cache bust
+  // 当前选中的主题 / 自定义 CSS：
+  // - 内置 light/dark → 直接指向 public 下的静态 CSS，Next.js 静态资源层伺服，零动态查询
+  // - 内置 blank → 不渲染 link
+  // - 自定义主题 → 走 /themes/theme.css 动态 handler，?v={id} 用于缓存失效
+  // builtin id→key 映射由 getBuiltinKeyById 在模块级内存缓存，首次访问后不再查库
   const rawThemeId = s.activeThemeId
   const themeId = typeof rawThemeId === 'number' && rawThemeId > 0 ? rawThemeId : 0
-  const themeHref = themeId > 0 ? `/themes/theme.css?v=${themeId}` : null
+  let themeHref: string | null = null
+  if (themeId > 0) {
+    const builtinKey = await getBuiltinKeyById(themeId)
+    if (builtinKey === 'light' || builtinKey === 'dark') {
+      themeHref = `/themes/${builtinKey}.css`
+    } else if (builtinKey === null) {
+      themeHref = `/themes/theme.css?v=${themeId}`
+    }
+    // builtinKey === 'blank' 时 themeHref 保持 null，不渲染 link
+  }
 
   const rawStyleIds = s.activeCustomStyleIds
   const customStyleIds = Array.isArray(rawStyleIds) ? (rawStyleIds as number[]) : []

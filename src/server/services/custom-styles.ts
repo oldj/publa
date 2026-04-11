@@ -92,12 +92,14 @@ export async function reorderCustomStyles(ids: number[]) {
     throw new Error('Invalid custom style reorder ids')
   }
 
-  for (const [index, id] of normalizedIds.entries()) {
-    await db
-      .update(customStyles)
-      .set({ sortOrder: index + 1 })
-      .where(eq(customStyles.id, id))
-  }
+  await db.transaction(async (tx) => {
+    for (const [index, id] of normalizedIds.entries()) {
+      await tx
+        .update(customStyles)
+        .set({ sortOrder: index + 1 })
+        .where(eq(customStyles.id, id))
+    }
+  })
 
   return { success: true }
 }

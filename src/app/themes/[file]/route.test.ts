@@ -1,6 +1,8 @@
 import * as schema from '@/server/db/schema'
+import { eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { setupTestDb, testDb } from '@/server/services/__test__/setup'
+import { __resetBuiltinThemeCache } from '@/server/services/builtin-themes'
 
 const { mockGetCurrentUser } = vi.hoisted(() => ({
   mockGetCurrentUser: vi.fn(),
@@ -17,6 +19,7 @@ function req(pathname: string): any {
   const url = new URL(`http://localhost${pathname}`)
   return {
     nextUrl: url,
+    url: url.toString(),
   }
 }
 
@@ -29,31 +32,27 @@ beforeEach(async () => {
   mockGetCurrentUser.mockReset()
   mockGetCurrentUser.mockResolvedValue(null)
 
-  // 预置内置主题
+  // 预置内置主题。id 由 DB 自增分配，测试通过 builtinKey 反查，避免对具体 id 产生隐式依赖，
+  // 这样未来新增或重排内置主题（例如在 blank 之前加一个 blue）都不需要改本文件
   await testDb.insert(schema.themes).values([
-    { id: 1, name: '浅色', css: '', sortOrder: 1, builtinKey: 'light' },
-    { id: 2, name: '深色', css: '', sortOrder: 2, builtinKey: 'dark' },
-    { id: 3, name: '空白', css: '', sortOrder: 3, builtinKey: 'blank' },
+    { name: '浅色', css: '', sortOrder: 1, builtinKey: 'light' },
+    { name: '深色', css: '', sortOrder: 2, builtinKey: 'dark' },
+    { name: '空白', css: '', sortOrder: 3, builtinKey: 'blank' },
   ])
+
+  // 每个测试独立重置 builtin id→key 模块缓存（setupTestDb 已做，这里显式再强调一次）
+  __resetBuiltinThemeCache()
 })
 
-describe('GET /themes/light.css 与 /themes/dark.css', () => {
-  it('返回内置 light.css 文件内容', async () => {
-    const res = await GET(req('/themes/light.css'), { params: params('light.css') })
-    expect(res.status).toBe(200)
-    expect(res.headers.get('Content-Type')).toContain('text/css')
-    const text = await res.text()
-    // light.css 文件真实存在，应包含至少一条 CSS 规则
-    expect(text.length).toBeGreaterThan(0)
-  })
-
-  it('返回内置 dark.css 文件内容', async () => {
-    const res = await GET(req('/themes/dark.css'), { params: params('dark.css') })
-    expect(res.status).toBe(200)
-    const text = await res.text()
-    expect(text.length).toBeGreaterThan(0)
-  })
-})
+async function builtinId(key: 'light' | 'dark' | 'blank'): Promise<number> {
+  const rows = await testDb
+    .select({ id: schema.themes.id })
+    .from(schema.themes)
+    .where(eq(schema.themes.builtinKey, key))
+    .limit(1)
+  if (rows.length === 0) throw new Error(`builtin theme not found: ${key}`)
+  return rows[0].id
+}
 
 describe('GET /themes/theme.css', () => {
   it('activeThemeId 为空时返回空字符串', async () => {
@@ -62,16 +61,24 @@ describe('GET /themes/theme.css', () => {
     expect(await res.text()).toBe('')
   })
 
-  it('active 指向内置 light 时返回 light.css 内容', async () => {
-    await setSetting('activeThemeId', 1)
+  it('active 指向内置 light 时 302 重定向到 /themes/light.css', async () => {
+    await setSetting('activeThemeId', await builtinId('light'))
     const res = await GET(req('/themes/theme.css'), { params: params('theme.css') })
-    const text = await res.text()
-    expect(text.length).toBeGreaterThan(0)
+    expect(res.status).toBe(302)
+    expect(res.headers.get('Location')).toMatch(/\/themes\/light\.css$/)
+  })
+
+  it('active 指向内置 dark 时 302 重定向到 /themes/dark.css', async () => {
+    await setSetting('activeThemeId', await builtinId('dark'))
+    const res = await GET(req('/themes/theme.css'), { params: params('theme.css') })
+    expect(res.status).toBe(302)
+    expect(res.headers.get('Location')).toMatch(/\/themes\/dark\.css$/)
   })
 
   it('active 指向内置 blank 时返回空字符串', async () => {
-    await setSetting('activeThemeId', 3)
+    await setSetting('activeThemeId', await builtinId('blank'))
     const res = await GET(req('/themes/theme.css'), { params: params('theme.css') })
+    expect(res.status).toBe(200)
     expect(await res.text()).toBe('')
   })
 
@@ -102,15 +109,14 @@ describe('GET /themes/theme.css', () => {
       sortOrder: 20,
       builtinKey: null,
     })
-    await setSetting('activeThemeId', 1) // light
+    await setSetting('activeThemeId', await builtinId('light'))
     const res = await GET(req('/themes/theme.css?preview=200'), { params: params('theme.css') })
-    const text = await res.text()
-    // 应当是 light.css 的内容，不是 .preview{}
-    expect(text).not.toBe('.preview{}')
-    expect(text.length).toBeGreaterThan(0)
+    // 被忽略后按 active=light 走 302
+    expect(res.status).toBe(302)
+    expect(res.headers.get('Location')).toMatch(/\/themes\/light\.css$/)
   })
 
-  it('已登录用户的 preview 参数生效', async () => {
+  it('已登录用户预览自定义主题时返回该主题的 css', async () => {
     mockGetCurrentUser.mockResolvedValue({ id: 1, username: 'admin', role: 'admin' })
     await testDb.insert(schema.themes).values({
       id: 200,
@@ -119,9 +125,52 @@ describe('GET /themes/theme.css', () => {
       sortOrder: 20,
       builtinKey: null,
     })
-    await setSetting('activeThemeId', 1)
+    await setSetting('activeThemeId', await builtinId('light'))
     const res = await GET(req('/themes/theme.css?preview=200'), { params: params('theme.css') })
     expect(await res.text()).toBe('.preview{}')
+  })
+
+  it('已登录用户预览内置 dark 时 302 到 /themes/dark.css（preview 参数使用 key）', async () => {
+    mockGetCurrentUser.mockResolvedValue({ id: 1, username: 'admin', role: 'admin' })
+    await setSetting('activeThemeId', await builtinId('light'))
+    const res = await GET(req('/themes/theme.css?preview=dark'), { params: params('theme.css') })
+    expect(res.status).toBe(302)
+    expect(res.headers.get('Location')).toMatch(/\/themes\/dark\.css$/)
+  })
+
+  it('已登录用户预览内置 light 时 302 到 /themes/light.css（preview 参数使用 key）', async () => {
+    mockGetCurrentUser.mockResolvedValue({ id: 1, username: 'admin', role: 'admin' })
+    await setSetting('activeThemeId', await builtinId('dark'))
+    const res = await GET(req('/themes/theme.css?preview=light'), { params: params('theme.css') })
+    expect(res.status).toBe(302)
+    expect(res.headers.get('Location')).toMatch(/\/themes\/light\.css$/)
+  })
+
+  it('已登录用户预览内置 blank 时返回空字符串而非 302', async () => {
+    mockGetCurrentUser.mockResolvedValue({ id: 1, username: 'admin', role: 'admin' })
+    await setSetting('activeThemeId', await builtinId('light'))
+    const res = await GET(req('/themes/theme.css?preview=blank'), { params: params('theme.css') })
+    expect(res.status).toBe(200)
+    expect(await res.text()).toBe('')
+  })
+
+  it('向后兼容：已登录用户仍可用数字 id 预览内置主题', async () => {
+    mockGetCurrentUser.mockResolvedValue({ id: 1, username: 'admin', role: 'admin' })
+    await setSetting('activeThemeId', await builtinId('light'))
+    const darkId = await builtinId('dark')
+    const res = await GET(req(`/themes/theme.css?preview=${darkId}`), { params: params('theme.css') })
+    // 数字 id 命中 builtin 后同样被识别为内置并 302
+    expect(res.status).toBe(302)
+    expect(res.headers.get('Location')).toMatch(/\/themes\/dark\.css$/)
+  })
+
+  it('无效 preview 字符串被忽略，仍按 active 返回', async () => {
+    mockGetCurrentUser.mockResolvedValue({ id: 1, username: 'admin', role: 'admin' })
+    await setSetting('activeThemeId', await builtinId('light'))
+    const res = await GET(req('/themes/theme.css?preview=bogus'), { params: params('theme.css') })
+    // 字符串不匹配任何 builtin key，Number('bogus') 为 NaN，回退到 active
+    expect(res.status).toBe(302)
+    expect(res.headers.get('Location')).toMatch(/\/themes\/light\.css$/)
   })
 })
 

@@ -21,8 +21,8 @@ test.describe('404 页面主题链接', () => {
     const html = await res.text()
 
     // 404 页面走 BlankLayout，应当注入当前主题的 CSS link。
-    // seed 阶段已把 activeThemeId 指向内置 light 主题，因此 /themes/theme.css?v=<id> 必然出现。
-    expect(html).toMatch(/\/themes\/theme\.css\?v=\d+/)
+    // seed 阶段已把 activeThemeId 指向内置 light 主题，前台直接指向 /public/themes/light.css。
+    expect(html).toMatch(/\/themes\/light\.css/)
     // 同时确认 404 文案本身已渲染
     expect(html).toContain('404 - 页面没有找到')
   })

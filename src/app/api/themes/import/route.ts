@@ -85,14 +85,23 @@ export async function POST(request: NextRequest) {
       )
     }
   } catch (err) {
-    const code = err instanceof Error && err.message === 'ZIP_TOO_LARGE' ? 'FILE_TOO_LARGE' : 'IMPORT_FAILED'
-    const message =
-      err instanceof Error && err.message === 'ZIP_TOO_LARGE'
-        ? '压缩包内容过大'
-        : err instanceof Error && err.message === 'ZIP_INVALID'
-          ? '压缩包损坏或格式不正确'
-          : '导入失败'
-    const status = code === 'FILE_TOO_LARGE' ? 413 : 400
+    const rawMessage = err instanceof Error ? err.message : ''
+    let code: string
+    let message: string
+    let status: number
+    if (rawMessage === 'ZIP_TOO_LARGE') {
+      code = 'FILE_TOO_LARGE'
+      message = '压缩包内容过大'
+      status = 413
+    } else if (rawMessage === 'ZIP_INVALID') {
+      code = 'ZIP_INVALID'
+      message = '压缩包损坏或格式不正确'
+      status = 400
+    } else {
+      code = 'IMPORT_FAILED'
+      message = '导入失败'
+      status = 400
+    }
     return NextResponse.json({ success: false, code, message }, { status })
   }
 

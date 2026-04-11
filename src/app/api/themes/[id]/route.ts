@@ -1,5 +1,6 @@
 import { requireRole } from '@/server/auth'
 import { parseIdParam, safeParseJson } from '@/server/lib/request'
+import { MAX_ENTRY_BYTES } from '@/server/lib/zip'
 import { logActivity } from '@/server/services/activity-logs'
 import {
   ActiveThemeError,
@@ -19,6 +20,14 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
   const { data: body, error } = await safeParseJson(request)
   if (error) return error
+
+  // 单条 CSS 文本上限与 zip 条目上限保持一致
+  if (typeof body.css === 'string' && body.css.length > MAX_ENTRY_BYTES) {
+    return NextResponse.json(
+      { success: false, code: 'CSS_TOO_LARGE', message: 'CSS 内容过大' },
+      { status: 413 },
+    )
+  }
 
   try {
     const theme = await updateTheme(themeId, {

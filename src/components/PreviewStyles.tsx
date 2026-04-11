@@ -1,5 +1,6 @@
 'use client'
 
+import { type BuiltinKey, isBuiltinKey } from '@/shared/builtin-themes'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useMemo } from 'react'
 
@@ -7,7 +8,12 @@ import { useEffect, useMemo } from 'react'
  * 前台主题预览模式。
  *
  * 触发方式：URL 带有 `__debug=<base64(JSON)>` 参数，payload 形如
- *   { theme: number | null, custom_styles: number[] }
+ *   { theme: number | 'light' | 'dark' | 'blank' | null, custom_styles: number[] }
+ *
+ * 其中 theme 字段的两种形态：
+ * - 字符串 key（light/dark/blank）：内置主题，协议不依赖 DB 中的 id 分配，
+ *   未来新增或重排内置主题不影响预览链接
+ * - 正整数：自定义主题的 id
  *
  * 组件职责：
  * 1. 解析 __debug，把预览主题与自定义 CSS 以 <link> 形式临时注入 <head>，
@@ -20,7 +26,7 @@ import { useEffect, useMemo } from 'react'
  */
 
 interface DebugPayload {
-  theme?: number | null
+  theme?: number | BuiltinKey | null
   custom_styles?: number[]
 }
 
@@ -52,11 +58,17 @@ export default function PreviewStyles() {
 
     const elements: HTMLLinkElement[] = []
 
-    const themeId = payload.theme
-    if (typeof themeId === 'number' && themeId > 0) {
+    const theme = payload.theme
+    // 内置主题用 key（字符串），自定义主题用 id（正整数），两者都写入 ?preview= 参数
+    const previewThemeToken = isBuiltinKey(theme)
+      ? theme
+      : typeof theme === 'number' && theme > 0
+        ? String(theme)
+        : null
+    if (previewThemeToken) {
       const link = document.createElement('link')
       link.rel = 'stylesheet'
-      link.href = `/themes/theme.css?preview=${themeId}`
+      link.href = `/themes/theme.css?preview=${previewThemeToken}`
       link.dataset.previewStyles = 'theme'
       document.head.appendChild(link)
       elements.push(link)

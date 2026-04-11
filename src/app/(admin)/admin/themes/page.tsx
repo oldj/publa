@@ -362,9 +362,16 @@ export default function ThemesPage() {
 
   const handlePreview = () => {
     // 把预览选中项打包为一个 base64(JSON) 的 __debug 参数，前台的 PreviewStyles
-    // 会解析这个参数并注入对应样式；同时全局监听会把 __debug 自动携带到后续链接上
+    // 会解析这个参数并注入对应样式；同时全局监听会把 __debug 自动携带到后续链接上。
+    //
+    // 内置主题写字符串 key（light/dark/blank），协议不绑定 DB 自增 id；
+    // 自定义主题写数字 id。
+    const pending = pendingThemeId ? themes.find((t) => t.id === pendingThemeId) : null
+    const themePayload: number | string | null = pending?.builtinKey
+      ? pending.builtinKey
+      : pendingThemeId
     const payload = {
-      theme: pendingThemeId,
+      theme: themePayload,
       custom_styles: pendingCustomStyleIds,
     }
     const bytes = new TextEncoder().encode(JSON.stringify(payload))
