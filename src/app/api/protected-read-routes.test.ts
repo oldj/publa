@@ -7,12 +7,16 @@ const {
   mockListMenus,
   mockListCategories,
   mockListTags,
+  mockListThemes,
+  mockListCustomStyles,
 } = vi.hoisted(() => ({
   mockRequireCurrentUser: vi.fn(),
   mockRequireRole: vi.fn(),
   mockListMenus: vi.fn(),
   mockListCategories: vi.fn(),
   mockListTags: vi.fn(),
+  mockListThemes: vi.fn(),
+  mockListCustomStyles: vi.fn(),
 }))
 
 vi.mock('@/server/auth', () => ({
@@ -39,10 +43,25 @@ vi.mock('@/server/services/tags', () => ({
   getTagBySlug: vi.fn(),
 }))
 
+vi.mock('@/server/services/themes', () => ({
+  listThemes: mockListThemes,
+  createTheme: vi.fn(),
+  reorderThemes: vi.fn(),
+  BuiltinThemeError: class BuiltinThemeError extends Error {},
+}))
+
+vi.mock('@/server/services/custom-styles', () => ({
+  listCustomStyles: mockListCustomStyles,
+  createCustomStyle: vi.fn(),
+  reorderCustomStyles: vi.fn(),
+}))
+
 const menusRoute = await import('./menus/route')
 const categoriesRoute = await import('./categories/route')
 const tagsRoute = await import('./tags/route')
 const importExportFormatRoute = await import('./import-export/format/route')
+const themesRoute = await import('./themes/route')
+const customStylesRoute = await import('./custom-styles/route')
 
 const unauthorizedResponse = () => ({
   ok: false,
@@ -59,6 +78,8 @@ describe('后台只读接口访问控制', () => {
     mockListMenus.mockReset()
     mockListCategories.mockReset()
     mockListTags.mockReset()
+    mockListThemes.mockReset()
+    mockListCustomStyles.mockReset()
 
     mockRequireCurrentUser.mockResolvedValue(unauthorizedResponse())
     mockRequireRole.mockResolvedValue(unauthorizedResponse())
@@ -97,5 +118,23 @@ describe('后台只读接口访问控制', () => {
 
     expect(response.status).toBe(401)
     expect(json.code).toBe('UNAUTHORIZED')
+  })
+
+  it('未登录不能读取主题列表', async () => {
+    const response = await themesRoute.GET()
+    const json = await response.json()
+
+    expect(response.status).toBe(401)
+    expect(json.code).toBe('UNAUTHORIZED')
+    expect(mockListThemes).not.toHaveBeenCalled()
+  })
+
+  it('未登录不能读取自定义 CSS 列表', async () => {
+    const response = await customStylesRoute.GET()
+    const json = await response.json()
+
+    expect(response.status).toBe(401)
+    expect(json.code).toBe('UNAUTHORIZED')
+    expect(mockListCustomStyles).not.toHaveBeenCalled()
   })
 })

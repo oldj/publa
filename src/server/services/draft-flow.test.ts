@@ -345,8 +345,8 @@ describe('转为草稿（下线）', () => {
 describe('statusCounts', () => {
   it('文章列表返回各状态计数', async () => {
     // 创建不同状态的文章
-    const draft1 = await createEmptyPost(1)
-    const draft2 = await createEmptyPost(1)
+    await createEmptyPost(1)
+    await createEmptyPost(1)
     const pub = await createEmptyPost(1)
     await updatePost(pub.id, { title: '已发布', slug: 'pub-1', status: 'published' })
 
@@ -355,7 +355,7 @@ describe('statusCounts', () => {
   })
 
   it('文章状态筛选不影响 statusCounts', async () => {
-    const draft = await createEmptyPost(1)
+    await createEmptyPost(1)
     const pub = await createEmptyPost(1)
     await updatePost(pub.id, { title: '已发布', slug: 'pub-2', status: 'published' })
 
