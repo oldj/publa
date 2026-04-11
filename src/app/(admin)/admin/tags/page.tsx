@@ -1,13 +1,15 @@
 'use client'
 import myModal from '@/app/(admin)/_components/myModals'
-import { NowrapBadge } from '../../_components/NowrapBadge'
+import { PostList } from '@/app/(admin)/_components/PostList'
 import adminStyles from '../../_components/AdminShell.module.scss'
+import { NowrapBadge } from '../../_components/NowrapBadge'
 
 import { notify } from '@/lib/notify'
 import {
   ActionIcon,
   Box,
   Button,
+  Drawer,
   Group,
   Modal,
   Table,
@@ -24,6 +26,7 @@ import {
   IconPlus,
   IconTrash,
 } from '@tabler/icons-react'
+import clsx from 'clsx'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 interface Tag {
@@ -59,6 +62,19 @@ export default function TagsPage() {
   const [loading, setLoading] = useState(false)
   const [sortBy, setSortBy] = useState<SortKey>('postCount')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+  const [drawerTag, setDrawerTag] = useState<Tag | null>(null)
+  const [drawerOpened, { open: openDrawer, close: closeDrawer }] = useDisclosure(false)
+
+  const showPostsByTag = (tag: Tag) => {
+    setDrawerTag(tag)
+    openDrawer()
+  }
+
+  const handleDrawerClose = () => {
+    closeDrawer()
+    // 抽屉内可能删除了文章，关闭时刷新标签列表以同步文章数
+    fetchTags()
+  }
 
   const sortedTags = useMemo(() => {
     return [...tagList].sort((a, b) => {
@@ -205,10 +221,16 @@ export default function TagsPage() {
                   </Text>
                 </Table.Td>
                 <Table.Td>
-                  <NowrapBadge variant="light">{tag.postCount}</NowrapBadge>
+                  <NowrapBadge
+                    variant="light"
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => showPostsByTag(tag)}
+                  >
+                    {tag.postCount}
+                  </NowrapBadge>
                 </Table.Td>
-                <Table.Td>
-                  <Group gap="xs">
+                <Table.Td className={clsx(adminStyles.cellFit, adminStyles.cellCenter)}>
+                  <Group gap="xs" wrap="nowrap">
                     <ActionIcon variant="subtle" onClick={() => handleOpen(tag)}>
                       <IconPencil size={16} />
                     </ActionIcon>
@@ -275,6 +297,16 @@ export default function TagsPage() {
           </Button>
         </Group>
       </Modal>
+
+      <Drawer
+        opened={drawerOpened}
+        onClose={handleDrawerClose}
+        position="right"
+        size="80%"
+        title={drawerTag ? `标签「${drawerTag.name}」下的文章` : '文章列表'}
+      >
+        {drawerTag && <PostList key={drawerTag.id} initialTagId={String(drawerTag.id)} />}
+      </Drawer>
     </Box>
   )
 }

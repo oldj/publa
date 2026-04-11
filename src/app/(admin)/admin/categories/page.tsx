@@ -1,5 +1,6 @@
 'use client'
 import myModal from '@/app/(admin)/_components/myModals'
+import { PostList } from '@/app/(admin)/_components/PostList'
 import { NowrapBadge } from '../../_components/NowrapBadge'
 
 import { notify } from '@/lib/notify'
@@ -24,6 +25,7 @@ import {
   ActionIcon,
   Box,
   Button,
+  Drawer,
   Group,
   Modal,
   Paper,
@@ -74,10 +76,12 @@ function SortableCategoryRow({
   item,
   onEdit,
   onDelete,
+  onShowPosts,
 }: {
   item: Category
   onEdit: (item: Category) => void
   onDelete: (item: Category) => void
+  onShowPosts: (item: Category) => void
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.id,
@@ -121,7 +125,13 @@ function SortableCategoryRow({
         </Group>
 
         <Group gap="xs" wrap="nowrap">
-          <NowrapBadge variant="light">{item.postCount} 篇</NowrapBadge>
+          <NowrapBadge
+            variant="light"
+            style={{ cursor: 'pointer' }}
+            onClick={() => onShowPosts(item)}
+          >
+            {item.postCount} 篇
+          </NowrapBadge>
           <ActionIcon variant="subtle" onClick={() => onEdit(item)} aria-label="编辑分类">
             <IconPencil size={16} />
           </ActionIcon>
@@ -145,6 +155,19 @@ export default function CategoriesPage() {
   const [editingId, setEditingId] = useState<number | null>(null)
   const [form, setForm] = useState<FormData>(emptyForm)
   const [loading, setLoading] = useState(false)
+  const [drawerCategory, setDrawerCategory] = useState<Category | null>(null)
+  const [drawerOpened, { open: openDrawer, close: closeDrawer }] = useDisclosure(false)
+
+  const showPostsByCategory = (category: Category) => {
+    setDrawerCategory(category)
+    openDrawer()
+  }
+
+  const handleDrawerClose = () => {
+    closeDrawer()
+    // 抽屉内可能删除了文章，关闭时刷新分类列表以同步文章数
+    fetchCategories()
+  }
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -298,6 +321,7 @@ export default function CategoriesPage() {
                   item={item}
                   onEdit={handleOpen}
                   onDelete={handleDelete}
+                  onShowPosts={showPostsByCategory}
                 />
               ))}
             </Stack>
@@ -351,6 +375,18 @@ export default function CategoriesPage() {
           </Button>
         </Group>
       </Modal>
+
+      <Drawer
+        opened={drawerOpened}
+        onClose={handleDrawerClose}
+        position="right"
+        size="80%"
+        title={drawerCategory ? `分类「${drawerCategory.name}」下的文章` : '文章列表'}
+      >
+        {drawerCategory && (
+          <PostList key={drawerCategory.id} initialCategoryId={String(drawerCategory.id)} />
+        )}
+      </Drawer>
     </Box>
   )
 }
