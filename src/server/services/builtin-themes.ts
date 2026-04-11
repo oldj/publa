@@ -40,6 +40,6 @@ export async function getBuiltinKeyById(id: number): Promise<BuiltinKey | null> 
 }
 
 /** 测试用：清空缓存，让下一次查询重新加载 */
-export function __resetBuiltinThemeCache() {
+export function _resetBuiltinThemeCache() {
   cache = null
 }

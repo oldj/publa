@@ -108,7 +108,7 @@ export async function reorderCustomStyles(ids: number[]) {
  * 按 id 列表导出自定义 CSS 为 zip（Uint8Array），保持 ids 顺序。
  * 未匹配到的 id 静默忽略。
  */
-export async function exportCustomStylesAsZip(ids: number[]): Promise<Uint8Array> {
+export async function exportCustomStylesAsZip(ids: number[]): Promise<Uint8Array<ArrayBuffer>> {
   const rows = await listCustomStylesByIds(ids)
   if (rows.length === 0) return new Uint8Array()
   return buildZip(rows.map((row) => ({ name: row.name, content: row.css ?? '' })))

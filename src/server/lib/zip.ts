@@ -33,8 +33,12 @@ function sanitizeBaseName(name: string): string {
 /**
  * 将条目数组打包成扁平 zip（根目录），同名条目追加 ` (1)`、` (2)` 形式的后缀。
  * 文件名始终以 .css 结尾，即便原 name 已含 .css 也**不截断**，以尊重原名。
+ *
+ * 返回类型收窄为 Uint8Array<ArrayBuffer>：fflate 运行时始终在普通 ArrayBuffer 上分配，
+ * 但 fflate 的 .d.ts 只声明 Uint8Array，TS 6 会推断为 Uint8Array<ArrayBufferLike>，
+ * 无法直接作为 BodyInit 传给 Response/NextResponse。在库边界一次性收窄，调用方即可直接使用。
  */
-export function buildZip(entries: ZipEntry[]): Uint8Array {
+export function buildZip(entries: ZipEntry[]): Uint8Array<ArrayBuffer> {
   const files: Record<string, Uint8Array> = {}
   const used = new Map<string, number>()
 
@@ -58,7 +62,7 @@ export function buildZip(entries: ZipEntry[]): Uint8Array {
     files[finalName] = strToU8(entry.content)
   }
 
-  return zipSync(files, { level: 6 })
+  return zipSync(files, { level: 6 }) as Uint8Array<ArrayBuffer>
 }
 
 /** 解析 zip，仅提取根目录下的 .css 文件，跳过子目录与 macOS/Windows 打包产物 */

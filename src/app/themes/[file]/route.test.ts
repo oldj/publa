@@ -2,7 +2,7 @@ import * as schema from '@/server/db/schema'
 import { eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { setupTestDb, testDb } from '@/server/services/__test__/setup'
-import { __resetBuiltinThemeCache } from '@/server/services/builtin-themes'
+import { _resetBuiltinThemeCache } from '@/server/services/builtin-themes'
 
 const { mockGetCurrentUser } = vi.hoisted(() => ({
   mockGetCurrentUser: vi.fn(),
@@ -41,7 +41,7 @@ beforeEach(async () => {
   ])
 
   // 每个测试独立重置 builtin id→key 模块缓存（setupTestDb 已做，这里显式再强调一次）
-  __resetBuiltinThemeCache()
+  _resetBuiltinThemeCache()
 })
 
 async function builtinId(key: 'light' | 'dark' | 'blank'): Promise<number> {

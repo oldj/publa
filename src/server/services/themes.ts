@@ -112,7 +112,7 @@ export async function deleteTheme(id: number) {
  * 只导出 builtinKey === null 的主题；未匹配到的 id 静默忽略。
  * 保持 ids 参数传入的顺序。
  */
-export async function exportThemesAsZip(ids: number[]): Promise<Uint8Array> {
+export async function exportThemesAsZip(ids: number[]): Promise<Uint8Array<ArrayBuffer>> {
   const all = await listThemes()
   const byId = new Map(all.map((row) => [row.id, row]))
   const entries: { name: string; content: string }[] = []
