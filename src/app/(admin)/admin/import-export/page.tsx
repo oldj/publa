@@ -155,17 +155,9 @@ export default function ImportExportPage() {
 
   const handleExport = async (type: 'content' | 'settings') => {
     const message =
-      type === 'content' ? (
-        '将导出文章、页面、分类、标签、评论、留言、附件、历史记录等内容数据，确定导出吗？'
-      ) : (
-        <>
-          <div>
-            将导出用户、菜单、系统设置、跳转规则等设置数据。
-            <br />
-            注意：密码、存储密钥等敏感信息不会被导出。
-          </div>
-        </>
-      )
+      type === 'content'
+        ? '将导出文章、页面、分类、标签、评论、留言、附件、历史记录等内容数据，确定导出吗？'
+        : '将导出用户、菜单、系统设置、跳转规则、主题、自定义样式等设置数据。\n注意：密码、存储密钥等敏感信息不会被导出。'
     const confirmed = await myModal.confirm({ message })
     if (!confirmed) return
     window.open(`/api/import-export?type=${type}`, '_blank')
