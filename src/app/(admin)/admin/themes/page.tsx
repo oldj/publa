@@ -33,8 +33,8 @@ import {
   Title,
 } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
-import { IconGripVertical, IconPencil, IconPlus, IconTrash } from '@tabler/icons-react'
-import { useCallback, useEffect, useState } from 'react'
+import { IconExternalLink, IconGripVertical, IconPencil, IconPlus, IconTrash } from '@tabler/icons-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAdminUrl } from '../../_components/AdminPathContext'
 import { useCurrentUser } from '../../_components/AdminCountsContext'
@@ -221,8 +221,12 @@ export default function ThemesPage() {
   const currentUser = useCurrentUser()
   const [themes, setThemes] = useState<Theme[]>([])
   const [customStyles, setCustomStyles] = useState<CustomStyle[]>([])
-  const [activeThemeId, setActiveThemeId] = useState<number | null>(null)
-  const [activeCustomStyleIds, setActiveCustomStyleIds] = useState<number[]>([])
+  // saved* 对应 settings 中已生效的值；pending* 是用户当前在页面上的选择，保存前不生效
+  const [savedThemeId, setSavedThemeId] = useState<number | null>(null)
+  const [savedCustomStyleIds, setSavedCustomStyleIds] = useState<number[]>([])
+  const [pendingThemeId, setPendingThemeId] = useState<number | null>(null)
+  const [pendingCustomStyleIds, setPendingCustomStyleIds] = useState<number[]>([])
+  const [saving, setSaving] = useState(false)
   const [drawerOpened, { open: openDrawer, close: closeDrawer }] = useDisclosure(false)
   const [drawerKind, setDrawerKind] = useState<StyleKind>('theme')
   const [drawerInitial, setDrawerInitial] = useState<StyleFormInitial | null>(null)
@@ -232,7 +236,38 @@ export default function ThemesPage() {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   )
 
-  const fetchAll = useCallback(async () => {
+  const dirty = useMemo(() => {
+    if (savedThemeId !== pendingThemeId) return true
+    if (savedCustomStyleIds.length !== pendingCustomStyleIds.length) return true
+    for (let i = 0; i < savedCustomStyleIds.length; i++) {
+      if (savedCustomStyleIds[i] !== pendingCustomStyleIds[i]) return true
+    }
+    return false
+  }, [savedThemeId, savedCustomStyleIds, pendingThemeId, pendingCustomStyleIds])
+
+  /** 仅刷新主题与自定义 CSS 列表，不触碰 pending/saved 选中状态，供 Drawer / 删除回调使用 */
+  const refreshLists = useCallback(async () => {
+    const [themesRes, stylesRes] = await Promise.all([
+      fetch('/api/themes').then((r) => r.json()),
+      fetch('/api/custom-styles').then((r) => r.json()),
+    ])
+    if (themesRes.success) {
+      const list = themesRes.data as Theme[]
+      setThemes(list)
+      // 若 pending 主题被删除，回退到 saved 或首个内置主题
+      const validIds = new Set(list.map((t) => t.id))
+      setPendingThemeId((prev) => (prev && !validIds.has(prev) ? savedThemeId : prev))
+    }
+    if (stylesRes.success) {
+      const list = stylesRes.data as CustomStyle[]
+      setCustomStyles(list)
+      const validIds = new Set(list.map((t) => t.id))
+      setPendingCustomStyleIds((prev) => prev.filter((id) => validIds.has(id)))
+    }
+  }, [savedThemeId])
+
+  /** 初次加载：拉取列表 + settings，pending 与 saved 同步 */
+  const fetchInitial = useCallback(async () => {
     const [themesRes, stylesRes, settingsRes] = await Promise.all([
       fetch('/api/themes').then((r) => r.json()),
       fetch('/api/custom-styles').then((r) => r.json()),
@@ -242,8 +277,14 @@ export default function ThemesPage() {
     if (stylesRes.success) setCustomStyles(stylesRes.data)
     if (settingsRes.success) {
       const s = settingsRes.data as Record<string, unknown>
-      setActiveThemeId(typeof s.activeThemeId === 'number' ? s.activeThemeId : null)
-      setActiveCustomStyleIds(Array.isArray(s.activeCustomStyleIds) ? (s.activeCustomStyleIds as number[]) : [])
+      const themeId = typeof s.activeThemeId === 'number' && s.activeThemeId > 0 ? s.activeThemeId : null
+      const styleIds = Array.isArray(s.activeCustomStyleIds)
+        ? (s.activeCustomStyleIds as number[])
+        : []
+      setSavedThemeId(themeId)
+      setSavedCustomStyleIds(styleIds)
+      setPendingThemeId(themeId)
+      setPendingCustomStyleIds(styleIds)
     }
   }, [])
 
@@ -255,56 +296,60 @@ export default function ThemesPage() {
 
   useEffect(() => {
     if (!currentUser || !['owner', 'admin'].includes(currentUser.role)) return
-    fetchAll()
-  }, [currentUser, fetchAll])
+    fetchInitial()
+  }, [currentUser, fetchInitial])
 
   if (!currentUser || !['owner', 'admin'].includes(currentUser.role)) {
     return null
   }
 
-  const saveActiveSettings = async (patch: Record<string, unknown>) => {
-    const res = await fetch('/api/settings', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(patch),
-    })
-    const json = await res.json()
-    if (!json.success) {
-      throw new Error(json.message || '保存失败')
-    }
+  const handleSelectTheme = (id: number) => {
+    setPendingThemeId(id)
   }
 
-  const handleSelectTheme = async (id: number) => {
-    const previous = activeThemeId
-    setActiveThemeId(id)
-    try {
-      await saveActiveSettings({ activeThemeId: id })
-      notify({ color: 'green', message: '已切换主题' })
-    } catch (err) {
-      setActiveThemeId(previous)
-      notify({ color: 'red', message: err instanceof Error ? err.message : '切换失败' })
-    }
+  const handleToggleCustomStyle = (id: number) => {
+    setPendingCustomStyleIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    )
   }
 
-  const handleToggleCustomStyle = async (id: number) => {
-    const exists = activeCustomStyleIds.includes(id)
-    const next = exists
-      ? activeCustomStyleIds.filter((x) => x !== id)
-      : [...activeCustomStyleIds, id]
-    const previous = activeCustomStyleIds
-    setActiveCustomStyleIds(next)
+  const handleSave = async () => {
+    setSaving(true)
     try {
-      await saveActiveSettings({ activeCustomStyleIds: next })
-      const item = customStyles.find((s) => s.id === id)
-      const label = item ? `「${item.name}」` : ''
-      notify({
-        color: 'green',
-        message: exists ? `已停用自定义 CSS${label}` : `已启用自定义 CSS${label}`,
+      const res = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          activeThemeId: pendingThemeId ?? 0,
+          activeCustomStyleIds: pendingCustomStyleIds,
+        }),
       })
-    } catch (err) {
-      setActiveCustomStyleIds(previous)
-      notify({ color: 'red', message: err instanceof Error ? err.message : '保存失败' })
+      const json = await res.json()
+      if (json.success) {
+        setSavedThemeId(pendingThemeId)
+        setSavedCustomStyleIds(pendingCustomStyleIds)
+        notify({ color: 'green', message: '已保存，前台生效' })
+      } else {
+        notify({ color: 'red', message: json.message || '保存失败' })
+      }
+    } catch {
+      notify({ color: 'red', message: '网络错误' })
+    } finally {
+      setSaving(false)
     }
+  }
+
+  const handlePreview = () => {
+    // 把预览选中项打包为一个 base64(JSON) 的 __debug 参数，前台的 PreviewStyles
+    // 会解析这个参数并注入对应样式；同时全局监听会把 __debug 自动携带到后续链接上
+    const payload = {
+      theme: pendingThemeId,
+      custom_styles: pendingCustomStyleIds,
+    }
+    const bytes = new TextEncoder().encode(JSON.stringify(payload))
+    const binary = Array.from(bytes, (b) => String.fromCharCode(b)).join('')
+    const debug = btoa(binary)
+    window.open(`/?__debug=${encodeURIComponent(debug)}`, '_blank')
   }
 
   const openCreate = (kind: StyleKind) => {
@@ -331,7 +376,7 @@ export default function ThemesPage() {
     const json = await res.json()
     if (json.success) {
       notify({ color: 'green', message: '删除成功' })
-      fetchAll()
+      refreshLists()
     } else {
       notify({ color: 'red', message: json.message || '删除失败' })
     }
@@ -343,7 +388,7 @@ export default function ThemesPage() {
     const json = await res.json()
     if (json.success) {
       notify({ color: 'green', message: '删除成功' })
-      fetchAll()
+      refreshLists()
     } else {
       notify({ color: 'red', message: json.message || '删除失败' })
     }
@@ -398,7 +443,22 @@ export default function ThemesPage() {
 
   return (
     <Box mt="md">
-      <PageHeader title="主题" />
+      <PageHeader
+        title="主题"
+        dirty={dirty}
+        dirtyMessage="选中项已变化，需保存后方可生效"
+        loading={saving}
+        onSave={handleSave}
+        extra={
+          <Button
+            variant="default"
+            leftSection={<IconExternalLink size={16} />}
+            onClick={handlePreview}
+          >
+            预览
+          </Button>
+        }
+      />
 
       <Grid>
         <Grid.Col span={{ base: 12, md: 6 }}>
@@ -437,7 +497,7 @@ export default function ThemesPage() {
                     <SortableThemeRow
                       key={theme.id}
                       theme={theme}
-                      selected={activeThemeId === theme.id}
+                      selected={pendingThemeId === theme.id}
                       onSelect={handleSelectTheme}
                       onEdit={openEditTheme}
                       onDelete={handleDeleteTheme}
@@ -485,7 +545,7 @@ export default function ThemesPage() {
                     <SortableCustomStyleRow
                       key={item.id}
                       item={item}
-                      checked={activeCustomStyleIds.includes(item.id)}
+                      checked={pendingCustomStyleIds.includes(item.id)}
                       onToggle={handleToggleCustomStyle}
                       onEdit={openEditCustomStyle}
                       onDelete={handleDeleteCustomStyle}
@@ -503,7 +563,7 @@ export default function ThemesPage() {
         onClose={closeDrawer}
         kind={drawerKind}
         initial={drawerInitial}
-        onSaved={fetchAll}
+        onSaved={refreshLists}
       />
     </Box>
   )

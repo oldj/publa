@@ -1,5 +1,6 @@
 import HeadElements from '@/components/HeadElements'
 import NProgressBar from '@/components/NProgress'
+import PreviewStyles from '@/components/PreviewStyles'
 import { buildFaviconHref, getFaviconConfigFromSettings } from '@/server/services/favicon'
 import { getAllSettings } from '@/server/services/settings'
 import '@/styles/globals.scss'
@@ -93,6 +94,11 @@ export default async function RootLayout({ children }: { children: any }) {
         <Suspense fallback={null}>
           <NProgressBar />
         </Suspense>
+        {isFrontend && (
+          <Suspense fallback={null}>
+            <PreviewStyles />
+          </Suspense>
+        )}
         {children}
       </body>
     </html>
