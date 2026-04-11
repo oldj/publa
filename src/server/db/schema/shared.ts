@@ -55,6 +55,10 @@ export const activityAction = [
   'create_custom_style',
   'update_custom_style',
   'delete_custom_style',
+  'export_themes',
+  'import_themes',
+  'export_custom_styles',
+  'import_custom_styles',
 ] as const
 
 export function isoNow() {

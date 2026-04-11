@@ -8,12 +8,15 @@ const {
   BuiltinThemeError,
   createTheme,
   deleteTheme,
+  exportThemesAsZip,
   getThemeById,
+  importThemesFromZip,
   listThemes,
   reorderThemes,
   updateTheme,
 } = await import('./themes')
 const { setSetting } = await import('./settings')
+const { buildZip, parseZip } = await import('@/server/lib/zip')
 
 async function seedBuiltinThemes() {
   await testDb.insert(schema.themes).values([
@@ -128,6 +131,120 @@ describe('deleteTheme', () => {
 
     const result = await deleteTheme(a!.id)
     expect(result.success).toBe(true)
+  })
+})
+
+describe('exportThemesAsZip', () => {
+  it('过滤掉内置主题，只导出自定义主题', async () => {
+    const a = await createTheme({ name: 'A', css: 'a{}' })
+    const b = await createTheme({ name: 'B', css: 'b{}' })
+    // 传入内置主题 id 也应被过滤
+    const buf = await exportThemesAsZip([1, 2, 3, a!.id, b!.id])
+    const { entries } = parseZip(buf)
+    expect(entries.map((e) => e.name).sort()).toEqual(['A', 'B'])
+  })
+
+  it('保持 ids 传入顺序', async () => {
+    const a = await createTheme({ name: 'A', css: 'a{}' })
+    const b = await createTheme({ name: 'B', css: 'b{}' })
+    const c = await createTheme({ name: 'C', css: 'c{}' })
+    const buf = await exportThemesAsZip([c!.id, a!.id, b!.id])
+    // 解压后顺序由 fflate 维持插入顺序
+    const raw = (await import('fflate')).unzipSync(buf)
+    expect(Object.keys(raw)).toEqual(['C.css', 'A.css', 'B.css'])
+  })
+
+  it('未匹配到的 id 静默忽略', async () => {
+    const a = await createTheme({ name: 'A', css: 'a{}' })
+    const buf = await exportThemesAsZip([a!.id, 99999])
+    const { entries } = parseZip(buf)
+    expect(entries.map((e) => e.name)).toEqual(['A'])
+  })
+
+  it('没有任何可导出项时返回空 Uint8Array', async () => {
+    // 只传内置主题 id
+    const buf = await exportThemesAsZip([1, 2, 3])
+    expect(buf.byteLength).toBe(0)
+
+    // 完全不存在的 id
+    const buf2 = await exportThemesAsZip([99999])
+    expect(buf2.byteLength).toBe(0)
+  })
+
+  it('content 字段保留原主题 css 原文', async () => {
+    const css = 'body { color: #f00; }\n.title { font-weight: bold; }'
+    const a = await createTheme({ name: '红色', css })
+    const buf = await exportThemesAsZip([a!.id])
+    const { entries } = parseZip(buf)
+    expect(entries).toHaveLength(1)
+    expect(entries[0].name).toBe('红色')
+    expect(entries[0].content).toBe(css)
+  })
+})
+
+describe('importThemesFromZip', () => {
+  it('导入与已有记录同名时直接新增（追加，不覆盖）', async () => {
+    const existing = await createTheme({ name: 'foo', css: 'old{}' })
+    const buf = buildZip([{ name: 'foo', content: 'new{}' }])
+    const result = await importThemesFromZip(buf)
+    expect(result.imported).toBe(1)
+
+    const rows = (await listThemes()).filter((t) => t.name === 'foo')
+    expect(rows).toHaveLength(2)
+    expect(rows.find((r) => r.id === existing!.id)?.css).toBe('old{}')
+    expect(rows.find((r) => r.id !== existing!.id)?.css).toBe('new{}')
+  })
+
+  it('zip 内重名条目被 zip 层去重后都能导入', async () => {
+    const buf = buildZip([
+      { name: 'foo', content: 'a{}' },
+      { name: 'foo', content: 'b{}' },
+      { name: 'foo', content: 'c{}' },
+    ])
+    const result = await importThemesFromZip(buf)
+    expect(result.imported).toBe(3)
+
+    const names = (await listThemes())
+      .filter((t) => !t.builtinKey)
+      .map((t) => t.name)
+      .sort()
+    expect(names).toEqual(['foo', 'foo (1)', 'foo (2)'])
+  })
+
+  it('导入的主题 builtinKey 为 null', async () => {
+    const buf = buildZip([{ name: 'imported', content: 'x' }])
+    await importThemesFromZip(buf)
+    const row = (await listThemes()).find((t) => t.name === 'imported')
+    expect(row?.builtinKey).toBeNull()
+  })
+
+  it('skipped 计数来自 zip 工具层的过滤', async () => {
+    const { zipSync, strToU8 } = await import('fflate')
+    const buf = zipSync({
+      'ok.css': strToU8('a{}'),
+      'sub/skip.css': strToU8('b{}'),
+      'readme.txt': strToU8('c'),
+    })
+    const result = await importThemesFromZip(buf)
+    expect(result.imported).toBe(1)
+    expect(result.skipped).toBe(2)
+  })
+
+  it('空 zip 返回 imported=0', async () => {
+    const buf = buildZip([])
+    const result = await importThemesFromZip(buf)
+    expect(result.imported).toBe(0)
+  })
+
+  it('export → import round-trip 后记录翻倍（追加语义）', async () => {
+    const a = await createTheme({ name: 'A', css: 'a{}' })
+    const b = await createTheme({ name: 'B', css: 'b{}' })
+    const buf = await exportThemesAsZip([a!.id, b!.id])
+    const result = await importThemesFromZip(buf)
+    expect(result.imported).toBe(2)
+
+    const custom = (await listThemes()).filter((t) => !t.builtinKey)
+    expect(custom.map((t) => t.name).sort()).toEqual(['A', 'A', 'B', 'B'])
   })
 })
 

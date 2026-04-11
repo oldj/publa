@@ -6,12 +6,15 @@ import { setupTestDb, testDb } from './__test__/setup'
 const {
   createCustomStyle,
   deleteCustomStyle,
+  exportCustomStylesAsZip,
   getCustomStyleById,
+  importCustomStylesFromZip,
   listCustomStyles,
   listCustomStylesByIds,
   reorderCustomStyles,
   updateCustomStyle,
 } = await import('./custom-styles')
+const { buildZip, parseZip } = await import('@/server/lib/zip')
 
 beforeEach(async () => {
   await setupTestDb()
@@ -115,6 +118,93 @@ describe('reorderCustomStyles', () => {
     await expect(reorderCustomStyles([a!.id, a!.id])).rejects.toThrow()
     // 未知 id
     await expect(reorderCustomStyles([a!.id, b!.id, 99999])).rejects.toThrow()
+  })
+})
+
+describe('exportCustomStylesAsZip', () => {
+  it('按 ids 传入顺序导出', async () => {
+    const a = await createCustomStyle({ name: 'A', css: 'a{}' })
+    const b = await createCustomStyle({ name: 'B', css: 'b{}' })
+    const c = await createCustomStyle({ name: 'C', css: 'c{}' })
+    const buf = await exportCustomStylesAsZip([c!.id, a!.id, b!.id])
+    const raw = (await import('fflate')).unzipSync(buf)
+    expect(Object.keys(raw)).toEqual(['C.css', 'A.css', 'B.css'])
+  })
+
+  it('未匹配到的 id 静默忽略', async () => {
+    const a = await createCustomStyle({ name: 'A', css: 'a{}' })
+    const buf = await exportCustomStylesAsZip([a!.id, 99999])
+    const { entries } = parseZip(buf)
+    expect(entries.map((e) => e.name)).toEqual(['A'])
+  })
+
+  it('全部 id 不存在时返回空 Uint8Array', async () => {
+    const buf = await exportCustomStylesAsZip([99999])
+    expect(buf.byteLength).toBe(0)
+  })
+
+  it('content 字段保留原 css 原文', async () => {
+    const css = '.btn { padding: 8px 16px; }\n.btn:hover { opacity: 0.8; }'
+    const a = await createCustomStyle({ name: '按钮', css })
+    const buf = await exportCustomStylesAsZip([a!.id])
+    const { entries } = parseZip(buf)
+    expect(entries).toHaveLength(1)
+    expect(entries[0].name).toBe('按钮')
+    expect(entries[0].content).toBe(css)
+  })
+})
+
+describe('importCustomStylesFromZip', () => {
+  it('导入与已有记录同名时直接新增（追加，不覆盖）', async () => {
+    const existing = await createCustomStyle({ name: 'foo', css: 'old{}' })
+    const buf = buildZip([{ name: 'foo', content: 'new{}' }])
+    const result = await importCustomStylesFromZip(buf)
+    expect(result.imported).toBe(1)
+
+    const rows = (await listCustomStyles()).filter((t) => t.name === 'foo')
+    expect(rows).toHaveLength(2)
+    expect(rows.find((r) => r.id === existing!.id)?.css).toBe('old{}')
+    expect(rows.find((r) => r.id !== existing!.id)?.css).toBe('new{}')
+  })
+
+  it('zip 内重名条目被 zip 层去重后都能导入', async () => {
+    const buf = buildZip([
+      { name: 'foo', content: 'a{}' },
+      { name: 'foo', content: 'b{}' },
+    ])
+    const result = await importCustomStylesFromZip(buf)
+    expect(result.imported).toBe(2)
+    const names = (await listCustomStyles()).map((t) => t.name).sort()
+    expect(names).toEqual(['foo', 'foo (1)'])
+  })
+
+  it('skipped 计数来自 zip 工具层的过滤', async () => {
+    const { zipSync, strToU8 } = await import('fflate')
+    const buf = zipSync({
+      'ok.css': strToU8('a{}'),
+      '__MACOSX/meta.css': strToU8('m'),
+      '.DS_Store': strToU8('m'),
+    })
+    const result = await importCustomStylesFromZip(buf)
+    expect(result.imported).toBe(1)
+    expect(result.skipped).toBe(2)
+  })
+
+  it('空 zip 返回 imported=0', async () => {
+    const buf = buildZip([])
+    const result = await importCustomStylesFromZip(buf)
+    expect(result.imported).toBe(0)
+  })
+
+  it('export → import round-trip 后记录翻倍', async () => {
+    const a = await createCustomStyle({ name: 'A', css: 'a{}' })
+    const b = await createCustomStyle({ name: 'B', css: 'b{}' })
+    const buf = await exportCustomStylesAsZip([a!.id, b!.id])
+    const result = await importCustomStylesFromZip(buf)
+    expect(result.imported).toBe(2)
+
+    const rows = await listCustomStyles()
+    expect(rows.map((r) => r.name).sort()).toEqual(['A', 'A', 'B', 'B'])
   })
 })
 

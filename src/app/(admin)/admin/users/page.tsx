@@ -80,6 +80,10 @@ const ACTION_LABELS: Record<string, string> = {
   delete_redirect: '删除重定向',
   import_data: '导入数据',
   export_data: '导出数据',
+  export_themes: '导出主题',
+  import_themes: '导入主题',
+  export_custom_styles: '导出自定义 CSS',
+  import_custom_styles: '导入自定义 CSS',
 }
 
 export default function UsersPage() {

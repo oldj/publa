@@ -2,6 +2,7 @@ import { db } from '@/server/db'
 import { isoNow } from '@/server/db/schema/shared'
 import { insertOne, maybeFirst, updateOne } from '@/server/db/query'
 import { themes } from '@/server/db/schema'
+import { buildZip, parseZip } from '@/server/lib/zip'
 import { getSetting } from '@/server/services/settings'
 import { asc, eq, max } from 'drizzle-orm'
 
@@ -104,6 +105,41 @@ export async function deleteTheme(id: number) {
   }
   await db.delete(themes).where(eq(themes.id, id))
   return { success: true as const }
+}
+
+/**
+ * 按 id 列表导出自定义主题为 zip（Uint8Array）。
+ * 只导出 builtinKey === null 的主题；未匹配到的 id 静默忽略。
+ * 保持 ids 参数传入的顺序。
+ */
+export async function exportThemesAsZip(ids: number[]): Promise<Uint8Array> {
+  const all = await listThemes()
+  const byId = new Map(all.map((row) => [row.id, row]))
+  const entries: { name: string; content: string }[] = []
+  for (const id of ids) {
+    const row = byId.get(id)
+    if (!row) continue
+    if (row.builtinKey) continue
+    entries.push({ name: row.name, content: row.css ?? '' })
+  }
+  if (entries.length === 0) return new Uint8Array()
+  return buildZip(entries)
+}
+
+/**
+ * 从 zip buffer 中读出所有合法的 .css 条目并追加为新主题。
+ * 导入总是追加，不合并同名项。
+ */
+export async function importThemesFromZip(
+  buffer: Uint8Array,
+): Promise<{ imported: number; skipped: number }> {
+  const { entries, skipped } = parseZip(buffer)
+  let imported = 0
+  for (const entry of entries) {
+    await createTheme({ name: entry.name, css: entry.content })
+    imported++
+  }
+  return { imported, skipped }
 }
 
 /** 批量更新主题排序（允许包含内置主题） */

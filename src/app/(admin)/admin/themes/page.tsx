@@ -33,12 +33,21 @@ import {
   Title,
 } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
-import { IconExternalLink, IconGripVertical, IconPencil, IconPlus, IconTrash } from '@tabler/icons-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import {
+  IconDownload,
+  IconExternalLink,
+  IconGripVertical,
+  IconPencil,
+  IconPlus,
+  IconTrash,
+  IconUpload,
+} from '@tabler/icons-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAdminUrl } from '../../_components/AdminPathContext'
 import { useCurrentUser } from '../../_components/AdminCountsContext'
 import { PageHeader } from '../../_components/PageHeader'
+import { ExportModal, type ExportKind } from './ExportModal'
 import { StyleDrawer, type StyleFormInitial, type StyleKind } from './StyleDrawer'
 
 interface Theme {
@@ -230,6 +239,12 @@ export default function ThemesPage() {
   const [drawerOpened, { open: openDrawer, close: closeDrawer }] = useDisclosure(false)
   const [drawerKind, setDrawerKind] = useState<StyleKind>('theme')
   const [drawerInitial, setDrawerInitial] = useState<StyleFormInitial | null>(null)
+  const [themeExportOpened, { open: openThemeExport, close: closeThemeExport }] =
+    useDisclosure(false)
+  const [customStyleExportOpened, { open: openCustomStyleExport, close: closeCustomStyleExport }] =
+    useDisclosure(false)
+  const themeFileInputRef = useRef<HTMLInputElement>(null)
+  const customStyleFileInputRef = useRef<HTMLInputElement>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -425,6 +440,38 @@ export default function ThemesPage() {
     }
   }
 
+  const handleImportFile = async (
+    kind: ExportKind,
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const input = event.target
+    const file = input.files?.[0]
+    if (!file) return
+    const apiPath = kind === 'theme' ? '/api/themes/import' : '/api/custom-styles/import'
+    const fd = new FormData()
+    fd.append('file', file)
+    try {
+      const res = await fetch(apiPath, { method: 'POST', body: fd })
+      const json = await res.json()
+      if (json.success) {
+        const imported = json.data?.imported ?? 0
+        const skipped = json.data?.skipped ?? 0
+        notify({
+          color: 'green',
+          message: `导入成功，新增 ${imported} 项${skipped > 0 ? `，跳过 ${skipped} 项` : ''}`,
+        })
+        refreshLists()
+      } else {
+        notify({ color: 'red', message: json.message || '导入失败' })
+      }
+    } catch {
+      notify({ color: 'red', message: '网络错误' })
+    } finally {
+      // 允许再次选择同名文件
+      input.value = ''
+    }
+  }
+
   const handleCustomStyleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event
     if (!over || active.id === over.id) return
@@ -468,13 +515,31 @@ export default function ThemesPage() {
         <Grid.Col span={{ base: 12, md: 6 }}>
           <Group justify="space-between" mb="md">
             <Title order={4}>主题</Title>
-            <Button
-              size="xs"
-              leftSection={<IconPlus size={14} />}
-              onClick={() => openCreate('theme')}
-            >
-              新建主题
-            </Button>
+            <Group gap="xs">
+              <Button
+                size="xs"
+                variant="default"
+                leftSection={<IconDownload size={14} />}
+                onClick={openThemeExport}
+              >
+                导出
+              </Button>
+              <Button
+                size="xs"
+                variant="default"
+                leftSection={<IconUpload size={14} />}
+                onClick={() => themeFileInputRef.current?.click()}
+              >
+                导入
+              </Button>
+              <Button
+                size="xs"
+                leftSection={<IconPlus size={14} />}
+                onClick={() => openCreate('theme')}
+              >
+                新建
+              </Button>
+            </Group>
           </Group>
           <Text size="sm" c="dimmed" mb="sm">
             单选，用于提供前台基础样式
@@ -516,13 +581,31 @@ export default function ThemesPage() {
         <Grid.Col span={{ base: 12, md: 6 }}>
           <Group justify="space-between" mb="md">
             <Title order={4}>自定义 CSS</Title>
-            <Button
-              size="xs"
-              leftSection={<IconPlus size={14} />}
-              onClick={() => openCreate('custom-style')}
-            >
-              新建自定义 CSS
-            </Button>
+            <Group gap="xs">
+              <Button
+                size="xs"
+                variant="default"
+                leftSection={<IconDownload size={14} />}
+                onClick={openCustomStyleExport}
+              >
+                导出
+              </Button>
+              <Button
+                size="xs"
+                variant="default"
+                leftSection={<IconUpload size={14} />}
+                onClick={() => customStyleFileInputRef.current?.click()}
+              >
+                导入
+              </Button>
+              <Button
+                size="xs"
+                leftSection={<IconPlus size={14} />}
+                onClick={() => openCreate('custom-style')}
+              >
+                新建
+              </Button>
+            </Group>
           </Group>
           <Text size="sm" c="dimmed" mb="sm">
             多选，可同时叠加多个样式片段
@@ -568,6 +651,35 @@ export default function ThemesPage() {
         kind={drawerKind}
         initial={drawerInitial}
         onSaved={refreshLists}
+      />
+
+      <ExportModal
+        opened={themeExportOpened}
+        onClose={closeThemeExport}
+        kind="theme"
+        items={themes.filter((t) => !t.builtinKey).map((t) => ({ id: t.id, name: t.name }))}
+      />
+
+      <ExportModal
+        opened={customStyleExportOpened}
+        onClose={closeCustomStyleExport}
+        kind="custom-style"
+        items={customStyles.map((t) => ({ id: t.id, name: t.name }))}
+      />
+
+      <input
+        ref={themeFileInputRef}
+        type="file"
+        accept=".css,.zip"
+        hidden
+        onChange={(e) => handleImportFile('theme', e)}
+      />
+      <input
+        ref={customStyleFileInputRef}
+        type="file"
+        accept=".css,.zip"
+        hidden
+        onChange={(e) => handleImportFile('custom-style', e)}
       />
     </Box>
   )

@@ -2,6 +2,7 @@ import { db } from '@/server/db'
 import { insertOne, maybeFirst, updateOne } from '@/server/db/query'
 import { customStyles } from '@/server/db/schema'
 import { isoNow } from '@/server/db/schema/shared'
+import { buildZip, parseZip } from '@/server/lib/zip'
 import { asc, eq, inArray, max } from 'drizzle-orm'
 
 export interface CustomStyleInput {
@@ -99,6 +100,29 @@ export async function reorderCustomStyles(ids: number[]) {
   }
 
   return { success: true }
+}
+
+/**
+ * 按 id 列表导出自定义 CSS 为 zip（Uint8Array），保持 ids 顺序。
+ * 未匹配到的 id 静默忽略。
+ */
+export async function exportCustomStylesAsZip(ids: number[]): Promise<Uint8Array> {
+  const rows = await listCustomStylesByIds(ids)
+  if (rows.length === 0) return new Uint8Array()
+  return buildZip(rows.map((row) => ({ name: row.name, content: row.css ?? '' })))
+}
+
+/** 从 zip buffer 中读出所有合法的 .css 条目并追加为新自定义 CSS */
+export async function importCustomStylesFromZip(
+  buffer: Uint8Array,
+): Promise<{ imported: number; skipped: number }> {
+  const { entries, skipped } = parseZip(buffer)
+  let imported = 0
+  for (const entry of entries) {
+    await createCustomStyle({ name: entry.name, css: entry.content })
+    imported++
+  }
+  return { imported, skipped }
 }
 
 /** 按 id 列表查出自定义 CSS，保持输入顺序 */
