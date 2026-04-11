@@ -947,8 +947,11 @@ describe('importSettingsData', () => {
     )
 
     const allSettings = await testDb.select().from(schema.settings)
-    expect(allSettings).toHaveLength(1)
-    expect(allSettings[0].value).toBe('"新标题"')
+    const map = Object.fromEntries(allSettings.map((item) => [item.key, item.value]))
+    expect(map.siteTitle).toBe('"新标题"')
+    expect(map.siteSlogan).toBe('"Yet Another Amazing Blog"')
+    expect(map.enableComment).toBe('true')
+    expect(map.rssLimit).toBe('20')
   })
 
   it('导入设置时保留现有敏感字段并忽略导入数据中的敏感字段', async () => {
@@ -1024,6 +1027,34 @@ describe('importSettingsData', () => {
     expect(map.siteTitle).toBe('"新站点"')
     expect(map.allowThemeToggle).toBeUndefined()
     expect(map.legacySetting).toBeUndefined()
+  })
+
+  it('导入缺失字段时会按默认值补齐并落库', async () => {
+    await importSettingsData(
+      {
+        settings: [{ key: 'siteTitle', value: '测试站' }],
+      },
+      1,
+    )
+
+    const settingsRows = await testDb.select().from(schema.settings)
+    const map = Object.fromEntries(settingsRows.map((item) => [item.key, item.value]))
+    const [lightTheme] = await testDb
+      .select({ id: schema.themes.id })
+      .from(schema.themes)
+      .where(eq(schema.themes.builtinKey, 'light'))
+      .limit(1)
+
+    expect(map.siteTitle).toBe('"测试站"')
+    expect(map.siteSlogan).toBe('"Yet Another Amazing Blog"')
+    expect(map.enableComment).toBe('true')
+    expect(map.showCommentsGlobally).toBe('true')
+    expect(map.rssLimit).toBe('20')
+    expect(map.guestbookWelcome).toBe('"欢迎给我留言！"')
+    expect(map.emailSmtpEncryption).toBe('"tls"')
+    expect(map.emailNotifyNewComment).toBe('{"enabled":false,"userIds":[]}')
+    expect(map.activeCustomStyleIds).toBe('[]')
+    expect(map.activeThemeId).toBe(String(lightTheme?.id))
   })
 
   it('覆盖导入菜单和跳转规则', async () => {
@@ -1209,7 +1240,7 @@ describe('importSettingsData', () => {
       1,
     )
 
-    expect(results).toContain('设置: 1 条')
+    expect(results.find((r) => r.startsWith('设置: 1 条'))).toContain('默认补齐')
     expect(results).toContain('菜单: 1 条')
     expect(results).toContain('跳转规则: 1 条')
     expect(results.find((r) => r.includes('用户'))).toContain('新建 1 个')
@@ -1293,12 +1324,15 @@ describe('importSettingsData', () => {
     await importSettingsData(exported, 1)
 
     const allSettings = await testDb.select().from(schema.settings)
-    expect(allSettings).toHaveLength(4)
+    expect(allSettings.length).toBeGreaterThanOrEqual(4)
     expect(allSettings.find((s) => s.key === 'siteTitle')?.value).toBe('"我的博客"')
     expect(allSettings.find((s) => s.key === 'enableComment')?.value).toBe('false')
     expect(allSettings.find((s) => s.key === 'rssLimit')?.value).toBe('20')
     expect(allSettings.find((s) => s.key === 'emailNotifyNewComment')?.value).toBe(
       '{"enabled":true,"userIds":[1]}',
+    )
+    expect(allSettings.find((s) => s.key === 'siteSlogan')?.value).toBe(
+      '"Yet Another Amazing Blog"',
     )
 
     const allRedirectRules = await testDb.select().from(schema.redirectRules)

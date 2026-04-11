@@ -2,7 +2,7 @@ import HeadElements from '@/components/HeadElements'
 import NProgressBar from '@/components/NProgress'
 import { resolveLocale } from '@/i18n/resolve-locale'
 import { buildFaviconHref, getFaviconConfigFromSettings } from '@/server/services/favicon'
-import { getAllSettings } from '@/server/services/settings'
+import { getAllSettings, type LooseSettingType } from '@/server/services/settings'
 import '@/styles/globals.scss'
 import { Metadata } from 'next'
 import { headers } from 'next/headers'
@@ -47,7 +47,7 @@ export const viewport = {
 
 export default async function RootLayout({ children }: { children: any }) {
   // 从数据库读取设置
-  let siteSettings: Record<string, unknown> = {}
+  let siteSettings: LooseSettingType = {}
   try {
     siteSettings = await getAllSettings()
   } catch {

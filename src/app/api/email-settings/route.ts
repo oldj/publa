@@ -2,6 +2,7 @@ import { requireRole } from '@/server/auth'
 import { safeParseJson } from '@/server/lib/request'
 import {
   EMAIL_SETTINGS_KEYS,
+  type EmailSettingType,
   getAllSettings,
   isSettingsValidationError,
   normalizeSettingsPayload,
@@ -10,7 +11,10 @@ import {
 } from '@/server/services/settings'
 import { NextRequest, NextResponse } from 'next/server'
 
-const SENSITIVE_KEYS = ['emailResendApiKey', 'emailSmtpPassword']
+const SENSITIVE_KEYS = [
+  'emailResendApiKey',
+  'emailSmtpPassword',
+] as const satisfies readonly (keyof EmailSettingType)[]
 const MASK = '••••••••'
 
 export async function GET() {

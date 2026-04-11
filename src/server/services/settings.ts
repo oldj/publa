@@ -11,8 +11,27 @@ export interface NotifySettingValue {
 }
 
 export type SettingValue = string | boolean | number | number[] | NotifySettingValue
+type Mutable<T> = { -readonly [K in keyof T]: T[K] }
+type WidenLiteral<T> = T extends string
+  ? string
+  : T extends number
+    ? number
+    : T extends boolean
+      ? boolean
+      : T extends readonly (infer U)[]
+        ? WidenLiteral<U>[]
+        : T extends (infer U)[]
+          ? WidenLiteral<U>[]
+          : T extends NotifySettingValue
+            ? NotifySettingValue
+            : T
 
 type SettingValueKind = 'string' | 'boolean' | 'number' | 'numberArray' | 'notify'
+
+const DEFAULT_NOTIFY_SETTING_VALUE: NotifySettingValue = Object.freeze({
+  enabled: false,
+  userIds: [],
+})
 
 export const ADMIN_SETTINGS_KEYS = [
   'siteTitle',
@@ -136,12 +155,146 @@ const SETTING_VALUE_KINDS: Record<string, SettingValueKind> = Object.freeze({
   ...Object.fromEntries(NOTIFY_SETTING_KEYS.map((key) => [key, 'notify' as const])),
 })
 
-export function isKnownSettingKey(key: string): boolean {
+function defineExplicitDefaultSettings<T extends Record<string, SettingValue>>(input: T) {
+  return Object.freeze(input) as Mutable<{
+    readonly [K in keyof T]: WidenLiteral<T[K]>
+  }>
+}
+
+const EXPLICIT_DEFAULT_SETTINGS = defineExplicitDefaultSettings({
+  siteTitle: 'Publa',
+  siteSlogan: 'Yet Another Amazing Blog',
+  siteDescription: '',
+  siteUrl: '',
+  language: 'zh',
+  timezone: 'Asia/Shanghai',
+  defaultTheme: 'light',
+  enableComment: true,
+  showCommentsGlobally: true,
+  defaultApprove: false,
+  enableRss: true,
+  rssTitle: '',
+  rssDescription: '',
+  rssContent: 'full',
+  rssLimit: 20,
+  enableGuestbook: true,
+  enableSearch: true,
+  guestbookWelcome: '欢迎给我留言！',
+  footerCopyright: '{SITE_NAME} &copy; {FULL_YEAR}',
+  customAfterPostHtml: '',
+  customHeadHtml: '',
+  customBodyStartHtml: '',
+  customBodyEndHtml: '',
+  activeCustomStyleIds: [] as number[],
+  faviconUrl: '',
+  faviconMode: 'default',
+  faviconData: '',
+  faviconMimeType: '',
+  faviconVersion: '',
+  emailProvider: '',
+  emailResendApiKey: '',
+  emailSmtpHost: '',
+  emailSmtpPort: '',
+  emailSmtpUsername: '',
+  emailSmtpPassword: '',
+  emailSmtpFrom: '',
+  emailSmtpEncryption: 'tls',
+  emailNotifyNewComment: DEFAULT_NOTIFY_SETTING_VALUE,
+  emailNotifyNewGuestbook: DEFAULT_NOTIFY_SETTING_VALUE,
+  storageProvider: '',
+  storageS3Endpoint: '',
+  storageS3Region: '',
+  storageS3Bucket: '',
+  storageS3AccessKey: '',
+  storageS3SecretKey: '',
+  storageOssRegion: '',
+  storageOssBucket: '',
+  storageOssAccessKeyId: '',
+  storageOssAccessKeySecret: '',
+  storageCosRegion: '',
+  storageCosBucket: '',
+  storageCosSecretId: '',
+  storageCosSecretKey: '',
+  storageR2AccountId: '',
+  storageR2Bucket: '',
+  storageR2AccessKey: '',
+  storageR2SecretKey: '',
+  attachmentBaseUrl: '',
+  jwtSecret: '',
+})
+
+type ExplicitDefaultSettingType = typeof EXPLICIT_DEFAULT_SETTINGS
+type ExplicitDefaultSettingKey = keyof ExplicitDefaultSettingType
+
+export type SettingType = ExplicitDefaultSettingType & {
+  activeThemeId: number
+}
+
+export type SettingKey = keyof SettingType
+export type PartialSettingType = Partial<SettingType>
+export type LooseSettingType = PartialSettingType & Record<string, unknown>
+export type AdminSettingType = Pick<SettingType, (typeof ADMIN_SETTINGS_KEYS)[number]>
+export type EmailSettingType = Pick<SettingType, (typeof EMAIL_SETTINGS_KEYS)[number]>
+export type EditorSettingType = Pick<SettingType, (typeof EDITOR_SETTINGS_KEYS)[number]>
+export type StorageSettingType = Pick<SettingType, (typeof STORAGE_SETTINGS_KEYS)[number]>
+
+export const KNOWN_SETTING_KEYS = Object.freeze(
+  Object.keys(SETTING_VALUE_KINDS),
+) as readonly SettingKey[]
+
+function cloneSettingValue(value: SettingValue): SettingValue {
+  if (Array.isArray(value)) return [...value]
+  if (value && typeof value === 'object') {
+    return { ...(value as NotifySettingValue), userIds: [...(value as NotifySettingValue).userIds] }
+  }
+  return value
+}
+
+export function isKnownSettingKey(key: string): key is SettingKey {
   return Object.prototype.hasOwnProperty.call(SETTING_VALUE_KINDS, key)
 }
 
 export function getSettingValueKind(key: string): SettingValueKind {
   return SETTING_VALUE_KINDS[key] ?? 'string'
+}
+
+function hasExplicitDefaultSetting<K extends SettingKey>(
+  key: K,
+): key is Extract<K, ExplicitDefaultSettingKey> {
+  return Object.prototype.hasOwnProperty.call(EXPLICIT_DEFAULT_SETTINGS, key)
+}
+
+export function getDefaultSettingValue<K extends SettingKey>(key: K): SettingType[K] {
+  if (hasExplicitDefaultSetting(key)) {
+    return cloneSettingValue(EXPLICIT_DEFAULT_SETTINGS[key]!) as SettingType[K]
+  }
+
+  switch (getSettingValueKind(key)) {
+    case 'boolean':
+      return false as SettingType[K]
+    case 'number':
+      return 0 as SettingType[K]
+    case 'numberArray':
+      return [] as unknown as SettingType[K]
+    case 'notify':
+      return cloneSettingValue(DEFAULT_NOTIFY_SETTING_VALUE) as SettingType[K]
+    case 'string':
+    default:
+      return '' as SettingType[K]
+  }
+}
+
+export function getDefaultSettingsPayload<K extends SettingKey = SettingKey>(
+  keys: readonly K[] = KNOWN_SETTING_KEYS as readonly K[],
+): Pick<SettingType, K> {
+  const result = {} as Pick<SettingType, K>
+
+  for (const key of keys) {
+    const value = getDefaultSettingValue(key)
+    result[key] = value
+  }
+
+  return result
 }
 
 function validateNotifyValue(value: unknown): NotifySettingValue {
@@ -257,6 +410,11 @@ export function isSettingsValidationError(error: unknown): error is SettingsVali
 }
 
 /** 统一校验并规范化设置 payload，供路由和导入导出复用 */
+export function normalizeSettingsPayload(input: unknown): Record<string, SettingValue>
+export function normalizeSettingsPayload<K extends SettingKey>(
+  input: unknown,
+  allowedKeys: readonly K[],
+): Partial<Pick<SettingType, K>>
 export function normalizeSettingsPayload(
   input: unknown,
   allowedKeys?: readonly string[],
@@ -308,6 +466,8 @@ export function toStr(value: unknown, defaultValue = ''): string {
 }
 
 /** 获取单个设置 */
+export async function getSetting<K extends SettingKey>(key: K): Promise<SettingType[K] | null>
+export async function getSetting(key: string): Promise<unknown>
 export async function getSetting(key: string): Promise<unknown> {
   const row = await maybeFirst(db.select().from(settings).where(eq(settings.key, key)).limit(1))
   if (!row) return null
@@ -318,29 +478,38 @@ export async function getSetting(key: string): Promise<unknown> {
  * 获取所有设置。使用 React cache 做请求级记忆化，同一次服务端渲染里无论被多少层布局调用，
  * 都只会真正查询数据库一次；写入（setSetting/updateSettings）不会走这条缓存，因此不影响读写一致性。
  */
-export const getAllSettings = cache(async (): Promise<Record<string, unknown>> => {
+export const getAllSettings = cache(async (): Promise<LooseSettingType> => {
   const rows = await db.select().from(settings)
-  const result: Record<string, unknown> = {}
+  const result: LooseSettingType = {}
   for (const row of rows) {
     result[row.key] = deserializeSettingValue(row.key, row.value)
   }
   return result
 })
 
-export function pickSettings(
-  allSettings: Record<string, unknown>,
-  keys: readonly string[],
-): Record<string, unknown> {
-  const result: Record<string, unknown> = {}
+export function pickSettings<K extends SettingKey>(
+  allSettings: LooseSettingType,
+  keys: readonly K[],
+): Pick<SettingType, K> {
+  const result = {} as Pick<SettingType, K>
 
   for (const key of keys) {
     if (allSettings[key] !== undefined) {
-      result[key] = allSettings[key]
+      result[key] = allSettings[key] as SettingType[K]
     } else {
-      // 按 key 类型给合适的默认值，避免布尔/数值 key 拿到空字符串后校验失败
+      // 按 key 类型给合适的默认值，避免布尔/数值/通知 key 拿到空字符串后校验失败
       const kind = getSettingValueKind(key)
-      result[key] =
-        kind === 'boolean' ? false : kind === 'number' ? 0 : kind === 'numberArray' ? [] : ''
+      result[key] = (
+        kind === 'boolean'
+          ? false
+          : kind === 'number'
+            ? 0
+            : kind === 'numberArray'
+              ? []
+              : kind === 'notify'
+                ? cloneSettingValue(DEFAULT_NOTIFY_SETTING_VALUE)
+                : ''
+      ) as SettingType[K]
     }
   }
 
@@ -348,7 +517,7 @@ export function pickSettings(
 }
 
 /** 设置单个值 */
-export async function setSetting(key: string, value: SettingValue) {
+export async function setSetting<K extends SettingKey>(key: K, value: SettingType[K]) {
   normalizeSettingValue(key, value)
   const serialized = serializeSettingValue(key, value)
   const existing = await maybeFirst(
@@ -362,8 +531,11 @@ export async function setSetting(key: string, value: SettingValue) {
 }
 
 /** 批量更新设置 */
-export async function updateSettings(data: Record<string, SettingValue>) {
-  for (const [key, value] of Object.entries(data)) {
-    await setSetting(key, value)
+export async function updateSettings(data: PartialSettingType) {
+  for (const key of Object.keys(data) as SettingKey[]) {
+    const value = data[key]
+    if (value !== undefined) {
+      await setSetting(key, value)
+    }
   }
 }

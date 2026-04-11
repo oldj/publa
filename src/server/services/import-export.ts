@@ -26,9 +26,11 @@ import { recountCategoriesAndTags } from '@/server/services/post-count'
 import { validateRedirectRuleInput } from '@/server/services/redirect-rules'
 import {
   deserializeSettingValue,
+  getDefaultSettingsPayload,
   isKnownSettingKey,
   normalizeSettingsPayload,
   serializeSettingValue,
+  type PartialSettingType,
 } from '@/server/services/settings'
 import ver from '@/version.json'
 import crypto from 'crypto'
@@ -38,7 +40,7 @@ const META_VERSION = '2.0'
 const PUBLA_VERSION = ver.join('.')
 
 // 敏感字段黑名单，导出时排除，导入时忽略并保留已有值
-const SECRET_KEYS = new Set([
+const SECRET_KEYS = [
   'jwtSecret',
   'storageS3AccessKey',
   'storageS3SecretKey',
@@ -48,7 +50,9 @@ const SECRET_KEYS = new Set([
   'storageCosSecretKey',
   'storageR2AccessKey',
   'storageR2SecretKey',
-])
+] as const
+
+const SECRET_KEY_SET = new Set<string>(SECRET_KEYS)
 
 /** 导出内容数据（全量导出，包含软删除记录） */
 export async function exportContentData() {
@@ -112,7 +116,7 @@ export async function exportSettingsData() {
   // 设置数据中排除存储敏感信息
   const allSettings = await db.select().from(settings)
   const filteredSettings = allSettings
-    .filter((s) => isKnownSettingKey(s.key) && !SECRET_KEYS.has(s.key))
+    .filter((s) => isKnownSettingKey(s.key) && !SECRET_KEY_SET.has(s.key))
     .map((item) => ({
       key: item.key,
       value: deserializeSettingValue(item.key, item.value),
@@ -399,7 +403,7 @@ export async function importSettingsData(data: any, currentUserId: number) {
   if (Array.isArray(data.settings)) {
     const existing = await db.select().from(settings)
     for (const s of existing) {
-      if (SECRET_KEYS.has(s.key)) existingSecrets[s.key] = s.value
+      if (SECRET_KEY_SET.has(s.key)) existingSecrets[s.key] = s.value
     }
   }
 
@@ -468,13 +472,39 @@ export async function importSettingsData(data: any, currentUserId: number) {
           item?.key &&
           typeof item.key === 'string' &&
           item.value !== undefined &&
-          !SECRET_KEYS.has(item.key) &&
+          !SECRET_KEY_SET.has(item.key) &&
           isKnownSettingKey(item.key)
         ) {
           inputSettings[item.key] = item.value
         }
       }
-      const normalizedSettings = normalizeSettingsPayload(inputSettings)
+      const normalizedInputSettings = normalizeSettingsPayload(inputSettings)
+      const defaultSettings: PartialSettingType = getDefaultSettingsPayload()
+
+      for (const key of SECRET_KEYS) {
+        delete defaultSettings[key]
+      }
+
+      if (!Object.prototype.hasOwnProperty.call(normalizedInputSettings, 'activeThemeId')) {
+        const [lightTheme] = await tx
+          .select({ id: themes.id })
+          .from(themes)
+          .where(eq(themes.builtinKey, 'light'))
+          .limit(1)
+        if (lightTheme) {
+          defaultSettings.activeThemeId = lightTheme.id
+        } else {
+          delete defaultSettings.activeThemeId
+        }
+      }
+
+      const normalizedSettings = {
+        ...defaultSettings,
+        ...normalizedInputSettings,
+      }
+      const defaultedSettingCount = Object.keys(defaultSettings).filter(
+        (key) => !Object.prototype.hasOwnProperty.call(normalizedInputSettings, key),
+      ).length
 
       await tx.delete(settings)
 
@@ -488,7 +518,11 @@ export async function importSettingsData(data: any, currentUserId: number) {
         await tx.insert(settings).values({ key, value })
       }
 
-      results.push(`设置: ${Object.keys(normalizedSettings).length} 条`)
+      results.push(
+        defaultedSettingCount > 0
+          ? `设置: ${Object.keys(normalizedInputSettings).length} 条（默认补齐 ${defaultedSettingCount} 条）`
+          : `设置: ${Object.keys(normalizedInputSettings).length} 条`,
+      )
     }
 
     // 清空并重新导入菜单

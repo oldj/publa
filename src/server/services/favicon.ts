@@ -1,7 +1,7 @@
 import crypto from 'crypto'
 import fs from 'fs/promises'
 import path from 'path'
-import { getAllSettings, updateSettings } from './settings'
+import { getAllSettings, updateSettings, type LooseSettingType } from './settings'
 
 export const FAVICON_ALLOWED_MIME_TYPES = [
   'image/x-icon',
@@ -122,7 +122,7 @@ export function isValidFaviconUrl(value: string): boolean {
   }
 }
 
-export function getFaviconConfigFromSettings(allSettings: Record<string, unknown>): FaviconConfig {
+export function getFaviconConfigFromSettings(allSettings: LooseSettingType): FaviconConfig {
   const rawUrl = String(allSettings.faviconUrl ?? '').trim()
   const rawMimeType = normalizeMimeType(String(allSettings.faviconMimeType ?? ''))
   const rawData = String(allSettings.faviconData ?? '')
@@ -184,7 +184,7 @@ async function readDefaultFavicon(): Promise<FaviconAsset> {
 }
 
 async function buildFaviconAsset(
-  settings: Record<string, unknown>,
+  settings: LooseSettingType,
   config: FaviconConfig,
 ): Promise<FaviconAsset> {
   if (config.mode === 'url') {
@@ -214,7 +214,7 @@ async function buildFaviconAsset(
 }
 
 async function loadFaviconState(): Promise<CachedFaviconState> {
-  let settings: Record<string, unknown> = {}
+  let settings: LooseSettingType = {}
 
   try {
     settings = await getAllSettings()

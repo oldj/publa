@@ -193,6 +193,12 @@ describe('pickSettings', () => {
     const result = pickSettings({}, ['siteTitle'])
     expect(result.siteTitle).toBe('')
   })
+
+  it('缺失的通知 key 默认为空的 NotifySettingValue', () => {
+    const result = pickSettings({}, ['emailNotifyNewComment', 'emailNotifyNewGuestbook'])
+    expect(result.emailNotifyNewComment).toEqual({ enabled: false, userIds: [] })
+    expect(result.emailNotifyNewGuestbook).toEqual({ enabled: false, userIds: [] })
+  })
 })
 
 describe('deserializeSettingValue', () => {
