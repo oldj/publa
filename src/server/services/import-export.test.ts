@@ -1,5 +1,6 @@
 import { maybeFirst } from '@/server/db/query'
 import * as schema from '@/server/db/schema'
+import ver from '@/version.json'
 import { asc, eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { setupTestDb, testDb } from './__test__/setup'
@@ -11,6 +12,8 @@ const {
   importSettingsData,
   validateImportData,
 } = await import('./import-export')
+
+const PUBLA_VERSION = ver.join('.')
 
 beforeEach(async () => {
   await setupTestDb()
@@ -179,6 +182,7 @@ describe('exportContentData', () => {
     const data = await exportContentData()
     expect(data.meta.type).toBe('content')
     expect(data.meta.version).toBe('2.0')
+    expect(data.meta.publaVersion).toBe(PUBLA_VERSION)
     expect(data.meta.exportedAt).toBeDefined()
   })
 
@@ -230,6 +234,7 @@ describe('exportSettingsData', () => {
     const data = await exportSettingsData()
     expect(data.meta.type).toBe('settings')
     expect(data.meta.version).toBe('2.0')
+    expect(data.meta.publaVersion).toBe(PUBLA_VERSION)
   })
 
   it('导出包含所有设置表', async () => {
@@ -271,6 +276,21 @@ describe('exportSettingsData', () => {
     expect(keys).not.toContain('jwtSecret')
   })
 
+  it('导出设置数据会忽略未知或废弃设置项', async () => {
+    await testDb.insert(schema.settings).values([
+      { key: 'siteTitle', value: '"我的博客"' },
+      { key: 'allowThemeToggle', value: 'true' },
+      { key: 'legacySetting', value: '"legacy"' },
+    ])
+
+    const data = await exportSettingsData()
+    const keys = data.settings.map((item) => item.key)
+
+    expect(keys).toContain('siteTitle')
+    expect(keys).not.toContain('allowThemeToggle')
+    expect(keys).not.toContain('legacySetting')
+  })
+
   it('导出设置数据会按真实类型输出 value', async () => {
     await testDb.insert(schema.settings).values([
       { key: 'siteTitle', value: '"我的博客"' },
@@ -300,9 +320,9 @@ describe('exportSettingsData', () => {
       { id: 101, name: '浅色', css: '', sortOrder: 1, builtinKey: 'light' },
       { id: 102, name: '自定义主题', css: 'body{color:red}', sortOrder: 10, builtinKey: null },
     ])
-    await testDb.insert(schema.customStyles).values([
-      { id: 201, name: '片段 A', css: '.a{}', sortOrder: 1 },
-    ])
+    await testDb
+      .insert(schema.customStyles)
+      .values([{ id: 201, name: '片段 A', css: '.a{}', sortOrder: 1 }])
 
     const data = await exportSettingsData()
     expect(data.themes).toHaveLength(2)
@@ -986,6 +1006,26 @@ describe('importSettingsData', () => {
     expect(map.emailNotifyNewComment).toBe('{"enabled":true,"userIds":[1]}')
   })
 
+  it('导入设置时忽略未知或废弃设置项', async () => {
+    await importSettingsData(
+      {
+        settings: [
+          { key: 'siteTitle', value: '新站点' },
+          { key: 'allowThemeToggle', value: true },
+          { key: 'legacySetting', value: 'legacy' },
+        ],
+      },
+      1,
+    )
+
+    const allSettings = await testDb.select().from(schema.settings)
+    const map = Object.fromEntries(allSettings.map((s) => [s.key, s.value]))
+
+    expect(map.siteTitle).toBe('"新站点"')
+    expect(map.allowThemeToggle).toBeUndefined()
+    expect(map.legacySetting).toBeUndefined()
+  })
+
   it('覆盖导入菜单和跳转规则', async () => {
     await seedSettingsData()
 
@@ -1153,7 +1193,10 @@ describe('importSettingsData', () => {
   it('返回导入结果摘要', async () => {
     const results = await importSettingsData(
       {
-        settings: [{ key: 'k1', value: 'v1' }],
+        settings: [
+          { key: 'siteTitle', value: 'v1' },
+          { key: 'allowThemeToggle', value: true },
+        ],
         menus: [{ id: 1, title: '菜单', url: '/' }],
         redirectRules: [
           { id: 1, sortOrder: 1, pathRegex: '^/old$', redirectTo: '/new', redirectType: '301' },
@@ -1175,9 +1218,9 @@ describe('importSettingsData', () => {
 
   it('导入覆盖 themes 与 customStyles，并补齐内置主题', async () => {
     // 预置一条自定义主题，期望导入后被清空
-    await testDb.insert(schema.themes).values([
-      { id: 800, name: '旧主题', css: 'body{}', sortOrder: 1, builtinKey: null },
-    ])
+    await testDb
+      .insert(schema.themes)
+      .values([{ id: 800, name: '旧主题', css: 'body{}', sortOrder: 1, builtinKey: null }])
 
     await importSettingsData(
       {

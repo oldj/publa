@@ -136,6 +136,10 @@ const SETTING_VALUE_KINDS: Record<string, SettingValueKind> = Object.freeze({
   ...Object.fromEntries(NOTIFY_SETTING_KEYS.map((key) => [key, 'notify' as const])),
 })
 
+export function isKnownSettingKey(key: string): boolean {
+  return Object.prototype.hasOwnProperty.call(SETTING_VALUE_KINDS, key)
+}
+
 export function getSettingValueKind(key: string): SettingValueKind {
   return SETTING_VALUE_KINDS[key] ?? 'string'
 }
@@ -336,13 +340,7 @@ export function pickSettings(
       // 按 key 类型给合适的默认值，避免布尔/数值 key 拿到空字符串后校验失败
       const kind = getSettingValueKind(key)
       result[key] =
-        kind === 'boolean'
-          ? false
-          : kind === 'number'
-            ? 0
-            : kind === 'numberArray'
-              ? []
-              : ''
+        kind === 'boolean' ? false : kind === 'number' ? 0 : kind === 'numberArray' ? [] : ''
     }
   }
 

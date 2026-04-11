@@ -26,13 +26,16 @@ import { recountCategoriesAndTags } from '@/server/services/post-count'
 import { validateRedirectRuleInput } from '@/server/services/redirect-rules'
 import {
   deserializeSettingValue,
+  isKnownSettingKey,
   normalizeSettingsPayload,
   serializeSettingValue,
 } from '@/server/services/settings'
+import ver from '@/version.json'
 import crypto from 'crypto'
 import { asc, eq } from 'drizzle-orm'
 
 const META_VERSION = '2.0'
+const PUBLA_VERSION = ver.join('.')
 
 // 敏感字段黑名单，导出时排除，导入时忽略并保留已有值
 const SECRET_KEYS = new Set([
@@ -73,7 +76,12 @@ export async function exportContentData() {
     .from(tags)
 
   return {
-    meta: { type: 'content', version: META_VERSION, exportedAt: new Date().toISOString() },
+    meta: {
+      type: 'content',
+      version: META_VERSION,
+      publaVersion: PUBLA_VERSION,
+      exportedAt: new Date().toISOString(),
+    },
     categories: categoryRows,
     tags: tagRows,
     contents: await db.select().from(contents),
@@ -104,14 +112,19 @@ export async function exportSettingsData() {
   // 设置数据中排除存储敏感信息
   const allSettings = await db.select().from(settings)
   const filteredSettings = allSettings
-    .filter((s) => !SECRET_KEYS.has(s.key))
+    .filter((s) => isKnownSettingKey(s.key) && !SECRET_KEYS.has(s.key))
     .map((item) => ({
       key: item.key,
       value: deserializeSettingValue(item.key, item.value),
     }))
 
   return {
-    meta: { type: 'settings', version: META_VERSION, exportedAt: new Date().toISOString() },
+    meta: {
+      type: 'settings',
+      version: META_VERSION,
+      publaVersion: PUBLA_VERSION,
+      exportedAt: new Date().toISOString(),
+    },
     users: userRows,
     settings: filteredSettings,
     menus: await db.select().from(menus),
@@ -451,7 +464,13 @@ export async function importSettingsData(data: any, currentUserId: number) {
     if (Array.isArray(data.settings)) {
       const inputSettings: Record<string, unknown> = {}
       for (const item of data.settings) {
-        if (item?.key && item.value !== undefined && !SECRET_KEYS.has(item.key)) {
+        if (
+          item?.key &&
+          typeof item.key === 'string' &&
+          item.value !== undefined &&
+          !SECRET_KEYS.has(item.key) &&
+          isKnownSettingKey(item.key)
+        ) {
           inputSettings[item.key] = item.value
         }
       }
@@ -469,7 +488,7 @@ export async function importSettingsData(data: any, currentUserId: number) {
         await tx.insert(settings).values({ key, value })
       }
 
-      results.push(`设置: ${data.settings.length} 条`)
+      results.push(`设置: ${Object.keys(normalizedSettings).length} 条`)
     }
 
     // 清空并重新导入菜单
