@@ -817,6 +817,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
     <div style={{ position: 'relative' }}>
       <EditorHeader
         entityId={postId}
+        entityKey="post"
         entityLabel="文章"
         backUrl={adminUrl('/posts')}
         status={form.status}
@@ -889,6 +890,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
               label="标题"
               placeholder="文章标题"
               size="lg"
+              data-role="post-title-input"
               value={form.title}
               onChange={(e) => setField('title', e.target.value)}
             />
@@ -896,6 +898,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
             <TextInput
               label="Slug"
               placeholder="post-url-slug"
+              data-role="post-slug-input"
               value={form.slug}
               onChange={(e) => setField('slug', e.target.value)}
               error={
@@ -1059,7 +1062,12 @@ export default function PostEditor({ postId }: { postId?: number }) {
 
             {postId && (
               <Paper withBorder p="md">
-                <Button variant="subtle" fullWidth onClick={() => setHistoryOpen(true)}>
+                <Button
+                  variant="subtle"
+                  fullWidth
+                  onClick={() => setHistoryOpen(true)}
+                  data-role="post-editor-history-button"
+                >
                   查看历史版本
                 </Button>
               </Paper>

@@ -33,6 +33,7 @@ function writeNavState(label: string, opened: boolean) {
 }
 
 export interface NavLink {
+  id: string
   label: string
   link: string
   badge?: number
@@ -86,6 +87,7 @@ export function NavLinksGroup({
           href={item.link}
           key={item.label}
           data-active={pathname === item.link || pathname.startsWith(item.link + '/') || undefined}
+          data-role={`admin-nav-link-${item.id}`}
         >
           <Group gap="xs" justify="space-between" wrap="nowrap">
             <span>{item.label}</span>
@@ -106,6 +108,7 @@ export function NavLinksGroup({
         href={link}
         className={classes.control}
         data-active={isActive || undefined}
+        data-role={`admin-nav-link-${id}`}
       >
         <Group gap={0} justify="space-between">
           <Box style={{ display: 'flex', alignItems: 'center' }}>
@@ -121,7 +124,11 @@ export function NavLinksGroup({
 
   return (
     <>
-      <UnstyledButton onClick={toggleOpened} className={classes.control}>
+      <UnstyledButton
+        onClick={toggleOpened}
+        className={classes.control}
+        data-role={`admin-nav-group-${id}`}
+      >
         <Group gap={0} justify="space-between">
           <Box style={{ display: 'flex', alignItems: 'center' }}>
             <ThemeIcon variant="subtle" size={30}>

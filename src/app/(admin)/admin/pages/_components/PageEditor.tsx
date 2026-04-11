@@ -725,6 +725,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
     <div style={{ position: 'relative' }}>
       <EditorHeader
         entityId={pageId}
+        entityKey="page"
         entityLabel="页面"
         backUrl={adminUrl('/pages')}
         status={form.status}
@@ -793,6 +794,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
             <TextInput
               label="标题"
               required
+              data-role="page-title-input"
               value={form.title}
               onChange={(e) => setField('title', e.target.value)}
             />
@@ -800,6 +802,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
               label="路径"
               required
               placeholder={isEdit ? undefined : 'about'}
+              data-role="page-path-input"
               value={form.path}
               onChange={(e) => handlePathChange(e.target.value)}
               error={pathError}
@@ -873,7 +876,12 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
 
             {isEdit && (
               <Paper withBorder p="md">
-                <Button variant="subtle" fullWidth onClick={() => setHistoryOpen(true)}>
+                <Button
+                  variant="subtle"
+                  fullWidth
+                  onClick={() => setHistoryOpen(true)}
+                  data-role="page-editor-history-button"
+                >
                   查看历史版本
                 </Button>
               </Paper>
@@ -886,6 +894,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
               <Stack gap="sm">
                 <Select
                   label="模板"
+                  data-role="page-template-input"
                   data={[
                     { value: 'default', label: '默认（含头尾）' },
                     { value: 'blank', label: '空白' },

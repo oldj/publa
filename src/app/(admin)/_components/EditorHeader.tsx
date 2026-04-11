@@ -8,6 +8,7 @@ import myModal from './myModals'
 
 interface EditorHeaderProps {
   entityId?: number
+  entityKey: 'post' | 'page'
   entityLabel: string // "文章" | "页面"
   backUrl: string // 如 "/{adminPath}/posts" | "/{adminPath}/pages"
   status: string // 'draft' | 'scheduled' | 'published'
@@ -23,6 +24,7 @@ interface EditorHeaderProps {
 /** 文章/页面编辑器公共顶栏，含操作按钮和标题/状态 */
 export function EditorHeader({
   entityId,
+  entityKey,
   entityLabel,
   backUrl,
   status,
@@ -88,10 +90,11 @@ export function EditorHeader({
           component={Link}
           href={backUrl}
           leftSection={<IconArrowLeft size={16} />}
+          data-role={`${entityKey}-editor-back-button`}
         >
           返回
         </Button>
-        <Title order={3}>
+        <Title order={3} data-role={`${entityKey}-editor-page-title`}>
           {entityId ? '编辑' : '新建'}
           {entityLabel}
         </Title>

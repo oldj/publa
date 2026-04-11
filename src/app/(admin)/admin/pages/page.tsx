@@ -83,10 +83,17 @@ export default function PagesAdminPage() {
   }
 
   return (
-    <Box mt="md">
+    <Box mt="md" data-role="admin-pages-page">
       <Group justify="space-between" mb="lg">
-        <Title order={3}>页面管理</Title>
-        <Button component={Link} href={adminUrl('/pages/new')} leftSection={<IconPlus size={16} />}>
+        <Title order={3} data-role="admin-pages-page-title">
+          页面管理
+        </Title>
+        <Button
+          component={Link}
+          href={adminUrl('/pages/new')}
+          leftSection={<IconPlus size={16} />}
+          data-role="admin-pages-new-button"
+        >
           新建页面
         </Button>
       </Group>

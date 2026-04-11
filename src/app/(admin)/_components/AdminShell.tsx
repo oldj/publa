@@ -34,11 +34,11 @@ function NavLinks({ user }: { user: AuthUser | null }) {
       icon: IconNotes,
       initiallyOpened: true,
       links: [
-        { label: t('posts'), link: adminUrl('/posts') },
-        { label: t('categories'), link: adminUrl('/categories') },
-        { label: t('tags'), link: adminUrl('/tags') },
-        { label: t('pages'), link: adminUrl('/pages') },
-        { label: t('attachments'), link: adminUrl('/attachments') },
+        { id: 'posts', label: t('posts'), link: adminUrl('/posts') },
+        { id: 'categories', label: t('categories'), link: adminUrl('/categories') },
+        { id: 'tags', label: t('tags'), link: adminUrl('/tags') },
+        { id: 'pages', label: t('pages'), link: adminUrl('/pages') },
+        { id: 'attachments', label: t('attachments'), link: adminUrl('/attachments') },
       ],
     },
     {
@@ -47,8 +47,18 @@ function NavLinks({ user }: { user: AuthUser | null }) {
       icon: IconMessage,
       initiallyOpened: true,
       links: [
-        { label: t('comments'), link: adminUrl('/comments'), badge: counts?.pendingComments || 0 },
-        { label: t('guestbook'), link: adminUrl('/guestbook'), badge: counts?.unreadGuestbook || 0 },
+        {
+          id: 'comments',
+          label: t('comments'),
+          link: adminUrl('/comments'),
+          badge: counts?.pendingComments || 0,
+        },
+        {
+          id: 'guestbook',
+          label: t('guestbook'),
+          link: adminUrl('/guestbook'),
+          badge: counts?.unreadGuestbook || 0,
+        },
       ],
     },
     {
@@ -56,9 +66,15 @@ function NavLinks({ user }: { user: AuthUser | null }) {
       label: t('site'),
       icon: IconWorld,
       links: [
-        ...(isOwner || isAdmin ? [{ label: t('menus'), link: adminUrl('/menus') }] : []),
-        ...(isOwner || isAdmin ? [{ label: t('redirects'), link: adminUrl('/redirects') }] : []),
-        ...(isOwner || isAdmin ? [{ label: t('themes'), link: adminUrl('/themes') }] : []),
+        ...(isOwner || isAdmin
+          ? [{ id: 'menus', label: t('menus'), link: adminUrl('/menus') }]
+          : []),
+        ...(isOwner || isAdmin
+          ? [{ id: 'redirects', label: t('redirects'), link: adminUrl('/redirects') }]
+          : []),
+        ...(isOwner || isAdmin
+          ? [{ id: 'themes', label: t('themes'), link: adminUrl('/themes') }]
+          : []),
       ],
     },
     ...(isOwner || isAdmin
@@ -68,8 +84,8 @@ function NavLinks({ user }: { user: AuthUser | null }) {
             label: t('email'),
             icon: IconMail,
             links: [
-              { label: t('emailNotify'), link: adminUrl('/email') },
-              { label: t('emailLogs'), link: adminUrl('/email-logs') },
+              { id: 'email-notify', label: t('emailNotify'), link: adminUrl('/email') },
+              { id: 'email-logs', label: t('emailLogs'), link: adminUrl('/email-logs') },
             ],
           },
         ]
@@ -79,10 +95,12 @@ function NavLinks({ user }: { user: AuthUser | null }) {
       label: t('system'),
       icon: IconSettings,
       links: [
-        { label: t('users'), link: adminUrl('/users') },
-        ...(isOwner || isAdmin ? [{ label: t('settings'), link: adminUrl('/settings') }] : []),
+        { id: 'users', label: t('users'), link: adminUrl('/users') },
         ...(isOwner || isAdmin
-          ? [{ label: t('importExport'), link: adminUrl('/import-export') }]
+          ? [{ id: 'settings', label: t('settings'), link: adminUrl('/settings') }]
+          : []),
+        ...(isOwner || isAdmin
+          ? [{ id: 'import-export', label: t('importExport'), link: adminUrl('/import-export') }]
           : []),
       ],
     },
@@ -126,7 +144,7 @@ export function AdminShell({
             </Group>
           </div>
 
-          <ScrollArea className={classes.links}>
+          <ScrollArea className={classes.links} data-role="admin-nav">
             <div className={classes.linksInner}>
               <NavLinks user={user} />
             </div>

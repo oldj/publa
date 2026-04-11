@@ -44,8 +44,20 @@ export default async function AdminDashboard() {
   const t = await getTranslations('admin.dashboard')
 
   const statCards = [
-    { key: 'posts', title: t('stats.posts'), value: stats.posts, icon: IconFileText, color: 'blue' },
-    { key: 'comments', title: t('stats.comments'), value: stats.comments, icon: IconMessage, color: 'green' },
+    {
+      key: 'posts',
+      title: t('stats.posts'),
+      value: stats.posts,
+      icon: IconFileText,
+      color: 'blue',
+    },
+    {
+      key: 'comments',
+      title: t('stats.comments'),
+      value: stats.comments,
+      icon: IconMessage,
+      color: 'green',
+    },
     {
       key: 'pendingComments',
       title: t('stats.pendingComments'),
@@ -53,13 +65,19 @@ export default async function AdminDashboard() {
       icon: IconAlertCircle,
       color: 'orange',
     },
-    { key: 'guestbook', title: t('stats.guestbook'), value: stats.guestbook, icon: IconMailbox, color: 'violet' },
+    {
+      key: 'guestbook',
+      title: t('stats.guestbook'),
+      value: stats.guestbook,
+      icon: IconMailbox,
+      color: 'violet',
+    },
     { key: 'users', title: t('stats.users'), value: stats.users, icon: IconUsers, color: 'teal' },
   ]
 
   return (
-    <Box mt="md">
-      <Title order={3} mb="lg">
+    <Box mt="md" data-role="admin-dashboard-page">
+      <Title order={3} mb="lg" data-role="admin-dashboard-title">
         {t('title')}
       </Title>
 

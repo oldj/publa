@@ -1,5 +1,7 @@
 import { expect, test, type BrowserContext, type Page } from '@playwright/test'
 import { setupPerFileApp, type TestAppInstance } from './helpers/app-instance'
+import { adminPagesPage, adminPostsPage, pageEditor, postEditor } from './helpers/admin'
+import { closePageAndContext } from './helpers/browser'
 import {
   createPageRecord,
   createPostRecord,
@@ -42,51 +44,50 @@ test.describe('编辑器真实导航入口', () => {
 
   test.afterEach(async ({ browserName: _browserName }, testInfo) => {
     if (testInfo.status !== 'passed') hasFailed = true
-    await page?.close()
-    await context?.close()
+    await closePageAndContext(page, context)
     page = null
     context = null
   })
 
   test('文章管理页的真实入口可以进入编辑页和新建页', async () => {
     const currentPage = page!
+    const postsPage = adminPostsPage(currentPage)
+    const editor = postEditor(currentPage)
 
     await currentPage.goto(app!.adminUrl('/posts'))
-    await expect(currentPage.getByRole('heading', { name: '文章管理' })).toBeVisible()
+    await expect(postsPage.title).toBeVisible()
 
     await currentPage.getByRole('link', { name: post.title, exact: true }).click()
     await expect(currentPage).toHaveURL(app!.adminUrl(`/posts/${post.id}`))
-    await expect(currentPage.getByRole('textbox', { name: '标题', exact: true })).toHaveValue(
-      post.title,
-    )
+    await expect(editor.titleInput).toHaveValue(post.title)
 
-    await currentPage.getByRole('link', { name: '返回' }).click()
+    await editor.backButton.click()
     await expect(currentPage).toHaveURL(app!.adminUrl('/posts'))
-    await expect(currentPage.getByRole('heading', { name: '文章管理' })).toBeVisible()
+    await expect(postsPage.title).toBeVisible()
 
-    await currentPage.getByRole('link', { name: '新建文章' }).click()
+    await postsPage.newButton.click()
     await expect(currentPage).toHaveURL(app!.adminUrl('/posts/new'))
-    await expect(currentPage.getByRole('heading', { name: '新建文章' })).toBeVisible()
+    await expect(editor.pageTitle).toBeVisible()
   })
 
   test('页面管理页的真实入口可以进入编辑页和新建页', async () => {
     const currentPage = page!
+    const pagesPage = adminPagesPage(currentPage)
+    const editor = pageEditor(currentPage)
 
     await currentPage.goto(app!.adminUrl('/pages'))
-    await expect(currentPage.getByRole('heading', { name: '页面管理' })).toBeVisible()
+    await expect(pagesPage.title).toBeVisible()
 
     await currentPage.getByRole('link', { name: adminPage.title, exact: true }).click()
     await expect(currentPage).toHaveURL(app!.adminUrl(`/pages/${adminPage.id}`))
-    await expect(currentPage.getByRole('textbox', { name: '标题', exact: true })).toHaveValue(
-      adminPage.title,
-    )
+    await expect(editor.titleInput).toHaveValue(adminPage.title)
 
-    await currentPage.getByRole('link', { name: '返回' }).click()
+    await editor.backButton.click()
     await expect(currentPage).toHaveURL(app!.adminUrl('/pages'))
-    await expect(currentPage.getByRole('heading', { name: '页面管理' })).toBeVisible()
+    await expect(pagesPage.title).toBeVisible()
 
-    await currentPage.getByRole('link', { name: '新建页面' }).click()
+    await pagesPage.newButton.click()
     await expect(currentPage).toHaveURL(app!.adminUrl('/pages/new'))
-    await expect(currentPage.getByRole('heading', { name: '新建页面' })).toBeVisible()
+    await expect(editor.pageTitle).toBeVisible()
   })
 })

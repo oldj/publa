@@ -58,12 +58,13 @@ export default function AdminLoginPage() {
       </Text>
 
       <Paper withBorder shadow="sm" p={22} pb={40} mt={30} radius="md">
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} data-role="admin-login-form">
           <TextInput
             label={t('fields.username')}
             placeholder={t('fields.usernamePlaceholder')}
             required
             radius="md"
+            data-role="admin-login-username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
           />
@@ -73,10 +74,18 @@ export default function AdminLoginPage() {
             required
             mt="md"
             radius="md"
+            data-role="admin-login-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
-          <Button fullWidth mt="xl" radius="md" type="submit" loading={loading}>
+          <Button
+            fullWidth
+            mt="xl"
+            radius="md"
+            type="submit"
+            loading={loading}
+            data-role="admin-login-submit"
+          >
             {t('submit')}
           </Button>
         </form>

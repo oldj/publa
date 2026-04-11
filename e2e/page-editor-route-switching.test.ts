@@ -1,6 +1,8 @@
 import { expect, test, type BrowserContext, type Page } from '@playwright/test'
 import { createPageRecord, type CreatedPage } from './helpers/content'
 import { setupPerFileApp, type TestAppInstance } from './helpers/app-instance'
+import { pageEditor } from './helpers/admin'
+import { closePageAndContext } from './helpers/browser'
 import { expectRichText, expectRichTextEmpty, pushClientRoute } from './helpers/editor'
 
 test.describe('页面编辑器路由切换', () => {
@@ -38,51 +40,42 @@ test.describe('页面编辑器路由切换', () => {
 
   test.afterEach(async ({ browserName: _browserName }, testInfo) => {
     if (testInfo.status !== 'passed') hasFailed = true
-    await page?.close()
-    await context?.close()
+    await closePageAndContext(page, context)
     page = null
     context = null
   })
 
   test('从页面编辑页切回新建页会重置状态', async () => {
     const currentPage = page!
+    const editor = pageEditor(currentPage)
 
     await currentPage.goto(app!.adminUrl(`/pages/${pageA.id}`))
-    await expect(currentPage.getByRole('textbox', { name: '标题', exact: true })).toHaveValue(
-      pageA.title,
-    )
-    await expect(currentPage.getByRole('textbox', { name: '路径', exact: true })).toHaveValue(
-      pageA.path,
-    )
+    await expect(editor.titleInput).toHaveValue(pageA.title)
+    await expect(editor.pathInput).toHaveValue(pageA.path)
     await expectRichText(currentPage, '这是页面A正文')
 
     await pushClientRoute(currentPage, app!.adminUrl('/pages/new'))
     await expect(currentPage).toHaveURL(app!.adminUrl('/pages/new'))
-    await expect(currentPage.getByRole('heading', { name: '新建页面' })).toBeVisible()
-    await expect(currentPage.getByRole('textbox', { name: '标题', exact: true })).toHaveValue('')
-    await expect(currentPage.getByRole('textbox', { name: '路径', exact: true })).toHaveValue('')
-    await expect(currentPage.getByRole('combobox', { name: '模板' })).toHaveValue('默认（含头尾）')
+    await expect(editor.pageTitle).toBeVisible()
+    await expect(editor.titleInput).toHaveValue('')
+    await expect(editor.pathInput).toHaveValue('')
+    await expect(editor.templateInput).toHaveValue('默认（含头尾）')
     await expectRichTextEmpty(currentPage)
-    await expect(currentPage.getByText('查看历史版本')).toHaveCount(0)
+    await expect(editor.historyButton).toHaveCount(0)
   })
 
   test('从页面 A 切到页面 B 不会残留旧内容', async () => {
     const currentPage = page!
+    const editor = pageEditor(currentPage)
 
     await currentPage.goto(app!.adminUrl(`/pages/${pageA.id}`))
-    await expect(currentPage.getByRole('textbox', { name: '标题', exact: true })).toHaveValue(
-      pageA.title,
-    )
+    await expect(editor.titleInput).toHaveValue(pageA.title)
     await expectRichText(currentPage, '这是页面A正文')
 
     await pushClientRoute(currentPage, app!.adminUrl(`/pages/${pageB.id}`))
     await expect(currentPage).toHaveURL(app!.adminUrl(`/pages/${pageB.id}`))
-    await expect(currentPage.getByRole('textbox', { name: '标题', exact: true })).toHaveValue(
-      pageB.title,
-    )
-    await expect(currentPage.getByRole('textbox', { name: '路径', exact: true })).toHaveValue(
-      pageB.path,
-    )
+    await expect(editor.titleInput).toHaveValue(pageB.title)
+    await expect(editor.pathInput).toHaveValue(pageB.path)
     await expectRichText(currentPage, '这是页面B正文')
   })
 })

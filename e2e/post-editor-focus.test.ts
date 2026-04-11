@@ -1,5 +1,7 @@
 import { expect, test, type BrowserContext, type Page } from '@playwright/test'
 import { setupPerTestApp, type TestAppInstance } from './helpers/app-instance'
+import { postEditor } from './helpers/admin'
+import { closePageAndContext } from './helpers/browser'
 import { expectRichText, richTextEditor } from './helpers/editor'
 
 test.describe('文章编辑器自动保存焦点', () => {
@@ -20,9 +22,10 @@ test.describe('文章编辑器自动保存焦点', () => {
     try {
       context = await browser.newContext(app.browserContextOptions)
       page = await context.newPage()
+      const editorPage = postEditor(page)
 
       await page.goto(app.adminUrl('/posts/new'))
-      await page.getByRole('textbox', { name: '标题', exact: true }).fill('E2E 文章标题')
+      await editorPage.titleInput.fill('E2E 文章标题')
 
       const editor = richTextEditor(page)
       await expect(editor).toBeVisible()
@@ -41,8 +44,7 @@ test.describe('文章编辑器自动保存焦点', () => {
       await page.keyboard.type(' 自动保存后的第二段内容')
       await expectRichText(page, '自动保存前的第一段内容 自动保存后的第二段内容')
     } finally {
-      await page?.close()
-      await context?.close()
+      await closePageAndContext(page, context)
     }
   })
 })
