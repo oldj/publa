@@ -16,6 +16,7 @@ export const contents = runtimeSchema.contents as typeof sqliteSchema.contents
 export const contentRevisions =
   runtimeSchema.contentRevisions as typeof sqliteSchema.contentRevisions
 export const contentTags = runtimeSchema.contentTags as typeof sqliteSchema.contentTags
+export const customStyles = runtimeSchema.customStyles as typeof sqliteSchema.customStyles
 export const guestbookMessages =
   runtimeSchema.guestbookMessages as typeof sqliteSchema.guestbookMessages
 export const menus = runtimeSchema.menus as typeof sqliteSchema.menus
@@ -24,4 +25,5 @@ export const redirectRules = runtimeSchema.redirectRules as typeof sqliteSchema.
 export const settings = runtimeSchema.settings as typeof sqliteSchema.settings
 export const slugHistories = runtimeSchema.slugHistories as typeof sqliteSchema.slugHistories
 export const tags = runtimeSchema.tags as typeof sqliteSchema.tags
+export const themes = runtimeSchema.themes as typeof sqliteSchema.themes
 export const users = runtimeSchema.users as typeof sqliteSchema.users

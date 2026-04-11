@@ -8,9 +8,9 @@ export interface NotifySettingValue {
   userIds: number[]
 }
 
-export type SettingValue = string | boolean | number | NotifySettingValue
+export type SettingValue = string | boolean | number | number[] | NotifySettingValue
 
-type SettingValueKind = 'string' | 'boolean' | 'number' | 'notify'
+type SettingValueKind = 'string' | 'boolean' | 'number' | 'numberArray' | 'notify'
 
 export const ADMIN_SETTINGS_KEYS = [
   'siteTitle',
@@ -36,6 +36,8 @@ export const ADMIN_SETTINGS_KEYS = [
   'customHeadHtml',
   'customBodyStartHtml',
   'customBodyEndHtml',
+  'activeThemeId',
+  'activeCustomStyleIds',
 ] as const
 
 export const EMAIL_SETTINGS_KEYS = [
@@ -84,7 +86,9 @@ const BOOLEAN_SETTING_KEYS = [
   'enableSearch',
 ] as const
 
-const NUMBER_SETTING_KEYS = ['rssLimit'] as const
+const NUMBER_SETTING_KEYS = ['rssLimit', 'activeThemeId'] as const
+
+const NUMBER_ARRAY_SETTING_KEYS = ['activeCustomStyleIds'] as const
 
 const NOTIFY_SETTING_KEYS = ['emailNotifyNewComment', 'emailNotifyNewGuestbook'] as const
 
@@ -126,6 +130,7 @@ const SETTING_VALUE_KINDS: Record<string, SettingValueKind> = Object.freeze({
   ...Object.fromEntries(STRING_SETTING_KEYS.map((key) => [key, 'string' as const])),
   ...Object.fromEntries(BOOLEAN_SETTING_KEYS.map((key) => [key, 'boolean' as const])),
   ...Object.fromEntries(NUMBER_SETTING_KEYS.map((key) => [key, 'number' as const])),
+  ...Object.fromEntries(NUMBER_ARRAY_SETTING_KEYS.map((key) => [key, 'numberArray' as const])),
   ...Object.fromEntries(NOTIFY_SETTING_KEYS.map((key) => [key, 'notify' as const])),
 })
 
@@ -161,6 +166,16 @@ function normalizeSettingValue(key: string, value: unknown): SettingValue {
         throw new SettingsValidationError({ invalidValueKeys: [key] })
       }
       return value
+    case 'numberArray':
+      if (!Array.isArray(value)) {
+        throw new SettingsValidationError({ invalidValueKeys: [key] })
+      }
+      for (const item of value) {
+        if (typeof item !== 'number' || !Number.isInteger(item)) {
+          throw new SettingsValidationError({ invalidValueKeys: [key] })
+        }
+      }
+      return value as number[]
     case 'notify':
       try {
         return validateNotifyValue(value)
@@ -307,7 +322,14 @@ export function pickSettings(
     } else {
       // 按 key 类型给合适的默认值，避免布尔/数值 key 拿到空字符串后校验失败
       const kind = getSettingValueKind(key)
-      result[key] = kind === 'boolean' ? false : kind === 'number' ? 0 : ''
+      result[key] =
+        kind === 'boolean'
+          ? false
+          : kind === 'number'
+            ? 0
+            : kind === 'numberArray'
+              ? []
+              : ''
     }
   }
 

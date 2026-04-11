@@ -4,7 +4,6 @@ import { getCurrentUser } from '@/server/auth'
 import { redirectOrNotFound } from '@/server/lib/frontend-404'
 import { getPublishedPageByPath } from '@/server/services/pages'
 import { getPreviewPage, parsePreviewId } from '@/server/services/preview'
-import '@/styles/themes/oj-2025.css'
 import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 

@@ -7,6 +7,10 @@ export async function register() {
   await runMigrations()
   console.log('Database migration completed.')
 
+  // 幂等写入内置主题（浅色/深色/空白），支持现有数据库升级时平滑补齐
+  const { ensureBuiltinThemes } = await import('@/server/db/seed')
+  await ensureBuiltinThemes()
+
   // 初始化 JWT secret（环境变量 > 数据库 > 自动生成）
   const { initJwtSecret } = await import('@/server/auth/shared')
   await initJwtSecret()

@@ -1,5 +1,4 @@
 import '@/styles/globals.scss'
-import '@/styles/themes/oj-2025.css'
 import GoBackButton from '@/components/GoBackButton'
 import { IconHome } from '@tabler/icons-react'
 

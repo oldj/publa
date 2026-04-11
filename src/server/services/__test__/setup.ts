@@ -30,6 +30,8 @@ const resetTableNames = [
   'attachments',
   'captchas',
   'rate_events',
+  'themes',
+  'custom_styles',
   'users',
   '__drizzle_migrations',
 ] as const

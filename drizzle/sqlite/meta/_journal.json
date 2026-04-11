@@ -78,6 +78,13 @@
       "when": 1775876480799,
       "tag": "0010_dizzy_wolverine",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1775884463055,
+      "tag": "0011_overjoyed_sugar_man",
+      "breakpoints": true
     }
   ]
 }

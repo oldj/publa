@@ -21,6 +21,7 @@ export const {
   contents,
   contentRevisions,
   contentTags,
+  customStyles,
   emailLogs,
   guestbookMessages,
   menus,
@@ -29,6 +30,7 @@ export const {
   settings,
   slugHistories,
   tags,
+  themes,
   users,
 } = schema
 
