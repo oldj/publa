@@ -6,6 +6,7 @@ import {
   listCategories,
   reorderCategories,
 } from '@/server/services/categories'
+import { recountCategoriesAndTags } from '@/server/services/post-count'
 import { logActivity } from '@/server/services/activity-logs'
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -42,6 +43,13 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       )
     }
+  }
+
+  // 重新计数
+  if (body.action === 'recount') {
+    await recountCategoriesAndTags()
+    await logActivity(request, guard.user.id, 'recount_categories')
+    return NextResponse.json({ success: true })
   }
 
   const { name, slug } = body

@@ -18,6 +18,7 @@ import {
 } from '@/server/db/schema'
 import { syncPrimaryKeySequences } from '@/server/db/sequences'
 import { htmlToText } from '@/server/lib/markdown'
+import { recountCategoriesAndTags } from '@/server/services/post-count'
 import { validateRedirectRuleInput } from '@/server/services/redirect-rules'
 import {
   deserializeSettingValue,
@@ -44,10 +45,33 @@ const SECRET_KEYS = new Set([
 
 /** 导出内容数据（全量导出，包含软删除记录） */
 export async function exportContentData() {
+  // postCount 是派生字段，不参与导出；显式列选择保持与旧版本导出格式兼容
+  const categoryRows = await db
+    .select({
+      id: categories.id,
+      name: categories.name,
+      slug: categories.slug,
+      description: categories.description,
+      sortOrder: categories.sortOrder,
+      seoTitle: categories.seoTitle,
+      seoDescription: categories.seoDescription,
+    })
+    .from(categories)
+
+  const tagRows = await db
+    .select({
+      id: tags.id,
+      name: tags.name,
+      slug: tags.slug,
+      seoTitle: tags.seoTitle,
+      seoDescription: tags.seoDescription,
+    })
+    .from(tags)
+
   return {
     meta: { type: 'content', version: META_VERSION, exportedAt: new Date().toISOString() },
-    categories: await db.select().from(categories),
-    tags: await db.select().from(tags),
+    categories: categoryRows,
+    tags: tagRows,
     contents: await db.select().from(contents),
     contentTags: await db.select().from(contentTags),
     contentRevisions: await db.select().from(contentRevisions),
@@ -264,14 +288,17 @@ export async function importContentData(data: any, currentUserId: number) {
 
     if (Array.isArray(data.categories) && data.categories.length > 0) {
       for (const item of data.categories) {
-        await tx.insert(categories).values(item)
+        // postCount 是派生字段，导入时忽略，由事务末尾的重算回填
+        const { postCount: _postCount, ...rest } = item ?? {}
+        await tx.insert(categories).values(rest)
       }
       results.push(`分类: ${data.categories.length} 条`)
     }
 
     if (Array.isArray(data.tags) && data.tags.length > 0) {
       for (const item of data.tags) {
-        await tx.insert(tags).values(item)
+        const { postCount: _postCount, ...rest } = item ?? {}
+        await tx.insert(tags).values(rest)
       }
       results.push(`标签: ${data.tags.length} 条`)
     }
@@ -326,6 +353,9 @@ export async function importContentData(data: any, currentUserId: number) {
     }
 
     await syncPrimaryKeySequences(tx)
+
+    // 导入完成后重算分类/标签的 postCount（导入内容未知，无条件触发）
+    await recountCategoriesAndTags(tx)
   })
 
   return results

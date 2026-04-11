@@ -1,5 +1,6 @@
 import { requireCurrentUser } from '@/server/auth'
 import { isUniqueConstraintError, safeParseJson } from '@/server/lib/request'
+import { recountCategoriesAndTags } from '@/server/services/post-count'
 import { createTag, getTagBySlug, listTags } from '@/server/services/tags'
 import { logActivity } from '@/server/services/activity-logs'
 import { NextRequest, NextResponse } from 'next/server'
@@ -18,6 +19,14 @@ export async function POST(request: NextRequest) {
 
   const { data: body, error } = await safeParseJson(request)
   if (error) return error
+
+  // 重新计数
+  if (body.action === 'recount') {
+    await recountCategoriesAndTags()
+    await logActivity(request, guard.user.id, 'recount_tags')
+    return NextResponse.json({ success: true })
+  }
+
   const { name, slug } = body
 
   if (!name || !slug) {

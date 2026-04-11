@@ -36,7 +36,7 @@ import {
   Title,
 } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
-import { IconGripVertical, IconPencil, IconPlus, IconTrash } from '@tabler/icons-react'
+import { IconGripVertical, IconPencil, IconPlus, IconRefresh, IconTrash } from '@tabler/icons-react'
 import { useCallback, useEffect, useState } from 'react'
 
 interface Category {
@@ -250,6 +250,29 @@ export default function CategoriesPage() {
     }
   }
 
+  const [recounting, setRecounting] = useState(false)
+  const handleRecount = async () => {
+    setRecounting(true)
+    try {
+      const res = await fetch('/api/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'recount' }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        notify({ color: 'green', message: '重新计数成功' })
+        fetchCategories()
+      } else {
+        notify({ color: 'red', message: data.message || '重新计数失败' })
+      }
+    } catch {
+      notify({ color: 'red', message: '网络错误' })
+    } finally {
+      setRecounting(false)
+    }
+  }
+
   const persistOrder = async (items: Category[]) => {
     const response = await fetch('/api/categories', {
       method: 'POST',
@@ -297,9 +320,19 @@ export default function CategoriesPage() {
     <Box mt="md">
       <Group justify="space-between" mb="lg">
         <Title order={3}>分类管理</Title>
-        <Button leftSection={<IconPlus size={16} />} onClick={() => handleOpen()}>
-          新建分类
-        </Button>
+        <Group gap="sm">
+          <Button
+            variant="default"
+            leftSection={<IconRefresh size={16} />}
+            onClick={handleRecount}
+            loading={recounting}
+          >
+            重新计数
+          </Button>
+          <Button leftSection={<IconPlus size={16} />} onClick={() => handleOpen()}>
+            新建分类
+          </Button>
+        </Group>
       </Group>
 
       {categories.length === 0 ? (

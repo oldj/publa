@@ -23,7 +23,7 @@ export interface CategoryWithCount {
   postCount: number
 }
 
-/** 查询所有分类（含文章计数） */
+/** 查询所有分类（含文章计数，读取缓存字段） */
 export async function listCategories(): Promise<CategoryWithCount[]> {
   const rows = await db
     .select({
@@ -34,19 +34,9 @@ export async function listCategories(): Promise<CategoryWithCount[]> {
       sortOrder: categories.sortOrder,
       seoTitle: categories.seoTitle,
       seoDescription: categories.seoDescription,
-      postCount: count(contents.id),
+      postCount: categories.postCount,
     })
     .from(categories)
-    .leftJoin(
-      contents,
-      and(
-        eq(contents.categoryId, categories.id),
-        eq(contents.type, 'post'),
-        eq(contents.status, 'published'),
-        isNull(contents.deletedAt),
-      ),
-    )
-    .groupBy(categories.id)
     .orderBy(asc(categories.sortOrder), asc(categories.id))
 
   return rows

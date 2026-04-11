@@ -24,6 +24,7 @@ import {
   IconChevronUp,
   IconPencil,
   IconPlus,
+  IconRefresh,
   IconTrash,
 } from '@tabler/icons-react'
 import clsx from 'clsx'
@@ -172,13 +173,46 @@ export default function TagsPage() {
     setForm((prev) => ({ ...prev, [field]: value }))
   }
 
+  const [recounting, setRecounting] = useState(false)
+  const handleRecount = async () => {
+    setRecounting(true)
+    try {
+      const res = await fetch('/api/tags', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'recount' }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        notify({ color: 'green', message: '重新计数成功' })
+        fetchTags()
+      } else {
+        notify({ color: 'red', message: data.message || '重新计数失败' })
+      }
+    } catch {
+      notify({ color: 'red', message: '网络错误' })
+    } finally {
+      setRecounting(false)
+    }
+  }
+
   return (
     <Box mt="md">
       <Group justify="space-between" mb="lg">
         <Title order={3}>标签管理</Title>
-        <Button leftSection={<IconPlus size={16} />} onClick={() => handleOpen()}>
-          新建标签
-        </Button>
+        <Group gap="sm">
+          <Button
+            variant="default"
+            leftSection={<IconRefresh size={16} />}
+            onClick={handleRecount}
+            loading={recounting}
+          >
+            重新计数
+          </Button>
+          <Button leftSection={<IconPlus size={16} />} onClick={() => handleOpen()}>
+            新建标签
+          </Button>
+        </Group>
       </Group>
 
       <Table.ScrollContainer minWidth={500} className={adminStyles.tableContainer}>

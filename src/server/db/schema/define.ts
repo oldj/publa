@@ -97,6 +97,7 @@ export function defineSchema(kit: DialectKit) {
     sortOrder: integer('sort_order').notNull().default(0),
     seoTitle: text('seo_title'),
     seoDescription: text('seo_description'),
+    postCount: integer('post_count').notNull().default(0),
   })
 
   const tags = table('tags', {
@@ -105,6 +106,7 @@ export function defineSchema(kit: DialectKit) {
     slug: text('slug').notNull().unique(),
     seoTitle: text('seo_title'),
     seoDescription: text('seo_description'),
+    postCount: integer('post_count').notNull().default(0),
   })
 
   const captchas = table('captchas', {

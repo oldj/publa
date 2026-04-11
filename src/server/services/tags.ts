@@ -1,7 +1,7 @@
 import { db } from '@/server/db'
 import { insertOne, maybeFirst, updateOne } from '@/server/db/query'
-import { contentTags, contents, tags } from '@/server/db/schema'
-import { and, asc, count, eq, isNull } from 'drizzle-orm'
+import { contentTags, tags } from '@/server/db/schema'
+import { asc, eq } from 'drizzle-orm'
 
 export interface TagInput {
   name: string
@@ -19,7 +19,7 @@ export interface TagWithCount {
   postCount: number
 }
 
-/** 查询所有标签（含文章计数） */
+/** 查询所有标签（含文章计数，读取缓存字段） */
 export async function listTags(): Promise<TagWithCount[]> {
   const rows = await db
     .select({
@@ -28,20 +28,9 @@ export async function listTags(): Promise<TagWithCount[]> {
       slug: tags.slug,
       seoTitle: tags.seoTitle,
       seoDescription: tags.seoDescription,
-      postCount: count(contents.id),
+      postCount: tags.postCount,
     })
     .from(tags)
-    .leftJoin(contentTags, eq(contentTags.tagId, tags.id))
-    .leftJoin(
-      contents,
-      and(
-        eq(contents.id, contentTags.contentId),
-        eq(contents.type, 'post'),
-        eq(contents.status, 'published'),
-        isNull(contents.deletedAt),
-      ),
-    )
-    .groupBy(tags.id)
     .orderBy(asc(tags.id))
 
   return rows

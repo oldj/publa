@@ -64,6 +64,13 @@
       "when": 1775560885915,
       "tag": "0008_optimal_the_hand",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1775876481411,
+      "tag": "0009_strong_iron_lad",
+      "breakpoints": true
     }
   ]
 }
