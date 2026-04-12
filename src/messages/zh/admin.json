@@ -127,15 +127,15 @@
       "enableSearch": "启用搜索",
       "enableSearchDescription": "关闭后，页脚的搜索框将不再显示",
       "footerCopyright": "底部版权信息",
-      "footerCopyrightDescription": "支持 HTML，可用 {SITE_NAME} 引用站点名，{FULL_YEAR} 引用当前年份",
+      "footerCopyrightDescription": "支持 HTML，可用 '{SITE_NAME}' 引用站点名，'{FULL_YEAR}' 引用当前年份",
       "customAfterPostHtml": "文章末尾自定义 HTML",
       "customAfterPostHtmlDescription": "显示在每篇文章内容之后，可用于放置广告代码等",
       "customHeadHtml": "自定义 Head HTML",
-      "customHeadHtmlDescription": "在 </head> 标签前方插入 HTML，仅支持 <script>、<meta>、<link>、<style> 标签",
+      "customHeadHtmlDescription": "在 '</head>' 标签前方插入 HTML，仅支持 '<script>'、'<meta>'、'<link>'、'<style>' 标签",
       "customBodyStartHtml": "自定义 Body 头部 HTML",
-      "customBodyStartHtmlDescription": "在 <body> 标签后方插入 HTML",
+      "customBodyStartHtmlDescription": "在 '<body>' 标签后方插入 HTML",
       "customBodyEndHtml": "自定义 Body 底部 HTML",
-      "customBodyEndHtmlDescription": "在 </body> 标签前方插入 HTML"
+      "customBodyEndHtmlDescription": "在 '</body>' 标签前方插入 HTML"
     },
     "modes": {
       "default": "默认图标",

@@ -127,15 +127,15 @@
       "enableSearch": "Enable search",
       "enableSearchDescription": "When disabled, the footer search box will be hidden",
       "footerCopyright": "Footer copyright",
-      "footerCopyrightDescription": "HTML is supported. Use {SITE_NAME} for the site name and {FULL_YEAR} for the current year",
+      "footerCopyrightDescription": "HTML is supported. Use '{SITE_NAME}' for the site name and '{FULL_YEAR}' for the current year",
       "customAfterPostHtml": "Custom HTML after posts",
       "customAfterPostHtmlDescription": "Displayed after each post. Useful for ads or embeds",
       "customHeadHtml": "Custom Head HTML",
-      "customHeadHtmlDescription": "Injected before </head>. Only <script>, <meta>, <link> and <style> are supported",
+      "customHeadHtmlDescription": "Injected before '</head>'. Only '<script>', '<meta>', '<link>' and '<style>' are supported",
       "customBodyStartHtml": "Custom Body start HTML",
-      "customBodyStartHtmlDescription": "Injected right after <body>",
+      "customBodyStartHtmlDescription": "Injected right after '<body>'",
       "customBodyEndHtml": "Custom Body end HTML",
-      "customBodyEndHtmlDescription": "Injected before </body>"
+      "customBodyEndHtmlDescription": "Injected before '</body>'"
     },
     "modes": {
       "default": "Default icon",
