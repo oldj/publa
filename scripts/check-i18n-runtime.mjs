@@ -5,6 +5,7 @@ import path from 'node:path'
 import ts from 'typescript'
 
 const CHINESE_RE = /[\u3400-\u9fff]/
+const LOADING_LITERAL_RE = /^loading\.{3}$/i
 const CODE_EXTENSIONS = new Set(['.ts', '.tsx', '.js', '.jsx'])
 const UI_ATTRIBUTE_NAMES = new Set([
   'title',
@@ -90,6 +91,10 @@ function hasChinese(text) {
   return Boolean(text) && CHINESE_RE.test(text)
 }
 
+function isHardcodedLoading(text) {
+  return Boolean(text) && LOADING_LITERAL_RE.test(text.trim())
+}
+
 function buildFinding(sourceFile, node, reason) {
   const start = node.getStart(sourceFile)
   const { line, character } = sourceFile.getLineAndCharacterOfPosition(start)
@@ -137,6 +142,8 @@ function analyzeUiFile(filePath) {
       const text = node.getText(sourceFile).trim()
       if (hasChinese(text)) {
         findings.push(buildFinding(sourceFile, node, '检测到 JSX 直接文案，请迁移到消息文件'))
+      } else if (isHardcodedLoading(text)) {
+        findings.push(buildFinding(sourceFile, node, '检测到硬编码 loading 文案，请改为走 i18n'))
       }
     }
 
@@ -158,6 +165,26 @@ function analyzeUiFile(filePath) {
             sourceFile,
             node,
             `检测到对象属性 ${context.name} 使用了中文硬编码，请改为走 i18n`,
+          ),
+        )
+      }
+    } else if (isHardcodedLoading(literalText)) {
+      const context = findUiContext(node)
+
+      if (context?.type === 'jsx-attribute' && UI_ATTRIBUTE_NAMES.has(context.name)) {
+        findings.push(
+          buildFinding(
+            sourceFile,
+            node,
+            `检测到 JSX 属性 ${context.name} 使用了硬编码 loading 文案，请改为走 i18n`,
+          ),
+        )
+      } else if (context?.type === 'object-property' && UI_PROPERTY_NAMES.has(context.name)) {
+        findings.push(
+          buildFinding(
+            sourceFile,
+            node,
+            `检测到对象属性 ${context.name} 使用了硬编码 loading 文案，请改为走 i18n`,
           ),
         )
       }

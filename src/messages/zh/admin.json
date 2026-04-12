@@ -586,6 +586,20 @@
       "failed": "发送失败"
     }
   },
+  "notificationEmails": {
+    "unknownContentTitle": "未知文章",
+    "authorSays": "说：",
+    "newComment": {
+      "subject": "新评论：{title}",
+      "title": "文章「{title}」收到新评论",
+      "linkText": "查看评论"
+    },
+    "newGuestbook": {
+      "subject": "新留言：来自 {authorName}",
+      "title": "收到新的留言",
+      "linkText": "查看留言"
+    }
+  },
   "menusPage": {
     "title": "菜单管理",
     "empty": "暂无菜单",

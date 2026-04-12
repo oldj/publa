@@ -13,6 +13,7 @@ import ContentTypeSelector from '@/components/editors/ContentTypeSelector'
 import RichTextEditorWrapper, {
   type RichTextEditorHandle,
 } from '@/components/editors/RichTextEditorWrapper'
+import { getClientErrorMessage } from '@/lib/client-error'
 import { notify } from '@/lib/notify'
 import { Button, Grid, Menu, Paper, Select, Stack, Text, TextInput, Textarea } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
@@ -207,14 +208,22 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
 
   const uploadImage = useCallback(
     async (file: File): Promise<string> => {
-      const formData = new FormData()
-      formData.append('file', file)
-      const res = await fetch('/api/attachments', { method: 'POST', body: formData })
-      const json = await res.json()
-      if (!json.success) throw new Error(json.message || t('uploadFailed'))
-      return json.data.publicUrl
+      try {
+        const formData = new FormData()
+        formData.append('file', file)
+        const res = await fetch('/api/attachments', { method: 'POST', body: formData })
+        const json = await res.json()
+        if (!json.success) throw new Error(json.message || t('uploadFailed'))
+        return json.data.publicUrl
+      } catch (error) {
+        const message = getClientErrorMessage(error, {
+          networkMessage: tCommon('errors.network'),
+          fallbackMessage: t('uploadFailed'),
+        })
+        throw new Error(message)
+      }
     },
-    [t],
+    [t, tCommon],
   )
 
   // 加载页面数据（编辑模式）

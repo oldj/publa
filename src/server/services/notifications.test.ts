@@ -14,12 +14,12 @@ const { listEmailLogs } = await import('./email-logs')
 async function setSetting(key: string, value: unknown) {
   const serialized = JSON.stringify(value)
   const { eq } = await import('drizzle-orm')
-  const existing = await testDb
-    .select()
-    .from(schema.settings)
-    .where(eq(schema.settings.key, key))
+  const existing = await testDb.select().from(schema.settings).where(eq(schema.settings.key, key))
   if (existing.length > 0) {
-    await testDb.update(schema.settings).set({ value: serialized }).where(eq(schema.settings.key, key))
+    await testDb
+      .update(schema.settings)
+      .set({ value: serialized })
+      .where(eq(schema.settings.key, key))
   } else {
     await testDb.insert(schema.settings).values({ key, value: serialized })
   }
@@ -58,6 +58,25 @@ beforeEach(async () => {
 })
 
 describe('notifyNewComment', () => {
+  it('站点语言为英文时使用英文通知模板', async () => {
+    await setUserEmail(1, 'admin@test.com')
+    await setSetting('language', 'en')
+    await setSetting('emailNotifyNewComment', { enabled: true, userIds: [1] })
+    await setSetting('siteUrl', 'https://example.com')
+    const post = await createTestPost()
+
+    await notifyNewComment({
+      authorName: 'Visitor',
+      content: 'Great post!',
+      contentId: post.id,
+    })
+
+    const [, subject, html] = mockSendEmail.mock.calls[0]
+    expect(subject).toBe('New comment: 测试文章标题')
+    expect(html).toContain('received a new comment')
+    expect(html).toContain('View comment')
+  })
+
   it('开启通知并指定有邮箱的用户时，发送邮件并记录日志', async () => {
     await setUserEmail(1, 'admin@test.com')
     await setSetting('emailNotifyNewComment', { enabled: true, userIds: [1] })
@@ -182,6 +201,23 @@ describe('notifyNewComment', () => {
 })
 
 describe('notifyNewGuestbook', () => {
+  it('站点语言为英文时使用英文通知模板', async () => {
+    await setUserEmail(1, 'admin@test.com')
+    await setSetting('language', 'en')
+    await setSetting('emailNotifyNewGuestbook', { enabled: true, userIds: [1] })
+    await setSetting('siteUrl', 'https://example.com')
+
+    await notifyNewGuestbook({
+      authorName: 'Visitor',
+      content: 'Hello',
+    })
+
+    const [, subject, html] = mockSendEmail.mock.calls[0]
+    expect(subject).toBe('New guestbook message from Visitor')
+    expect(html).toContain('A new guestbook message was received')
+    expect(html).toContain('View message')
+  })
+
   it('开启通知时发送邮件', async () => {
     await setUserEmail(1, 'admin@test.com')
     await setSetting('emailNotifyNewGuestbook', { enabled: true, userIds: [1] })

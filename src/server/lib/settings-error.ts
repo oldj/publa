@@ -4,40 +4,13 @@ import { SettingsValidationError } from '@/server/services/settings'
 
 type RequestLike = Request | HeadersLike
 
-function extractKeys(message: string, prefix: string) {
-  const index = message.indexOf(prefix)
-  if (index < 0) return []
-  return message
-    .slice(index + prefix.length)
-    .split(/[；;]/, 1)[0]
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean)
-}
-
 export async function jsonSettingsValidationError(
   error: SettingsValidationError,
   source?: RequestLike,
 ) {
-  const invalidKeys =
-    Array.isArray(error.invalidKeys) && error.invalidKeys.length > 0
-      ? error.invalidKeys
-      : extractKeys(error.message, '不支持修改以下设置项：')
-  const invalidValueKeys =
-    Array.isArray(error.invalidValueKeys) && error.invalidValueKeys.length > 0
-      ? error.invalidValueKeys
-      : extractKeys(error.message, '以下设置项的值类型不合法：')
-  const reason =
-    error.reason ??
-    (invalidKeys.length > 0 && invalidValueKeys.length > 0
-      ? 'INVALID_PAYLOAD'
-      : invalidKeys.length > 0
-        ? 'INVALID_KEYS'
-        : invalidValueKeys.length > 0
-          ? 'INVALID_VALUES'
-          : error.message.includes('对象')
-            ? 'INVALID_OBJECT'
-            : 'INVALID_PAYLOAD')
+  const invalidKeys = Array.isArray(error.invalidKeys) ? error.invalidKeys : []
+  const invalidValueKeys = Array.isArray(error.invalidValueKeys) ? error.invalidValueKeys : []
+  const reason = error.reason ?? 'INVALID_PAYLOAD'
 
   if (invalidKeys.length > 0 && invalidValueKeys.length > 0) {
     return jsonError({
@@ -82,7 +55,14 @@ export async function jsonSettingsValidationError(
   return jsonError({
     source,
     namespace: 'admin.api.settings',
-    key: reason === 'INVALID_OBJECT' ? 'invalidObject' : 'invalidPayload',
+    key:
+      reason === 'INVALID_OBJECT'
+        ? 'invalidObject'
+        : reason === 'INVALID_VALUES'
+          ? 'invalidValueKeys'
+          : reason === 'INVALID_KEYS'
+            ? 'unsupportedKeys'
+            : 'invalidPayload',
     code: 'VALIDATION_ERROR',
     status: 400,
   })

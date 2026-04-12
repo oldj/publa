@@ -68,7 +68,7 @@
     "tagNotFound": "Tag not found"
   },
   "commentItem": {
-    "wroteAt": "wrote at {time}:",
+    "wroteAt": "wrote at {time}: ",
     "reply": "Reply",
     "collapse": "Collapse"
   },
@@ -129,6 +129,7 @@
       "contentAndUsernameRequired": "Username and content are required"
     },
     "posts": {
+      "slugRequired": "Slug is required",
       "notFound": "Post not found"
     }
   }

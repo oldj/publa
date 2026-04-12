@@ -129,6 +129,7 @@
       "contentAndUsernameRequired": "用户名和内容不能为空"
     },
     "posts": {
+      "slugRequired": "slug 不能为空",
       "notFound": "文章不存在"
     }
   }

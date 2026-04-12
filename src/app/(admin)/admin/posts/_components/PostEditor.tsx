@@ -13,6 +13,7 @@ import ContentTypeSelector from '@/components/editors/ContentTypeSelector'
 import RichTextEditorWrapper, {
   type RichTextEditorHandle,
 } from '@/components/editors/RichTextEditorWrapper'
+import { getClientErrorMessage } from '@/lib/client-error'
 import { notify } from '@/lib/notify'
 import {
   Alert,
@@ -194,12 +195,20 @@ export default function PostEditor({ postId }: { postId?: number }) {
 
   const uploadImage = useCallback(
     async (file: File): Promise<string> => {
-      const formData = new FormData()
-      formData.append('file', file)
-      const res = await fetch('/api/attachments', { method: 'POST', body: formData })
-      const json = await res.json()
-      if (!json.success) throw new Error(json.message || tCommon('errors.uploadFailed'))
-      return json.data.publicUrl
+      try {
+        const formData = new FormData()
+        formData.append('file', file)
+        const res = await fetch('/api/attachments', { method: 'POST', body: formData })
+        const json = await res.json()
+        if (!json.success) throw new Error(json.message || tCommon('errors.uploadFailed'))
+        return json.data.publicUrl
+      } catch (error) {
+        const message = getClientErrorMessage(error, {
+          networkMessage: tCommon('errors.network'),
+          fallbackMessage: tCommon('errors.uploadFailed'),
+        })
+        throw new Error(message)
+      }
     },
     [tCommon],
   )

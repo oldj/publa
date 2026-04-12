@@ -586,6 +586,20 @@
       "failed": "Delivery failed"
     }
   },
+  "notificationEmails": {
+    "unknownContentTitle": "Unknown post",
+    "authorSays": "said: ",
+    "newComment": {
+      "subject": "New comment: {title}",
+      "title": "Post \"{title}\" received a new comment",
+      "linkText": "View comment"
+    },
+    "newGuestbook": {
+      "subject": "New guestbook message from {authorName}",
+      "title": "A new guestbook message was received",
+      "linkText": "View message"
+    }
+  },
   "menusPage": {
     "title": "Menu management",
     "empty": "No menus yet",

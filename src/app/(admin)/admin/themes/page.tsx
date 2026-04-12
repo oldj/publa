@@ -1,6 +1,7 @@
 'use client'
 
 import myModal from '@/app/(admin)/_components/myModals'
+import { getClientErrorMessage } from '@/lib/client-error'
 import { notify } from '@/lib/notify'
 import {
   DndContext,
@@ -434,13 +435,21 @@ export default function ThemesPage() {
   }
 
   const persistOrder = async (apiBase: string, ids: number[]) => {
-    const res = await fetch(apiBase, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'reorder', ids }),
-    })
-    const json = await res.json()
-    if (!json.success) throw new Error(json.message || t('messages.reorderFailed'))
+    try {
+      const res = await fetch(apiBase, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'reorder', ids }),
+      })
+      const json = await res.json()
+      if (!json.success) throw new Error(json.message || t('messages.reorderFailed'))
+    } catch (error) {
+      const message = getClientErrorMessage(error, {
+        networkMessage: tCommon('errors.network'),
+        fallbackMessage: t('messages.reorderFailed'),
+      })
+      throw new Error(message)
+    }
   }
 
   const handleThemeDragEnd = async (event: DragEndEvent) => {
