@@ -1,5 +1,6 @@
 import { notify } from '@/lib/notify'
 import { Button, Text, TextInput, Tooltip } from '@mantine/core'
+import { useTranslations } from 'next-intl'
 import {
   IconAlignCenter,
   IconAlignLeft,
@@ -35,6 +36,7 @@ export default function ImageToolbar({
   customHeight,
   setCustomHeight,
 }: ImageToolbarProps) {
+  const t = useTranslations('admin.editor.imageToolbar')
   return (
     <div
       style={{
@@ -67,7 +69,7 @@ export default function ImageToolbar({
             }}
           >
             <Text size="xs" c="dimmed" style={{ userSelect: 'none' }}>
-              宽
+              {t('width')}
             </Text>
             <TextInput
               size="xs"
@@ -79,7 +81,7 @@ export default function ImageToolbar({
               }}
             />
             <Text size="xs" c="dimmed" style={{ userSelect: 'none' }}>
-              高
+              {t('height')}
             </Text>
             <TextInput
               size="xs"
@@ -119,13 +121,13 @@ export default function ImageToolbar({
                 setCustomSizeOpen(false)
               }}
             >
-              确认
+              {t('confirm')}
             </Button>
           </div>
         )}
         {/* 主工具栏 */}
         <div className="image-bubble-menu" onMouseDown={(e) => e.preventDefault()}>
-          <Tooltip label="自动尺寸" withArrow>
+          <Tooltip label={t('autoSize')} withArrow>
             <Button
               size="compact-xs"
               variant="subtle"
@@ -149,7 +151,7 @@ export default function ImageToolbar({
               <IconMaximizeOff size={14} />
             </Button>
           </Tooltip>
-          <Tooltip label="原始尺寸" withArrow>
+          <Tooltip label={t('originalSize')} withArrow>
             <Button
               size="compact-xs"
               variant="subtle"
@@ -158,11 +160,7 @@ export default function ImageToolbar({
                 if (!imgEl) return
                 const w = imgEl.naturalWidth
                 if (!w) return
-                editor
-                  .chain()
-                  .focus()
-                  .updateAttributes('image', { width: w, height: null })
-                  .run()
+                editor.chain().focus().updateAttributes('image', { width: w, height: null }).run()
                 imgEl.style.width = `${w}px`
                 imgEl.style.height = ''
                 const wrapper = imgEl.closest('[data-node-view-wrapper]') as HTMLElement
@@ -175,7 +173,7 @@ export default function ImageToolbar({
               <IconArrowsMaximize size={14} />
             </Button>
           </Tooltip>
-          <Tooltip label="1/2 尺寸" withArrow>
+          <Tooltip label={t('halfSize')} withArrow>
             <Button
               size="compact-xs"
               variant="subtle"
@@ -184,11 +182,7 @@ export default function ImageToolbar({
                 if (!imgEl) return
                 const w = Math.round(imgEl.naturalWidth / 2)
                 if (!w) return
-                editor
-                  .chain()
-                  .focus()
-                  .updateAttributes('image', { width: w, height: null })
-                  .run()
+                editor.chain().focus().updateAttributes('image', { width: w, height: null }).run()
                 imgEl.style.width = `${w}px`
                 imgEl.style.height = ''
                 const wrapper = imgEl.closest('[data-node-view-wrapper]') as HTMLElement
@@ -201,7 +195,7 @@ export default function ImageToolbar({
               <IconMath1Divide2 size={14} />
             </Button>
           </Tooltip>
-          <Tooltip label="自定义尺寸" withArrow>
+          <Tooltip label={t('customSize')} withArrow>
             <Button
               size="compact-xs"
               variant={customSizeOpen ? 'filled' : 'subtle'}
@@ -226,7 +220,7 @@ export default function ImageToolbar({
             }}
           />
 
-          <Tooltip label="居左" withArrow>
+          <Tooltip label={t('alignLeft')} withArrow>
             <Button
               size="compact-xs"
               variant="subtle"
@@ -243,7 +237,7 @@ export default function ImageToolbar({
               <IconAlignLeft size={14} />
             </Button>
           </Tooltip>
-          <Tooltip label="居中" withArrow>
+          <Tooltip label={t('alignCenter')} withArrow>
             <Button
               size="compact-xs"
               variant="subtle"
@@ -260,7 +254,7 @@ export default function ImageToolbar({
               <IconAlignCenter size={14} />
             </Button>
           </Tooltip>
-          <Tooltip label="居右" withArrow>
+          <Tooltip label={t('alignRight')} withArrow>
             <Button
               size="compact-xs"
               variant="subtle"
@@ -286,7 +280,7 @@ export default function ImageToolbar({
             }}
           />
 
-          <Tooltip label="复制图片链接" withArrow>
+          <Tooltip label={t('copyLink')} withArrow>
             <Button
               size="compact-xs"
               variant="subtle"
@@ -294,7 +288,7 @@ export default function ImageToolbar({
                 const src = editor.getAttributes('image').src
                 if (src) {
                   navigator.clipboard.writeText(src)
-                  notify({ color: 'green', message: '已复制链接' })
+                  notify({ color: 'green', message: t('copied') })
                 }
               }}
             >

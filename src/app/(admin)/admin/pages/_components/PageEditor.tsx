@@ -13,9 +13,11 @@ import ContentTypeSelector from '@/components/editors/ContentTypeSelector'
 import RichTextEditorWrapper, {
   type RichTextEditorHandle,
 } from '@/components/editors/RichTextEditorWrapper'
+import { getClientErrorMessage } from '@/lib/client-error'
 import { notify } from '@/lib/notify'
 import { Button, Grid, Menu, Paper, Select, Stack, Text, TextInput, Textarea } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
+import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { shouldCreateDraftRecord } from '../../_lib/draft-persistence'
@@ -23,13 +25,6 @@ import RevisionHistory from '../../posts/_components/RevisionHistory'
 import { buildPageDraftPayload, buildPageSaveBody } from './page-save-payload'
 
 const AUTO_SAVE_FAIL_ID = 'auto-save-fail'
-
-function validatePath(path: string): string | null {
-  if (!path) return '路径不能为空'
-  if (path.startsWith('/')) return '路径不能以 / 开头'
-  if (path.endsWith('/')) return '路径不能以 / 结尾'
-  return null
-}
 
 interface PageDraftContent {
   title: string
@@ -61,6 +56,8 @@ function createEmptyPageForm() {
 export default function PageEditor({ pageId }: { pageId?: number }) {
   const router = useRouter()
   const adminUrl = useAdminUrl()
+  const t = useTranslations('admin.editor.page')
+  const tCommon = useTranslations('common')
   const [loading, setLoading] = useState(false)
   const [pathError, setPathError] = useState<string | null>(null)
   const [dirty, setDirty] = useState(false)
@@ -79,6 +76,16 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
   const skipInitialLoadForCreatedPageIdRef = useRef<number | null>(null)
   const routePageIdRef = useRef<number | undefined>(pageId)
 
+  const validatePath = useCallback(
+    (path: string): string | null => {
+      if (!path) return t('pathRequired')
+      if (path.startsWith('/')) return t('pathStartsWithSlash')
+      if (path.endsWith('/')) return t('pathEndsWithSlash')
+      return null
+    },
+    [t],
+  )
+
   // 自动保存失败计数
   const autoSaveFailCountRef = useRef(0)
   const onAutoSaveFail = useCallback(() => {
@@ -87,11 +94,11 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
       notify({
         id: AUTO_SAVE_FAIL_ID,
         color: 'red',
-        message: '自动保存连续失败，请检查网络连接',
+        message: t('autoSaveFailed'),
         autoClose: false,
       })
     }
-  }, [])
+  }, [t])
   const clearAutoSaveFail = useCallback(() => {
     autoSaveFailCountRef.current = 0
     notifications.hide(AUTO_SAVE_FAIL_ID)
@@ -199,14 +206,25 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
     }
   }, [])
 
-  const uploadImage = useCallback(async (file: File): Promise<string> => {
-    const formData = new FormData()
-    formData.append('file', file)
-    const res = await fetch('/api/attachments', { method: 'POST', body: formData })
-    const json = await res.json()
-    if (!json.success) throw new Error(json.message || '上传失败')
-    return json.data.publicUrl
-  }, [])
+  const uploadImage = useCallback(
+    async (file: File): Promise<string> => {
+      try {
+        const formData = new FormData()
+        formData.append('file', file)
+        const res = await fetch('/api/attachments', { method: 'POST', body: formData })
+        const json = await res.json()
+        if (!json.success) throw new Error(json.message || t('uploadFailed'))
+        return json.data.publicUrl
+      } catch (error) {
+        const message = getClientErrorMessage(error, {
+          networkMessage: tCommon('errors.network'),
+          fallbackMessage: t('uploadFailed'),
+        })
+        throw new Error(message)
+      }
+    },
+    [t, tCommon],
+  )
 
   // 加载页面数据（编辑模式）
   useEffect(() => {
@@ -323,7 +341,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
         if (!active) return
         if (error instanceof Error && error.name === 'AbortError') return
 
-        notify({ color: 'red', message: '加载页面失败' })
+        notify({ color: 'red', message: t('loadFailed') })
         router.push(adminUrl('/pages'))
       })
       .finally(() => {
@@ -336,7 +354,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
       active = false
       controller.abort()
     }
-  }, [pageId, adminUrl, router, getMetaSnapshot, makeSnapshot, resetEditorState])
+  }, [pageId, adminUrl, router, getMetaSnapshot, makeSnapshot, resetEditorState, t, validatePath])
 
   // 同步 ref
   useEffect(() => {
@@ -392,25 +410,28 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
     [getCurrentContent],
   )
 
-  const ensurePendingPageId = useCallback(async (silent = false) => {
-    if (pendingCreatedPageIdRef.current) return pendingCreatedPageIdRef.current
+  const ensurePendingPageId = useCallback(
+    async (silent = false) => {
+      if (pendingCreatedPageIdRef.current) return pendingCreatedPageIdRef.current
 
-    const res = await fetch('/api/pages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ createEmpty: true }),
-    })
-    const json = await res.json()
-    if (!json.success) {
-      if (!silent) {
-        notify({ color: 'red', message: json.message || '创建草稿失败' })
+      const res = await fetch('/api/pages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ createEmpty: true }),
+      })
+      const json = await res.json()
+      if (!json.success) {
+        if (!silent) {
+          notify({ color: 'red', message: json.message || t('createDraftFailed') })
+        }
+        return null
       }
-      return null
-    }
 
-    pendingCreatedPageIdRef.current = json.data.id
-    return json.data.id as number
-  }, [])
+      pendingCreatedPageIdRef.current = json.data.id
+      return json.data.id as number
+    },
+    [t],
+  )
 
   const getTargetPageId = useCallback(() => pageId ?? pendingCreatedPageIdRef.current, [pageId])
 
@@ -438,7 +459,10 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
           if (silent) {
             onAutoSaveFail()
           } else {
-            notify({ color: 'red', message: draftSave.json.message || '保存草稿失败' })
+            notify({
+              color: 'red',
+              message: draftSave.json.message || tCommon('errors.saveFailed'),
+            })
           }
           return null
         }
@@ -459,7 +483,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
         if (silent) {
           onAutoSaveFail()
         } else {
-          notify({ color: 'red', message: '网络错误' })
+          notify({ color: 'red', message: tCommon('errors.network') })
         }
         return null
       } finally {
@@ -563,10 +587,10 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
         setAutoSaveTime(draftSave.json.data.updatedAt)
         window.open(`/--preview-${targetPageId}`, '_blank')
       } else {
-        notify({ color: 'red', message: draftSave.json.message || '保存失败' })
+        notify({ color: 'red', message: draftSave.json.message || tCommon('errors.saveFailed') })
       }
     } catch {
-      notify({ color: 'red', message: '网络错误' })
+      notify({ color: 'red', message: tCommon('errors.network') })
     } finally {
       setLoading(false)
     }
@@ -589,12 +613,12 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
         lastAutoSaveContent.current = draftSave.content.contentRaw
         lastAutoSaveMetaRef.current = getMetaSnapshot(formState)
         setAutoSaveTime(draftSave.json.data.updatedAt)
-        notify({ color: 'green', message: '草稿已保存' })
+        notify({ color: 'green', message: t('draftSaved') })
       } else {
-        notify({ color: 'red', message: draftSave.json.message || '保存失败' })
+        notify({ color: 'red', message: draftSave.json.message || tCommon('errors.saveFailed') })
       }
     } catch {
-      notify({ color: 'red', message: '网络错误' })
+      notify({ color: 'red', message: tCommon('errors.network') })
     } finally {
       setLoading(false)
     }
@@ -606,7 +630,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
     // 发布/定时发布时校验必填字段
     if (status !== 'draft') {
       if (!form.title) {
-        notify({ color: 'red', message: '标题不能为空' })
+        notify({ color: 'red', message: t('titleRequired') })
         return
       }
       const err = validatePath(form.path)
@@ -641,7 +665,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
         if (!pageId) {
           const nextId = targetPageId ?? json.data.id
           pendingCreatedPageIdRef.current = null
-          notify({ color: 'green', message: '创建成功' })
+          notify({ color: 'green', message: t('createSuccess') })
           router.push(adminUrl(`/pages/${nextId}`))
         } else {
           const newPublishedAt =
@@ -652,9 +676,9 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
           setPublishTab(
             status === 'published' ? 'published' : status === 'scheduled' ? 'scheduled' : 'draft',
           )
-          let msg = '发布成功'
-          if (status === 'draft') msg = '已转为草稿'
-          else if (status === 'scheduled') msg = '定时发布已设置'
+          let msg = t('publishSuccess')
+          if (status === 'draft') msg = t('convertedToDraft')
+          else if (status === 'scheduled') msg = t('scheduledSet')
           notify({ color: 'green', message: msg })
           savedSnapshot.current = makeSnapshot(
             { ...form, status, publishedAt: newPublishedAt },
@@ -675,10 +699,10 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
         if (json.code === 'INVALID_PATH' && json.message) {
           setPathError(json.message)
         }
-        notify({ color: 'red', message: json.message || '操作失败' })
+        notify({ color: 'red', message: json.message || t('operationFailed') })
       }
     } catch {
-      notify({ color: 'red', message: '网络错误' })
+      notify({ color: 'red', message: tCommon('errors.network') })
     } finally {
       setLoading(false)
     }
@@ -686,7 +710,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
 
   const handleContentTypeChange = async (newType: ContentType) => {
     if (newType === contentType) return
-    const warning = '切换内容类型可能导致格式或数据丢失，确定要切换吗？'
+    const warning = t('contentSwitchWarning')
     if (!(await myModal.confirm({ message: warning }))) return
 
     const ed = richTextRef.current?.getEditor()
@@ -725,7 +749,8 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
     <div style={{ position: 'relative' }}>
       <EditorHeader
         entityId={pageId}
-        entityLabel="页面"
+        entityKey="page"
+        entityLabel={t('entityLabel')}
         backUrl={adminUrl('/pages')}
         status={form.status}
         dirty={dirty}
@@ -791,15 +816,17 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
         <Grid.Col span={{ base: 12, md: 8 }}>
           <Stack>
             <TextInput
-              label="标题"
+              label={t('fields.title')}
               required
+              data-role="page-title-input"
               value={form.title}
               onChange={(e) => setField('title', e.target.value)}
             />
             <TextInput
-              label="路径"
+              label={t('fields.path')}
               required
-              placeholder={isEdit ? undefined : 'about'}
+              placeholder={isEdit ? undefined : t('fields.pathPlaceholder')}
+              data-role="page-path-input"
               value={form.path}
               onChange={(e) => handlePathChange(e.target.value)}
               error={pathError}
@@ -810,7 +837,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
             {/* 富文本编辑器 */}
             <RichTextEditorWrapper
               editorRef={richTextRef}
-              placeholder="开始撰写页面内容..."
+              placeholder={t('fields.contentPlaceholder')}
               onImageUpload={uploadImage}
               checkStorageConfig={checkStorageConfig}
               onUpdate={() => {
@@ -830,9 +857,13 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
             {/* Markdown / HTML 文本编辑器 */}
             {contentType !== 'richtext' && (
               <Textarea
-                label={contentType === 'markdown' ? 'Markdown 内容' : 'HTML 内容'}
+                label={
+                  contentType === 'markdown' ? t('fields.markdownContent') : t('fields.htmlContent')
+                }
                 placeholder={
-                  contentType === 'markdown' ? '在此输入 Markdown...' : '在此输入 HTML...'
+                  contentType === 'markdown'
+                    ? t('fields.markdownPlaceholder')
+                    : t('fields.htmlPlaceholder')
                 }
                 autosize
                 minRows={15}
@@ -868,27 +899,33 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
                 const isPast = new Date(publishedAt) <= new Date()
                 await handleSave(isPast ? 'published' : 'scheduled', { publishedAt })
               }}
-              entityLabel="页面"
+              entityLabel={t('entityLabel')}
             />
 
             {isEdit && (
               <Paper withBorder p="md">
-                <Button variant="subtle" fullWidth onClick={() => setHistoryOpen(true)}>
-                  查看历史版本
+                <Button
+                  variant="subtle"
+                  fullWidth
+                  onClick={() => setHistoryOpen(true)}
+                  data-role="page-editor-history-button"
+                >
+                  {t('historyButton')}
                 </Button>
               </Paper>
             )}
 
             <Paper withBorder p="md">
               <Text fw={500} mb="sm">
-                页面设置
+                {t('sections.settings')}
               </Text>
               <Stack gap="sm">
                 <Select
-                  label="模板"
+                  label={t('fields.template')}
+                  data-role="page-template-input"
                   data={[
-                    { value: 'default', label: '默认（含头尾）' },
-                    { value: 'blank', label: '空白' },
+                    { value: 'default', label: t('fields.templateDefault') },
+                    { value: 'blank', label: t('fields.templateBlank') },
                   ]}
                   value={form.template}
                   onChange={(v) => {
@@ -901,7 +938,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
                   <Menu position="bottom-start" withinPortal>
                     <Menu.Target>
                       <TextInput
-                        label="MIME 类型"
+                        label={t('fields.mimeType')}
                         placeholder="text/html"
                         value={form.mimeType}
                         onChange={(e) => setField('mimeType', e.target.value)}
@@ -930,17 +967,17 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
 
             <Paper withBorder p="md">
               <Text fw={500} mb="sm">
-                SEO
+                {t('sections.seo')}
               </Text>
               <TextInput
-                label="SEO 标题"
-                placeholder="可选"
+                label={t('fields.seoTitle')}
+                placeholder={t('fields.optionalPlaceholder')}
                 value={form.seoTitle}
                 onChange={(e) => setField('seoTitle', e.target.value)}
               />
               <Textarea
-                label="SEO 描述"
-                placeholder="可选"
+                label={t('fields.seoDescription')}
+                placeholder={t('fields.optionalPlaceholder')}
                 mt="sm"
                 autosize
                 minRows={2}

@@ -20,6 +20,7 @@ import {
 import { IconEye, IconPencil, IconPlus, IconSearch, IconTrash } from '@tabler/icons-react'
 import clsx from 'clsx'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import { useCallback, useEffect, useState } from 'react'
 
 interface PageItem {
@@ -41,13 +42,9 @@ interface PageListResult {
   statusCounts: Record<string, number>
 }
 
-const statusMap: Record<string, { label: string; color: string }> = {
-  draft: { label: '草稿', color: 'gray' },
-  scheduled: { label: '定时', color: 'blue' },
-  published: { label: '已发布', color: 'green' },
-}
-
 export default function PagesAdminPage() {
+  const t = useTranslations('admin.pagesPage')
+  const tCommon = useTranslations('common')
   const adminUrl = useAdminUrl()
   const [data, setData] = useState<PageListResult | null>(null)
   const [page, setPage] = useState(1)
@@ -69,11 +66,11 @@ export default function PagesAdminPage() {
   }, [fetchPages])
 
   const handleDelete = async (id: number, title: string) => {
-    if (!(await myModal.confirm({ message: `确定要删除页面「${title}」吗？` }))) return
+    if (!(await myModal.confirm({ message: t('deleteConfirm', { title }) }))) return
     const res = await fetch(`/api/pages/${id}`, { method: 'DELETE' })
     const json = await res.json()
     if (json.success) {
-      notify({ color: 'green', message: '删除成功' })
+      notify({ color: 'green', message: tCommon('messages.deleteSuccess') })
       if (data && data.items.length <= 1 && page > 1) {
         setPage(page - 1)
       } else {
@@ -82,12 +79,25 @@ export default function PagesAdminPage() {
     }
   }
 
+  const statusMap: Record<string, { label: string; color: string }> = {
+    draft: { label: tCommon('status.draft'), color: 'gray' },
+    scheduled: { label: tCommon('status.scheduled'), color: 'blue' },
+    published: { label: tCommon('status.published'), color: 'green' },
+  }
+
   return (
-    <Box mt="md">
+    <Box mt="md" data-role="admin-pages-page">
       <Group justify="space-between" mb="lg">
-        <Title order={3}>页面管理</Title>
-        <Button component={Link} href={adminUrl('/pages/new')} leftSection={<IconPlus size={16} />}>
-          新建页面
+        <Title order={3} data-role="admin-pages-page-title">
+          {t('title')}
+        </Title>
+        <Button
+          component={Link}
+          href={adminUrl('/pages/new')}
+          leftSection={<IconPlus size={16} />}
+          data-role="admin-pages-new-button"
+        >
+          {t('newPage')}
         </Button>
       </Group>
 
@@ -102,15 +112,15 @@ export default function PagesAdminPage() {
             const c = data?.statusCounts ?? { draft: 0, scheduled: 0, published: 0 }
             const total = Object.values(c).reduce((a, b) => a + b, 0)
             return [
-              { value: '', label: `全部 (${total})` },
-              { value: 'draft', label: `草稿 (${c.draft})` },
-              { value: 'scheduled', label: `定时 (${c.scheduled})` },
-              { value: 'published', label: `已发布 (${c.published})` },
+              { value: '', label: t('statusAll', { count: total }) },
+              { value: 'draft', label: t('statusDraft', { count: c.draft }) },
+              { value: 'scheduled', label: t('statusScheduled', { count: c.scheduled }) },
+              { value: 'published', label: t('statusPublished', { count: c.published }) },
             ]
           })()}
         />
         <TextInput
-          placeholder="搜索标题或路径..."
+          placeholder={t('searchPlaceholder')}
           leftSection={<IconSearch size={16} />}
           value={search}
           onChange={(e) => {
@@ -125,18 +135,18 @@ export default function PagesAdminPage() {
         <Table highlightOnHover>
           <Table.Thead>
             <Table.Tr>
-              <Table.Th className={adminStyles.cellFill}>标题</Table.Th>
+              <Table.Th className={adminStyles.cellFill}>{t('columns.title')}</Table.Th>
               <Table.Th className={clsx(adminStyles.cellFit, adminStyles.cellCenter)}>
-                路径
+                {t('columns.path')}
               </Table.Th>
               <Table.Th className={clsx(adminStyles.cellFit, adminStyles.cellCenter)}>
-                类型
+                {t('columns.type')}
               </Table.Th>
               <Table.Th className={clsx(adminStyles.cellFit, adminStyles.cellCenter)}>
-                状态
+                {t('columns.status')}
               </Table.Th>
               <Table.Th className={clsx(adminStyles.cellFit, adminStyles.cellCenter)}>
-                操作
+                {t('columns.actions')}
               </Table.Th>
             </Table.Tr>
           </Table.Thead>
@@ -158,13 +168,13 @@ export default function PagesAdminPage() {
                       >
                         {p.title || (
                           <Text span c="dimmed" inherit>
-                            (无标题)
+                            {t('untitled')}
                           </Text>
                         )}
                       </Link>
                       {p.status === 'published' && p.hasDraft && (
                         <NowrapBadge color="orange" variant="light" size="xs">
-                          已修改
+                          {t('modified')}
                         </NowrapBadge>
                       )}
                     </Group>
@@ -200,7 +210,7 @@ export default function PagesAdminPage() {
                         }
                         target="_blank"
                         rel="noopener noreferrer"
-                        aria-label={`查看页面《${p.title}》`}
+                        aria-label={t('previewAria', { title: p.title || t('untitled') })}
                       >
                         <IconEye size={16} />
                       </ActionIcon>
@@ -227,7 +237,7 @@ export default function PagesAdminPage() {
               <Table.Tr>
                 <Table.Td colSpan={5}>
                   <Text ta="center" c="dimmed" py="md">
-                    暂无页面
+                    {t('empty')}
                   </Text>
                 </Table.Td>
               </Table.Tr>

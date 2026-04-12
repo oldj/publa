@@ -1,5 +1,6 @@
-import { getCurrentUser } from '@/server/auth'
+import { requireCurrentUser } from '@/server/auth'
 import { db } from '@/server/db'
+import { jsonError, jsonSuccess } from '@/server/lib/api-response'
 import { htmlToText, renderMarkdown } from '@/server/lib/markdown'
 import { isUniqueConstraintError, parseIdParam, safeParseJson } from '@/server/lib/request'
 import {
@@ -12,61 +13,56 @@ import {
 import { getDraft, publishDraft, saveDraft } from '@/server/services/revisions'
 import { parsePostDraftMetadata } from '@/shared/revision-metadata'
 import { logActivity } from '@/server/services/activity-logs'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
+
+function getSlugValidationKey(code: 'REQUIRED' | 'STARTS_WITH_HYPHEN' | 'ENDS_WITH_HYPHEN') {
+  if (code === 'REQUIRED') return 'slugRequired'
+  if (code === 'STARTS_WITH_HYPHEN') return 'slugStartsWithHyphen'
+  return 'slugEndsWithHyphen'
+}
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const user = await getCurrentUser()
-  if (!user) {
-    return NextResponse.json(
-      { success: false, code: 'UNAUTHORIZED', message: 'Unauthorized' },
-      { status: 401 },
-    )
-  }
+  const guard = await requireCurrentUser()
+  if (!guard.ok) return guard.response
 
   const { id: idStr } = await params
-  const { id: postId, error: idError } = parseIdParam(idStr)
+  const { id: postId, error: idError } = await parseIdParam(idStr)
   if (idError) return idError
   const post = await getPostById(postId)
   if (!post) {
-    return NextResponse.json(
-      { success: false, code: 'NOT_FOUND', message: '文章不存在' },
-      { status: 404 },
-    )
+    return jsonError({
+      namespace: 'admin.api.posts',
+      key: 'notFound',
+      code: 'NOT_FOUND',
+      status: 404,
+    })
   }
 
   // 附带草稿内容（如果有）
   const draft = await getDraft('post', post.id)
-  return NextResponse.json({
-    success: true,
-    data: {
-      ...post,
-      draftContent: draft
-        ? {
-            ...parsePostDraftMetadata(draft.metadata),
-            title: draft.title,
-            excerpt: draft.excerpt,
-            contentType: draft.contentType,
-            contentRaw: draft.contentRaw,
-            contentHtml: draft.contentHtml,
-            contentText: draft.contentText,
-            updatedAt: draft.updatedAt,
-          }
-        : null,
-    },
+  return jsonSuccess({
+    ...post,
+    draftContent: draft
+      ? {
+          ...parsePostDraftMetadata(draft.metadata),
+          title: draft.title,
+          excerpt: draft.excerpt,
+          contentType: draft.contentType,
+          contentRaw: draft.contentRaw,
+          contentHtml: draft.contentHtml,
+          contentText: draft.contentText,
+          updatedAt: draft.updatedAt,
+        }
+      : null,
   })
 }
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const user = await getCurrentUser()
-  if (!user) {
-    return NextResponse.json(
-      { success: false, code: 'UNAUTHORIZED', message: 'Unauthorized' },
-      { status: 401 },
-    )
-  }
+  const guard = await requireCurrentUser()
+  if (!guard.ok) return guard.response
 
   const { id: idStr } = await params
-  const { id: postId, error: idError } = parseIdParam(idStr)
+  const { id: postId, error: idError } = await parseIdParam(idStr)
   if (idError) return idError
   const { data: body, error } = await safeParseJson(request)
   if (error) return error
@@ -74,42 +70,57 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   // 发布/定时发布时校验必填字段
   if (body.status === 'published' || body.status === 'scheduled') {
     if (!body.title) {
-      return NextResponse.json(
-        { success: false, code: 'VALIDATION_ERROR', message: '发布时标题不能为空' },
-        { status: 400 },
-      )
+      return jsonError({
+        source: request,
+        namespace: 'admin.api.posts',
+        key: 'publishTitleRequired',
+        code: 'VALIDATION_ERROR',
+        status: 400,
+      })
     }
     if (!body.slug) {
-      return NextResponse.json(
-        { success: false, code: 'VALIDATION_ERROR', message: '发布时 slug 不能为空' },
-        { status: 400 },
-      )
+      return jsonError({
+        source: request,
+        namespace: 'admin.api.posts',
+        key: 'publishSlugRequired',
+        code: 'VALIDATION_ERROR',
+        status: 400,
+      })
     }
   }
 
   // 定时发布必须提供发布时间
   if (body.status === 'scheduled' && !body.publishedAt) {
-    return NextResponse.json(
-      { success: false, code: 'VALIDATION_ERROR', message: '定时发布必须指定发布时间' },
-      { status: 400 },
-    )
+    return jsonError({
+      source: request,
+      namespace: 'admin.api.posts',
+      key: 'publishedAtRequired',
+      code: 'VALIDATION_ERROR',
+      status: 400,
+    })
   }
 
   if (body.slug) {
     const slugCheck = validateSlug(body.slug)
     if (!slugCheck.valid) {
-      return NextResponse.json(
-        { success: false, code: 'VALIDATION_ERROR', message: slugCheck.message },
-        { status: 400 },
-      )
+      return jsonError({
+        source: request,
+        namespace: 'admin.api.posts',
+        key: getSlugValidationKey(slugCheck.code),
+        code: 'VALIDATION_ERROR',
+        status: 400,
+      })
     }
 
     const slugOk = await isSlugAvailable(body.slug, postId)
     if (!slugOk) {
-      return NextResponse.json(
-        { success: false, code: 'DUPLICATE_SLUG', message: 'slug 已存在' },
-        { status: 400 },
-      )
+      return jsonError({
+        source: request,
+        namespace: 'admin.api.posts',
+        key: 'duplicateSlug',
+        code: 'DUPLICATE_SLUG',
+        status: 400,
+      })
     }
   }
 
@@ -153,43 +164,52 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
               publishedAt: result.publishedAt,
             }),
           },
-          user.id,
+          guard.user.id,
           tx,
         )
-        await publishDraft('post', postId, user.id, tx)
+        await publishDraft('post', postId, guard.user.id, tx)
 
         return result
       })
 
       if (!post) {
-        return NextResponse.json(
-          { success: false, code: 'NOT_FOUND', message: '文章不存在' },
-          { status: 404 },
-        )
+        return jsonError({
+          source: request,
+          namespace: 'admin.api.posts',
+          key: 'notFound',
+          code: 'NOT_FOUND',
+          status: 404,
+        })
       }
-      await logActivity(request, user.id, 'update_post')
+      await logActivity(request, guard.user.id, 'update_post')
 
-      return NextResponse.json({ success: true, data: post })
+      return jsonSuccess(post)
     }
 
     // 非发布操作，直接更新主表
     const post = await updatePost(postId, body)
     if (!post) {
-      return NextResponse.json(
-        { success: false, code: 'NOT_FOUND', message: '文章不存在' },
-        { status: 404 },
-      )
+      return jsonError({
+        source: request,
+        namespace: 'admin.api.posts',
+        key: 'notFound',
+        code: 'NOT_FOUND',
+        status: 404,
+      })
     }
 
-    await logActivity(request, user.id, 'update_post')
+    await logActivity(request, guard.user.id, 'update_post')
 
-    return NextResponse.json({ success: true, data: post })
+    return jsonSuccess(post)
   } catch (err) {
     if (isUniqueConstraintError(err)) {
-      return NextResponse.json(
-        { success: false, code: 'DUPLICATE_SLUG', message: 'slug 已存在' },
-        { status: 400 },
-      )
+      return jsonError({
+        source: request,
+        namespace: 'admin.api.posts',
+        key: 'duplicateSlug',
+        code: 'DUPLICATE_SLUG',
+        status: 400,
+      })
     }
     throw err
   }
@@ -199,20 +219,15 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const user = await getCurrentUser()
-  if (!user) {
-    return NextResponse.json(
-      { success: false, code: 'UNAUTHORIZED', message: 'Unauthorized' },
-      { status: 401 },
-    )
-  }
+  const guard = await requireCurrentUser()
+  if (!guard.ok) return guard.response
 
   const { id: idStr } = await params
-  const { id: postId, error: idError } = parseIdParam(idStr)
+  const { id: postId, error: idError } = await parseIdParam(idStr)
   if (idError) return idError
   await deletePost(postId)
 
-  await logActivity(request, user.id, 'delete_post')
+  await logActivity(request, guard.user.id, 'delete_post')
 
-  return NextResponse.json({ success: true })
+  return jsonSuccess()
 }

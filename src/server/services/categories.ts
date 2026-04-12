@@ -23,6 +23,14 @@ export interface CategoryWithCount {
   postCount: number
 }
 
+export type DeleteCategoryResult =
+  | { success: true }
+  | {
+      success: false
+      code: 'CATEGORY_HAS_POSTS'
+      count: number
+    }
+
 /** 查询所有分类（含文章计数，读取缓存字段） */
 export async function listCategories(): Promise<CategoryWithCount[]> {
   const rows = await db
@@ -123,14 +131,14 @@ export async function reorderCategories(ids: number[]) {
 }
 
 /** 删除分类（仅当无文章引用时） */
-export async function deleteCategory(id: number): Promise<{ success: boolean; message?: string }> {
+export async function deleteCategory(id: number): Promise<DeleteCategoryResult> {
   const [ref] = await db
     .select({ value: count() })
     .from(contents)
     .where(and(eq(contents.categoryId, id), eq(contents.type, 'post'), isNull(contents.deletedAt)))
 
   if (ref.value > 0) {
-    return { success: false, message: `该分类下仍有 ${ref.value} 篇文章，无法删除` }
+    return { success: false, code: 'CATEGORY_HAS_POSTS', count: ref.value }
   }
 
   await db.delete(categories).where(eq(categories.id, id))

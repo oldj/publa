@@ -4,6 +4,7 @@
  */
 
 import lodash from 'lodash'
+import { useTranslations } from 'next-intl'
 import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import CaptchaInput from 'src/components/captcha-input'
@@ -19,6 +20,8 @@ interface Props {
 
 const CommentForm = (props: Props) => {
   const { contentId, parentId, onSuccess } = props
+  const t = useTranslations('frontend.commentForm')
+  const tCommon = useTranslations('common')
   const [loading, setLoading] = useState(false)
   const {
     register,
@@ -63,14 +66,12 @@ const CommentForm = (props: Props) => {
         // console.log(r)
         if (r && r.success) {
           let message: string =
-            r.data && r.data.status === 'approved'
-              ? '评论成功，感谢你的评论！'
-              : '评论成功，将在审核后展示！'
+            r.data && r.data.status === 'approved' ? t('approvedSuccess') : t('pendingSuccess')
 
           // alert(msg)
           dialog.Alert({
             icon: 'success',
-            title: '评论成功',
+            title: t('successTitle'),
             message,
           })
 
@@ -82,19 +83,19 @@ const CommentForm = (props: Props) => {
             onSuccess(r.data)
           }
         } else if (r.code) {
-          let message = '出错了，评论失败！'
+          let message = t('errors.general')
           switch (r.code) {
             case 'INVALID_CAPTCHA':
-              message = '请输入正确的验证码。'
+              message = t('errors.invalidCaptcha')
               break
             case 'COMMENT_DISABLED':
-              message = '该文章不可评论！'
+              message = t('errors.commentDisabled')
               break
             case 'CONTENT_TOO_LONG':
-              message = `评论内容不能超过 ${COMMENT_MAX_LENGTH} 字符。`
+              message = t('errors.contentTooLong', { max: COMMENT_MAX_LENGTH })
               break
             case 'RATE_LIMITED':
-              message = '提交过于频繁，请稍后再试。'
+              message = t('errors.rateLimited')
               break
           }
 
@@ -116,7 +117,7 @@ const CommentForm = (props: Props) => {
       })
       .catch((e) => {
         console.error(e)
-        dialog.Alert({ icon: 'error', message: '网络错误，请稍后重试。' })
+        dialog.Alert({ icon: 'error', message: t('errors.network') })
       })
       .finally(() => {
         // refreshCaptcha()
@@ -167,7 +168,7 @@ const CommentForm = (props: Props) => {
         {/*</Form.Item>*/}
 
         <label>
-          评论 <span>*</span>
+          {t('fields.content')} <span>*</span>
         </label>
         <textarea
           required={true}
@@ -188,7 +189,7 @@ const CommentForm = (props: Props) => {
         {/*  <Input maxLength={50} />*/}
         {/*</Form.Item>*/}
         <label>
-          你的称呼 <span>*</span>
+          {t('fields.username')} <span>*</span>
         </label>
         <input required={true} maxLength={50} {...register('username')} />
 
@@ -203,7 +204,7 @@ const CommentForm = (props: Props) => {
         {/*  <Input maxLength={100} />*/}
         {/*</Form.Item>*/}
         <label>
-          电子邮件 <span>*</span>
+          {t('fields.email')} <span>*</span>
         </label>
         <input required={true} type={'email'} maxLength={100} {...register('email')} />
 
@@ -219,7 +220,8 @@ const CommentForm = (props: Props) => {
         {/*  <Input maxLength={200} />*/}
         {/*</Form.Item>*/}
         <label>
-          站点<span className="comment-form-info">（选填）</span>
+          {t('fields.website')}
+          <span className="comment-form-info">{tCommon('labels.optional')}</span>
         </label>
         <input type={'url'} maxLength={200} {...register('url')} />
 
@@ -235,8 +237,8 @@ const CommentForm = (props: Props) => {
         {/*  <CaptchaInput setRefresh={(fn) => (refreshCaptcha = fn)} />*/}
         {/*</Form.Item>*/}
         <label>
-          验证码 <span>*</span>
-          <span className="comment-form-info">（不区分大小写）</span>
+          {t('fields.captcha')} <span>*</span>
+          <span className="comment-form-info">{tCommon('labels.caseInsensitive')}</span>
         </label>
         <CaptchaInput
           setRefresh={(fn: () => void) => (refreshCaptcha = fn)}
@@ -256,7 +258,7 @@ const CommentForm = (props: Props) => {
         {/*  </Button>*/}
         {/*</Form.Item>*/}
         <Button type="primary" htmlType="submit" size="large" disabled={loading} loading={loading}>
-          {loading ? '提交中，请稍候……' : '提交评论'}
+          {loading ? t('submitting') : t('submit')}
         </Button>
       </form>
     </div>

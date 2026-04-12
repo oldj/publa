@@ -1,4 +1,5 @@
 import PostListPage from '@/components/post-list-page'
+import { getServerTranslator } from '@/i18n/server'
 import BasicLayout from '@/layouts/basic'
 import contentSummary from '@/lib/contentSummary'
 import { getFrontendPosts } from '@/server/services/posts-frontend'
@@ -7,8 +8,9 @@ import { Metadata } from 'next'
 import Link from 'next/link'
 import { IItemPage, IPost } from 'typings'
 
-export const metadata: Metadata = {
-  title: '文章列表',
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerTranslator('frontend.posts')
+  return { title: t('listTitle') }
 }
 
 export default async function Page({
@@ -16,6 +18,7 @@ export default async function Page({
 }: {
   searchParams: Promise<{ page?: string; category?: string; tag?: string }>
 }) {
+  const { t } = await getServerTranslator('frontend')
   const { page, category, tag } = await searchParams
   const data = await getData({ page, category, tag })
   const { postsPage, filter } = data
@@ -26,19 +29,19 @@ export default async function Page({
   if (filter) {
     let { category, tag } = filter
     if (category) {
-      filterBy = '分类'
+      filterBy = t('posts.categoryPrefix')
       filterKey = category
     } else if (tag) {
-      filterBy = '标签'
+      filterBy = t('posts.tagPrefix')
       filterKey = tag
     }
   }
 
-  let rTitle: React.ReactNode = '文章列表'
+  let rTitle: React.ReactNode = t('posts.listTitle')
   if (filterBy) {
     rTitle = (
       <>
-        <span className="posts-filter-by">{filterBy}：</span>
+        <span className="posts-filter-by">{filterBy}</span>
         <span>{filterKey}</span>
       </>
     )
@@ -53,7 +56,7 @@ export default async function Page({
             <div className="posts-filter-back">
               <Link href="/posts/list">
                 <IconChevronLeft size={16} />
-                返回所有文章列表
+                {t('taxonomy.backToAllPosts')}
               </Link>
             </div>
           </div>

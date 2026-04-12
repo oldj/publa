@@ -1,4 +1,6 @@
 import { adminUrl } from '@/lib/admin-path'
+import { DEFAULT_LOCALE, isLocale, type Locale } from '@/i18n/locales'
+import { getServerTranslator } from '@/i18n/server'
 import { db } from '@/server/db'
 import { maybeFirst } from '@/server/db/query'
 import { contents } from '@/server/db/schema'
@@ -60,6 +62,13 @@ function buildEmailHtml(options: {
 </html>`
 }
 
+async function getNotificationTranslator() {
+  const language = await getSetting('language')
+  const locale: Locale = isLocale(language) ? language : DEFAULT_LOCALE
+  const { t } = await getServerTranslator('admin.notificationEmails', { locale })
+  return t
+}
+
 /** 新评论通知 */
 export async function notifyNewComment(data: {
   authorName: string
@@ -72,19 +81,22 @@ export async function notifyNewComment(data: {
   const recipients = await resolveRecipients(config)
   if (recipients.length === 0) return
 
+  const t = await getNotificationTranslator()
   const row = await maybeFirst(
     db.select({ title: contents.title }).from(contents).where(eq(contents.id, data.contentId)),
   )
-  const contentTitle = row?.title || '未知文章'
+  const contentTitle = row?.title || t('unknownContentTitle')
 
   const siteUrl = String((await getSetting('siteUrl')) ?? '')
-  const subject = `新评论：${truncate(contentTitle, 50)}`
+  const subject = t('newComment.subject', {
+    title: truncate(contentTitle, 50),
+  })
   const html = buildEmailHtml({
-    title: `文章「${escapeHtml(contentTitle)}」收到新评论`,
-    body: `<p style="margin: 0 0 8px;"><strong>${escapeHtml(data.authorName)}</strong> 说：</p>
+    title: t('newComment.title', { title: escapeHtml(contentTitle) }),
+    body: `<p style="margin: 0 0 8px;"><strong>${escapeHtml(data.authorName)}</strong> ${t('authorSays')}</p>
 <p style="margin: 0; white-space: pre-wrap;">${escapeHtml(truncate(data.content, 500))}</p>`,
     linkUrl: `${siteUrl}${adminUrl('/comments')}`,
-    linkText: '查看评论',
+    linkText: t('newComment.linkText'),
   })
 
   const result = await sendEmail(recipients, subject, html)
@@ -105,14 +117,17 @@ export async function notifyNewGuestbook(data: { authorName: string; content: st
   const recipients = await resolveRecipients(config)
   if (recipients.length === 0) return
 
+  const t = await getNotificationTranslator()
   const siteUrl = String((await getSetting('siteUrl')) ?? '')
-  const subject = `新留言：来自 ${data.authorName}`
+  const subject = t('newGuestbook.subject', {
+    authorName: truncate(data.authorName, 50),
+  })
   const html = buildEmailHtml({
-    title: '收到新的留言',
-    body: `<p style="margin: 0 0 8px;"><strong>${escapeHtml(data.authorName)}</strong> 说：</p>
+    title: t('newGuestbook.title'),
+    body: `<p style="margin: 0 0 8px;"><strong>${escapeHtml(data.authorName)}</strong> ${t('authorSays')}</p>
 <p style="margin: 0; white-space: pre-wrap;">${escapeHtml(truncate(data.content, 500))}</p>`,
     linkUrl: `${siteUrl}${adminUrl('/guestbook')}`,
-    linkText: '查看留言',
+    linkText: t('newGuestbook.linkText'),
   })
 
   const result = await sendEmail(recipients, subject, html)

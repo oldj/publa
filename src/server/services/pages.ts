@@ -6,34 +6,42 @@ import { parsePageDraftMetadata } from '@/shared/revision-metadata'
 import { and, count, desc, eq, exists, isNull, like, lte, ne, or, sql } from 'drizzle-orm'
 import { listDraftsByTargetIds } from './revisions'
 
+export type PagePathValidationCode =
+  | 'REQUIRED'
+  | 'ENDS_WITH_SLASH'
+  | 'STARTS_WITH_SLASH'
+  | 'STARTS_WITH_HYPHEN'
+  | 'ENDS_WITH_HYPHEN'
+  | 'RESERVED'
+
 /** 校验页面路径 */
 export function validatePagePath(
   path: string,
   _excludeId?: number,
-): { valid: boolean; message?: string } {
+): { valid: true } | { valid: false; code: PagePathValidationCode; values?: { segment: string } } {
   if (!path) {
-    return { valid: false, message: '路径不能为空' }
+    return { valid: false, code: 'REQUIRED' }
   }
 
   if (path.endsWith('/')) {
-    return { valid: false, message: '路径不能以 / 结尾' }
+    return { valid: false, code: 'ENDS_WITH_SLASH' }
   }
 
   if (path.startsWith('/')) {
-    return { valid: false, message: '路径不能以 / 开头' }
+    return { valid: false, code: 'STARTS_WITH_SLASH' }
   }
 
   if (path.startsWith('-')) {
-    return { valid: false, message: '路径不能以 - 开头' }
+    return { valid: false, code: 'STARTS_WITH_HYPHEN' }
   }
 
   if (path.endsWith('-')) {
-    return { valid: false, message: '路径不能以 - 结尾' }
+    return { valid: false, code: 'ENDS_WITH_HYPHEN' }
   }
 
   const topSegment = path.split('/')[0]
   if (getPageReservedPrefixes().includes(topSegment)) {
-    return { valid: false, message: `"${topSegment}" 是保留路径，不能使用` }
+    return { valid: false, code: 'RESERVED', values: { segment: topSegment } }
   }
 
   return { valid: true }

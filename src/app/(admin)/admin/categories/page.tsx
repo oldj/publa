@@ -37,6 +37,7 @@ import {
 } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import { IconGripVertical, IconPencil, IconPlus, IconRefresh, IconTrash } from '@tabler/icons-react'
+import { useTranslations } from 'next-intl'
 import { useCallback, useEffect, useState } from 'react'
 
 interface Category {
@@ -77,11 +78,19 @@ function SortableCategoryRow({
   onEdit,
   onDelete,
   onShowPosts,
+  postCountLabel,
+  dragLabel,
+  editLabel,
+  deleteLabel,
 }: {
   item: Category
   onEdit: (item: Category) => void
   onDelete: (item: Category) => void
   onShowPosts: (item: Category) => void
+  postCountLabel: string
+  dragLabel: string
+  editLabel: string
+  deleteLabel: string
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.id,
@@ -110,7 +119,7 @@ function SortableCategoryRow({
             color="gray"
             {...attributes}
             {...listeners}
-            aria-label="拖拽排序"
+            aria-label={dragLabel}
             style={{ cursor: 'grab', marginTop: 2 }}
           >
             <IconGripVertical size={18} />
@@ -130,16 +139,16 @@ function SortableCategoryRow({
             style={{ cursor: 'pointer' }}
             onClick={() => onShowPosts(item)}
           >
-            {item.postCount} 篇
+            {postCountLabel}
           </NowrapBadge>
-          <ActionIcon variant="subtle" onClick={() => onEdit(item)} aria-label="编辑分类">
+          <ActionIcon variant="subtle" onClick={() => onEdit(item)} aria-label={editLabel}>
             <IconPencil size={16} />
           </ActionIcon>
           <ActionIcon
             variant="subtle"
             color="red"
             onClick={() => onDelete(item)}
-            aria-label="删除分类"
+            aria-label={deleteLabel}
           >
             <IconTrash size={16} />
           </ActionIcon>
@@ -150,6 +159,8 @@ function SortableCategoryRow({
 }
 
 export default function CategoriesPage() {
+  const t = useTranslations('admin.categoriesPage')
+  const tCommon = useTranslations('common')
   const [categories, setCategories] = useState<Category[]>([])
   const [opened, { open, close }] = useDisclosure(false)
   const [editingId, setEditingId] = useState<number | null>(null)
@@ -207,7 +218,7 @@ export default function CategoriesPage() {
 
   const handleSubmit = async () => {
     if (!form.name || !form.slug) {
-      notify({ color: 'red', message: '名称和 slug 不能为空' })
+      notify({ color: 'red', message: t('validation.nameAndSlugRequired') })
       return
     }
 
@@ -223,30 +234,35 @@ export default function CategoriesPage() {
       const data = await res.json()
 
       if (data.success) {
-        notify({ color: 'green', message: editingId ? '更新成功' : '创建成功' })
+        notify({
+          color: 'green',
+          message: editingId
+            ? tCommon('messages.updateSuccess')
+            : tCommon('messages.createSuccess'),
+        })
         close()
         fetchCategories()
       } else {
-        notify({ color: 'red', message: data.message || '操作失败' })
+        notify({ color: 'red', message: data.message || tCommon('errors.operationFailed') })
       }
     } catch {
-      notify({ color: 'red', message: '网络错误' })
+      notify({ color: 'red', message: tCommon('errors.network') })
     } finally {
       setLoading(false)
     }
   }
 
   const handleDelete = async (item: Category) => {
-    if (!(await myModal.confirm({ message: `确定要删除分类「${item.name}」吗？` }))) return
+    if (!(await myModal.confirm({ message: t('deleteConfirm', { name: item.name }) }))) return
 
     const res = await fetch(`/api/categories/${item.id}`, { method: 'DELETE' })
     const data = await res.json()
 
     if (data.success) {
-      notify({ color: 'green', message: '删除成功' })
+      notify({ color: 'green', message: tCommon('messages.deleteSuccess') })
       fetchCategories()
     } else {
-      notify({ color: 'red', message: data.message || '删除失败' })
+      notify({ color: 'red', message: data.message || tCommon('errors.deleteFailed') })
     }
   }
 
@@ -261,13 +277,13 @@ export default function CategoriesPage() {
       })
       const data = await res.json()
       if (data.success) {
-        notify({ color: 'green', message: '重新计数成功' })
+        notify({ color: 'green', message: t('messages.recountSuccess') })
         fetchCategories()
       } else {
-        notify({ color: 'red', message: data.message || '重新计数失败' })
+        notify({ color: 'red', message: data.message || t('messages.recountFailed') })
       }
     } catch {
-      notify({ color: 'red', message: '网络错误' })
+      notify({ color: 'red', message: tCommon('errors.network') })
     } finally {
       setRecounting(false)
     }
@@ -307,7 +323,7 @@ export default function CategoriesPage() {
       await persistOrder(nextItems)
     } catch {
       setCategories(previousItems)
-      notify({ color: 'red', message: '排序保存失败' })
+      notify({ color: 'red', message: t('messages.reorderFailed') })
       await fetchCategories()
     }
   }
@@ -319,7 +335,7 @@ export default function CategoriesPage() {
   return (
     <Box mt="md">
       <Group justify="space-between" mb="lg">
-        <Title order={3}>分类管理</Title>
+        <Title order={3}>{t('title')}</Title>
         <Group gap="sm">
           <Button
             variant="default"
@@ -327,10 +343,10 @@ export default function CategoriesPage() {
             onClick={handleRecount}
             loading={recounting}
           >
-            重新计数
+            {t('recount')}
           </Button>
           <Button leftSection={<IconPlus size={16} />} onClick={() => handleOpen()}>
-            新建分类
+            {t('new')}
           </Button>
         </Group>
       </Group>
@@ -338,7 +354,7 @@ export default function CategoriesPage() {
       {categories.length === 0 ? (
         <Paper withBorder p="xl" radius="md">
           <Text ta="center" c="dimmed">
-            暂无分类
+            {t('empty')}
           </Text>
         </Paper>
       ) : (
@@ -355,6 +371,10 @@ export default function CategoriesPage() {
                   onEdit={handleOpen}
                   onDelete={handleDelete}
                   onShowPosts={showPostsByCategory}
+                  postCountLabel={t('postCount', { count: item.postCount })}
+                  dragLabel={t('aria.drag')}
+                  editLabel={t('aria.edit')}
+                  deleteLabel={t('aria.delete')}
                 />
               ))}
             </Stack>
@@ -362,49 +382,53 @@ export default function CategoriesPage() {
         </DndContext>
       )}
 
-      <Modal opened={opened} onClose={close} title={editingId ? '编辑分类' : '新建分类'}>
+      <Modal
+        opened={opened}
+        onClose={close}
+        title={editingId ? t('modal.editTitle') : t('modal.createTitle')}
+      >
         <TextInput
-          label="名称"
-          placeholder="分类名称"
+          label={t('fields.name')}
+          placeholder={t('fields.namePlaceholder')}
           required
           value={form.name}
           onChange={(e) => setField('name', e.target.value)}
         />
         <TextInput
-          label="Slug"
-          placeholder="url-slug"
+          label={t('fields.slug')}
+          placeholder={t('fields.slugPlaceholder')}
           required
           mt="sm"
           value={form.slug}
           onChange={(e) => setField('slug', e.target.value)}
         />
         <Textarea
-          label="描述"
-          placeholder="分类描述（可选）"
+          label={t('fields.description')}
+          placeholder={t('fields.descriptionPlaceholder')}
           mt="sm"
           value={form.description}
           onChange={(e) => setField('description', e.target.value)}
         />
         <TextInput
-          label="SEO 标题"
-          placeholder="可选"
+          label={t('fields.seoTitle')}
+          placeholder={t('fields.optionalPlaceholder')}
           mt="sm"
           value={form.seoTitle}
           onChange={(e) => setField('seoTitle', e.target.value)}
         />
         <TextInput
-          label="SEO 描述"
-          placeholder="可选"
+          label={t('fields.seoDescription')}
+          placeholder={t('fields.optionalPlaceholder')}
           mt="sm"
           value={form.seoDescription}
           onChange={(e) => setField('seoDescription', e.target.value)}
         />
         <Group justify="flex-end" mt="lg">
           <Button variant="default" onClick={close}>
-            取消
+            {tCommon('actions.cancel')}
           </Button>
           <Button onClick={handleSubmit} loading={loading}>
-            {editingId ? '保存' : '创建'}
+            {editingId ? tCommon('actions.save') : tCommon('actions.create')}
           </Button>
         </Group>
       </Modal>
@@ -414,7 +438,11 @@ export default function CategoriesPage() {
         onClose={handleDrawerClose}
         position="right"
         size="80%"
-        title={drawerCategory ? `分类「${drawerCategory.name}」下的文章` : '文章列表'}
+        title={
+          drawerCategory
+            ? t('drawerTitle', { name: drawerCategory.name })
+            : t('drawerFallbackTitle')
+        }
       >
         {drawerCategory && (
           <PostList key={drawerCategory.id} initialCategoryId={String(drawerCategory.id)} />

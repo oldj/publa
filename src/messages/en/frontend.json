@@ -1,0 +1,143 @@
+{
+  "nav": {
+    "defaultMenus": {
+      "home": "Home",
+      "posts": "Posts",
+      "guestbook": "Guestbook",
+      "about": "About"
+    }
+  },
+  "footer": {
+    "categories": "Categories",
+    "tags": "Tags",
+    "searchPlaceholder": "Search in Google",
+    "searchButton": "Search",
+    "rssPrefix": "Subscribe to this site via ",
+    "rssSuffix": ""
+  },
+  "captcha": {
+    "refreshAlt": "Click to refresh"
+  },
+  "previewNotice": {
+    "message": "Preview mode - this page is only visible to admins or editors"
+  },
+  "toc": {
+    "title": "Contents"
+  },
+  "notFound": {
+    "title": "404 - Page not found",
+    "description": "This page does not exist or has expired.",
+    "home": "Home",
+    "back": "Go back"
+  },
+  "dynamicPage": {
+    "notFoundTitle": "Page not found"
+  },
+  "goBackButton": {
+    "label": "Go back"
+  },
+  "posts": {
+    "title": "Posts",
+    "listTitle": "Post list",
+    "categoryPrefix": "Category:",
+    "tagPrefix": "Tag:",
+    "list": {
+      "readMore": "Read more",
+      "empty": "No records"
+    },
+    "detail": {
+      "category": "Category:",
+      "tags": "Tags:",
+      "manage": "[Manage post]",
+      "previous": "Previous",
+      "next": "Next",
+      "none": "None",
+      "related": "Related posts:",
+      "noRelated": "No related posts yet",
+      "comments": "Comments:",
+      "noComments": "No comments yet",
+      "writeComment": "Leave a comment:",
+      "commentHelp": "Your email address will not be published. Required fields are marked with *.",
+      "commentsClosed": "Comments are closed.",
+      "backToTop": "Back to top"
+    }
+  },
+  "taxonomy": {
+    "backToAllPosts": "Back to all posts",
+    "categoryNotFound": "Category not found",
+    "tagNotFound": "Tag not found"
+  },
+  "commentItem": {
+    "wroteAt": "wrote at {time}: ",
+    "reply": "Reply",
+    "collapse": "Collapse"
+  },
+  "guestbook": {
+    "title": "Guestbook",
+    "disabled": "Guestbook is disabled",
+    "form": {
+      "fields": {
+        "username": "Your name",
+        "email": "Email",
+        "website": "Website",
+        "content": "Message",
+        "captcha": "Captcha"
+      },
+      "submit": "Submit message",
+      "submitting": "Submitting, please wait...",
+      "successTitle": "Message submitted",
+      "successMessage": "Your message has been received. Thank you!",
+      "errors": {
+        "general": "Something went wrong. Failed to submit your message.",
+        "invalidCaptcha": "Please enter the correct captcha.",
+        "contentTooLong": "Message content cannot exceed {max} characters.",
+        "rateLimited": "You are submitting too frequently. Please try again later.",
+        "network": "Network error, please try again later."
+      }
+    }
+  },
+  "commentForm": {
+    "fields": {
+      "content": "Comment",
+      "username": "Your name",
+      "email": "Email",
+      "website": "Website",
+      "captcha": "Captcha"
+    },
+    "submit": "Submit comment",
+    "submitting": "Submitting, please wait...",
+    "successTitle": "Comment submitted",
+    "approvedSuccess": "Comment submitted successfully. Thank you!",
+    "pendingSuccess": "Comment submitted successfully and will appear after review.",
+    "errors": {
+      "general": "Something went wrong. Failed to submit your comment.",
+      "invalidCaptcha": "Please enter the correct captcha.",
+      "commentDisabled": "Comments are disabled for this post.",
+      "invalidParent": "The parent comment is invalid.",
+      "nestedReplyNotAllowed": "Replying to a nested comment is not allowed.",
+      "contentTooLong": "Comment content cannot exceed {max} characters.",
+      "rateLimited": "You are submitting too frequently. Please try again later.",
+      "network": "Network error, please try again later."
+    }
+  },
+  "seed": {
+    "aboutPage": {
+      "title": "About",
+      "contentRaw": "# About\n\nWelcome to my blog!",
+      "contentHtml": "<h1>About</h1>\n<p>Welcome to my blog!</p>"
+    }
+  },
+  "api": {
+    "comments": {
+      "slugRequired": "Slug is required",
+      "contentAndUsernameRequired": "Username and content are required"
+    },
+    "guestbook": {
+      "contentAndUsernameRequired": "Username and content are required"
+    },
+    "posts": {
+      "slugRequired": "Slug is required",
+      "notFound": "Post not found"
+    }
+  }
+}

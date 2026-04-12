@@ -52,7 +52,7 @@ vi.mock('@/server/storage', () => ({
   createStorageProvider: mockCreateStorageProvider,
 }))
 
-const { GET, PUT } = await import('./route')
+const { GET, PUT, POST } = await import('./route')
 
 describe('/api/attachments/config', () => {
   beforeEach(() => {
@@ -157,8 +157,12 @@ describe('/api/attachments/config', () => {
 
   it('存储配置中的对象值会被拒绝', async () => {
     mockNormalizeSettingsPayload.mockImplementationOnce(() => {
-      const error = new Error('以下设置项的值类型不合法：attachmentBaseUrl')
-      error.name = 'SettingsValidationError'
+      const error = Object.assign(new Error('Invalid settings values'), {
+        name: 'SettingsValidationError',
+        invalidKeys: [],
+        invalidValueKeys: ['attachmentBaseUrl'],
+        reason: 'INVALID_VALUES' as const,
+      })
       throw error
     })
 
@@ -177,5 +181,31 @@ describe('/api/attachments/config', () => {
     expect(json.code).toBe('VALIDATION_ERROR')
     expect(json.message).toContain('attachmentBaseUrl')
     expect(mockUpdateSettings).not.toHaveBeenCalled()
+  })
+
+  it('测试连接失败时返回 CONNECTION_FAILED', async () => {
+    mockCreateStorageProvider.mockResolvedValueOnce({
+      testConnection: vi.fn().mockResolvedValue({ success: false, message: 'boom' }),
+    })
+
+    const response = await POST(
+      new Request('http://localhost/api/attachments/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider: 's3',
+          endpoint: 'https://s3.example.com',
+          bucket: 'blog-assets',
+          accessKey: 'AKIA',
+          secretKey: 'SECRET',
+        }),
+      }) as any,
+    )
+    const json = await response.json()
+
+    expect(response.status).toBe(400)
+    expect(json.success).toBe(false)
+    expect(json.code).toBe('CONNECTION_FAILED')
+    expect(typeof json.message).toBe('string')
   })
 })

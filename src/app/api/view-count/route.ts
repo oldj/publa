@@ -1,9 +1,10 @@
 import { db } from '@/server/db'
 import { maybeFirst } from '@/server/db/query'
 import { contents } from '@/server/db/schema'
+import { jsonError, jsonSuccess } from '@/server/lib/api-response'
 import { safeParseJson } from '@/server/lib/request'
 import { and, eq, isNull, sql } from 'drizzle-orm'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 
 /** 递增文章浏览数 */
 export async function POST(request: NextRequest) {
@@ -12,10 +13,13 @@ export async function POST(request: NextRequest) {
 
   const slug = data?.slug
   if (!slug || typeof slug !== 'string') {
-    return NextResponse.json(
-      { success: false, code: 'VALIDATION_ERROR', message: 'slug is required' },
-      { status: 400 },
-    )
+    return jsonError({
+      source: request,
+      namespace: 'frontend.api.posts',
+      key: 'slugRequired',
+      code: 'VALIDATION_ERROR',
+      status: 400,
+    })
   }
 
   const row = await maybeFirst(
@@ -34,7 +38,13 @@ export async function POST(request: NextRequest) {
   )
 
   if (!row) {
-    return NextResponse.json({ success: false, code: 'NOT_FOUND' }, { status: 404 })
+    return jsonError({
+      source: request,
+      namespace: 'frontend.api.posts',
+      key: 'notFound',
+      code: 'NOT_FOUND',
+      status: 404,
+    })
   }
 
   await db
@@ -42,5 +52,5 @@ export async function POST(request: NextRequest) {
     .set({ viewCount: sql`${contents.viewCount} + 1` })
     .where(eq(contents.id, row.id))
 
-  return NextResponse.json({ success: true })
+  return jsonSuccess()
 }

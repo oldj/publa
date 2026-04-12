@@ -1,9 +1,11 @@
 'use client'
 
 import { IconArrowLeft } from '@tabler/icons-react'
+import { useTranslations } from 'next-intl'
 import { useEffect, useState } from 'react'
 
 const GoBackButton = () => {
+  const t = useTranslations('frontend.goBackButton')
   const [hasHistory, setHasHistory] = useState(false)
 
   useEffect(() => {
@@ -22,7 +24,7 @@ const GoBackButton = () => {
       }}
     >
       <IconArrowLeft size={18} />
-      返回上一页
+      {t('label')}
     </button>
   )
 }

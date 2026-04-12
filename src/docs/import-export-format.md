@@ -62,6 +62,7 @@
 
 - 顶层必须包含 `meta.type` 和 `meta.version`
 - 当前仅支持 `meta.version = "2.0"`
+- 导出文件会额外包含 `meta.publaVersion`，表示生成该数据包时的 Publa 版本；导入时不依赖该字段
 - `meta.type = "content"` 时，格式校验强制要求 `categories`、`tags`、`contents` 为数组
 - `meta.type = "settings"` 时，格式校验强制要求 `settings` 为数组
 - 其余数组字段可选；覆盖导入时，缺失的可选数组对应的表数据会被清空
@@ -78,6 +79,7 @@
   "meta": {
     "type": "content",
     "version": "2.0",
+    "publaVersion": "0.1.23",
     "exportedAt": "2026-01-01T00:00:00.000Z"
   },
   "categories": [],
@@ -94,11 +96,12 @@
 
 ### meta
 
-| 字段       | 类型   | 必填 | 说明                         |
-| ---------- | ------ | ---- | ---------------------------- |
-| type       | string | 是   | 固定值 `"content"`           |
-| version    | string | 是   | 数据格式版本，当前为 `"2.0"` |
-| exportedAt | string | 是   | 导出时间，ISO 8601 格式      |
+| 字段         | 类型   | 必填 | 说明                                       |
+| ------------ | ------ | ---- | ------------------------------------------ |
+| type         | string | 是   | 固定值 `"content"`                         |
+| version      | string | 是   | 数据格式版本，当前为 `"2.0"`               |
+| publaVersion | string | 否   | 导出该数据包时的 Publa 版本，如 `"0.1.23"` |
+| exportedAt   | string | 是   | 导出时间，ISO 8601 格式                    |
 
 ### categories（分类）
 
@@ -255,6 +258,7 @@
   "meta": {
     "type": "settings",
     "version": "2.0",
+    "publaVersion": "0.1.23",
     "exportedAt": "2026-01-01T00:00:00.000Z"
   },
   "users": [],
@@ -288,6 +292,7 @@
 | value | string / boolean / number / object | 是   | 设置项值，按该设置项真实类型导出 |
 
 > 注意：出于安全考虑，敏感字段（如 `jwtSecret`、`storageS3AccessKey`、`storageS3SecretKey` 等）不会被导出，导入时也会被忽略，并保留当前系统中已有的值。导入时兼容旧格式的字符串值；新版导出会按真实类型输出布尔、数字和通知对象。
+> 兼容性说明：导出时仅包含当前版本仍支持的设置项；导入时遇到未知或已废弃的设置项会自动忽略，不会中断整个导入流程。
 
 ### menus（菜单）
 
@@ -314,26 +319,26 @@
 
 ### themes（主题）
 
-| 字段       | 类型   | 必填 | 说明                                                                       |
-| ---------- | ------ | ---- | -------------------------------------------------------------------------- |
-| id         | number | 是   | 主题 ID；导入时按原 id 写入，以便 `activeThemeId` 设置引用不变             |
-| name       | string | 是   | 主题名称                                                                   |
-| css        | string | 否   | 主题 CSS 内容；内置主题为空字符串，实际 CSS 由后端静态文件提供             |
-| sortOrder  | number | 否   | 排序序号，默认 `0`                                                         |
-| builtinKey | string | 否   | 内置主题标识：`light` / `dark` / `blank`；自定义主题为 `null`              |
-| createdAt  | string | 否   | 创建时间                                                                   |
-| updatedAt  | string | 否   | 更新时间                                                                   |
+| 字段       | 类型   | 必填 | 说明                                                           |
+| ---------- | ------ | ---- | -------------------------------------------------------------- |
+| id         | number | 是   | 主题 ID；导入时按原 id 写入，以便 `activeThemeId` 设置引用不变 |
+| name       | string | 是   | 主题名称                                                       |
+| css        | string | 否   | 主题 CSS 内容；内置主题为空字符串，实际 CSS 由后端静态文件提供 |
+| sortOrder  | number | 否   | 排序序号，默认 `0`                                             |
+| builtinKey | string | 否   | 内置主题标识：`light` / `dark` / `blank`；自定义主题为 `null`  |
+| createdAt  | string | 否   | 创建时间                                                       |
+| updatedAt  | string | 否   | 更新时间                                                       |
 
 ### customStyles（自定义 CSS）
 
-| 字段      | 类型   | 必填 | 说明                                                                 |
-| --------- | ------ | ---- | -------------------------------------------------------------------- |
+| 字段      | 类型   | 必填 | 说明                                                                    |
+| --------- | ------ | ---- | ----------------------------------------------------------------------- |
 | id        | number | 是   | 自定义 CSS ID；导入时按原 id 写入，以便 `activeCustomStyleIds` 引用不变 |
-| name      | string | 是   | 名称                                                                 |
-| css       | string | 否   | CSS 内容                                                             |
-| sortOrder | number | 否   | 排序序号，默认 `0`                                                   |
-| createdAt | string | 否   | 创建时间                                                             |
-| updatedAt | string | 否   | 更新时间                                                             |
+| name      | string | 是   | 名称                                                                    |
+| css       | string | 否   | CSS 内容                                                                |
+| sortOrder | number | 否   | 排序序号，默认 `0`                                                      |
+| createdAt | string | 否   | 创建时间                                                                |
+| updatedAt | string | 否   | 更新时间                                                                |
 
 ---
 
@@ -356,7 +361,8 @@
 
 ### 设置数据导入
 
-- `settings` 为格式校验必填字段，提供后会先清空现有设置，再导入非敏感设置，并恢复敏感设置
+- `settings` 为格式校验必填字段，提供后会先清空现有设置，再导入非敏感设置，对缺失的已知设置项按系统默认值补齐，并恢复敏感设置
+- `settings` 中未知或已废弃的设置项会被自动忽略；当前版本仅导出仍受支持的设置项
 - `users`、`menus`、`redirectRules` 在格式校验阶段均为可选字段
 - `menus` 存在时，会清空现有菜单后重新导入；导入时自动拓扑排序处理父子关系；省略时保留现有菜单
 - `redirectRules` 存在时，会清空现有跳转规则后按 `sortOrder` 重建；省略时保留现有规则

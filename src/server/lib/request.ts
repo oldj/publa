@@ -1,3 +1,4 @@
+import { jsonError } from '@/server/lib/api-response'
 import { NextResponse } from 'next/server'
 
 /**
@@ -25,10 +26,13 @@ export async function safeParseJson<T = any>(
     return { data }
   } catch {
     return {
-      error: NextResponse.json(
-        { success: false, code: 'INVALID_JSON', message: 'Invalid JSON body' },
-        { status: 400 },
-      ),
+      error: await jsonError({
+        source: request,
+        namespace: 'common.api',
+        key: 'invalidJsonBody',
+        code: 'INVALID_JSON',
+        status: 400,
+      }),
     }
   }
 }
@@ -53,16 +57,20 @@ export function parseIntParam(
 /**
  * 解析路由中的 ID 参数，无效时返回 400 错误响应
  */
-export function parseIdParam(
+export async function parseIdParam(
   id: string,
-): { id: number; error?: never } | { id?: never; error: NextResponse } {
+  source?: Request,
+): Promise<{ id: number; error?: never } | { id?: never; error: NextResponse }> {
   const parsed = parseInt(id, 10)
   if (isNaN(parsed) || parsed <= 0) {
     return {
-      error: NextResponse.json(
-        { success: false, code: 'VALIDATION_ERROR', message: 'Invalid ID' },
-        { status: 400 },
-      ),
+      error: await jsonError({
+        source,
+        namespace: 'common.api',
+        key: 'invalidId',
+        code: 'VALIDATION_ERROR',
+        status: 400,
+      }),
     }
   }
   return { id: parsed }

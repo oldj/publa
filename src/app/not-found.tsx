@@ -1,4 +1,5 @@
 import GoBackButton from '@/components/GoBackButton'
+import { getServerTranslator } from '@/i18n/server'
 import BlankLayout from '@/layouts/blank'
 import { getAllSettings, toStr } from '@/server/services/settings'
 import { IconHome } from '@tabler/icons-react'
@@ -18,15 +19,16 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function NotFound() {
+  const { t } = await getServerTranslator('frontend.notFound')
   return (
     <BlankLayout>
       <div className="not-found">
-        <h1 className="not-found-title">404 - 页面没有找到</h1>
-        <p className="not-found-desc">这个页面不存在或者已过期。</p>
+        <h1 className="not-found-title">{t('title')}</h1>
+        <p className="not-found-desc">{t('description')}</p>
         <div className="not-found-actions">
           <a href="/" className="not-found-btn">
             <IconHome size={18} />
-            首页
+            {t('home')}
           </a>
           <GoBackButton />
         </div>

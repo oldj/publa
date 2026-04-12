@@ -28,6 +28,7 @@ import {
   IconTrash,
 } from '@tabler/icons-react'
 import clsx from 'clsx'
+import { useLocale, useTranslations } from 'next-intl'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 interface Tag {
@@ -56,6 +57,9 @@ const emptyForm: FormData = {
 type SortKey = 'name' | 'slug' | 'postCount'
 
 export default function TagsPage() {
+  const locale = useLocale()
+  const t = useTranslations('admin.tagsPage')
+  const tCommon = useTranslations('common')
   const [tagList, setTagList] = useState<Tag[]>([])
   const [opened, { open, close }] = useDisclosure(false)
   const [editingId, setEditingId] = useState<number | null>(null)
@@ -83,11 +87,11 @@ export default function TagsPage() {
       if (sortBy === 'postCount') {
         cmp = a.postCount - b.postCount
       } else {
-        cmp = a[sortBy].localeCompare(b[sortBy], 'zh')
+        cmp = a[sortBy].localeCompare(b[sortBy], locale)
       }
       return sortDir === 'asc' ? cmp : -cmp
     })
-  }, [tagList, sortBy, sortDir])
+  }, [locale, tagList, sortBy, sortDir])
 
   const toggleSort = (key: SortKey) => {
     if (sortBy === key) {
@@ -126,7 +130,7 @@ export default function TagsPage() {
 
   const handleSubmit = async () => {
     if (!form.name || !form.slug) {
-      notify({ color: 'red', message: '名称和 slug 不能为空' })
+      notify({ color: 'red', message: t('validation.nameAndSlugRequired') })
       return
     }
 
@@ -142,30 +146,35 @@ export default function TagsPage() {
       const data = await res.json()
 
       if (data.success) {
-        notify({ color: 'green', message: editingId ? '更新成功' : '创建成功' })
+        notify({
+          color: 'green',
+          message: editingId
+            ? tCommon('messages.updateSuccess')
+            : tCommon('messages.createSuccess'),
+        })
         close()
         fetchTags()
       } else {
-        notify({ color: 'red', message: data.message || '操作失败' })
+        notify({ color: 'red', message: data.message || tCommon('errors.operationFailed') })
       }
     } catch {
-      notify({ color: 'red', message: '网络错误' })
+      notify({ color: 'red', message: tCommon('errors.network') })
     } finally {
       setLoading(false)
     }
   }
 
   const handleDelete = async (id: number, name: string) => {
-    if (!(await myModal.confirm({ message: `确定要删除标签「${name}」吗？` }))) return
+    if (!(await myModal.confirm({ message: t('deleteConfirm', { name }) }))) return
 
     const res = await fetch(`/api/tags/${id}`, { method: 'DELETE' })
     const data = await res.json()
 
     if (data.success) {
-      notify({ color: 'green', message: '删除成功' })
+      notify({ color: 'green', message: tCommon('messages.deleteSuccess') })
       fetchTags()
     } else {
-      notify({ color: 'red', message: data.message || '删除失败' })
+      notify({ color: 'red', message: data.message || tCommon('errors.deleteFailed') })
     }
   }
 
@@ -184,13 +193,13 @@ export default function TagsPage() {
       })
       const data = await res.json()
       if (data.success) {
-        notify({ color: 'green', message: '重新计数成功' })
+        notify({ color: 'green', message: t('messages.recountSuccess') })
         fetchTags()
       } else {
-        notify({ color: 'red', message: data.message || '重新计数失败' })
+        notify({ color: 'red', message: data.message || t('messages.recountFailed') })
       }
     } catch {
-      notify({ color: 'red', message: '网络错误' })
+      notify({ color: 'red', message: tCommon('errors.network') })
     } finally {
       setRecounting(false)
     }
@@ -199,7 +208,7 @@ export default function TagsPage() {
   return (
     <Box mt="md">
       <Group justify="space-between" mb="lg">
-        <Title order={3}>标签管理</Title>
+        <Title order={3}>{t('title')}</Title>
         <Group gap="sm">
           <Button
             variant="default"
@@ -207,10 +216,10 @@ export default function TagsPage() {
             onClick={handleRecount}
             loading={recounting}
           >
-            重新计数
+            {t('recount')}
           </Button>
           <Button leftSection={<IconPlus size={16} />} onClick={() => handleOpen()}>
-            新建标签
+            {t('new')}
           </Button>
         </Group>
       </Group>
@@ -221,9 +230,9 @@ export default function TagsPage() {
             <Table.Tr>
               {(
                 [
-                  ['name', '名称'],
-                  ['slug', 'Slug'],
-                  ['postCount', '文章数'],
+                  ['name', t('columns.name')],
+                  ['slug', t('columns.slug')],
+                  ['postCount', t('columns.postCount')],
                 ] as const
               ).map(([key, label]) => (
                 <Table.Th key={key}>
@@ -242,7 +251,7 @@ export default function TagsPage() {
                   </UnstyledButton>
                 </Table.Th>
               ))}
-              <Table.Th>操作</Table.Th>
+              <Table.Th>{t('columns.actions')}</Table.Th>
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
@@ -265,13 +274,18 @@ export default function TagsPage() {
                 </Table.Td>
                 <Table.Td className={clsx(adminStyles.cellFit, adminStyles.cellCenter)}>
                   <Group gap="xs" wrap="nowrap">
-                    <ActionIcon variant="subtle" onClick={() => handleOpen(tag)}>
+                    <ActionIcon
+                      variant="subtle"
+                      onClick={() => handleOpen(tag)}
+                      aria-label={t('aria.edit')}
+                    >
                       <IconPencil size={16} />
                     </ActionIcon>
                     <ActionIcon
                       variant="subtle"
                       color="red"
                       onClick={() => handleDelete(tag.id, tag.name)}
+                      aria-label={t('aria.delete')}
                     >
                       <IconTrash size={16} />
                     </ActionIcon>
@@ -283,7 +297,7 @@ export default function TagsPage() {
               <Table.Tr>
                 <Table.Td colSpan={4}>
                   <Text ta="center" c="dimmed" py="md">
-                    暂无标签
+                    {t('empty')}
                   </Text>
                 </Table.Td>
               </Table.Tr>
@@ -292,42 +306,46 @@ export default function TagsPage() {
         </Table>
       </Table.ScrollContainer>
 
-      <Modal opened={opened} onClose={close} title={editingId ? '编辑标签' : '新建标签'}>
+      <Modal
+        opened={opened}
+        onClose={close}
+        title={editingId ? t('modal.editTitle') : t('modal.createTitle')}
+      >
         <TextInput
-          label="名称"
-          placeholder="标签名称"
+          label={t('fields.name')}
+          placeholder={t('fields.namePlaceholder')}
           required
           value={form.name}
           onChange={(e) => setField('name', e.target.value)}
         />
         <TextInput
-          label="Slug"
-          placeholder="url-slug"
+          label={t('fields.slug')}
+          placeholder={t('fields.slugPlaceholder')}
           required
           mt="sm"
           value={form.slug}
           onChange={(e) => setField('slug', e.target.value)}
         />
         <TextInput
-          label="SEO 标题"
-          placeholder="可选"
+          label={t('fields.seoTitle')}
+          placeholder={t('fields.optionalPlaceholder')}
           mt="sm"
           value={form.seoTitle}
           onChange={(e) => setField('seoTitle', e.target.value)}
         />
         <TextInput
-          label="SEO 描述"
-          placeholder="可选"
+          label={t('fields.seoDescription')}
+          placeholder={t('fields.optionalPlaceholder')}
           mt="sm"
           value={form.seoDescription}
           onChange={(e) => setField('seoDescription', e.target.value)}
         />
         <Group justify="flex-end" mt="lg">
           <Button variant="default" onClick={close}>
-            取消
+            {tCommon('actions.cancel')}
           </Button>
           <Button onClick={handleSubmit} loading={loading}>
-            {editingId ? '保存' : '创建'}
+            {editingId ? tCommon('actions.save') : tCommon('actions.create')}
           </Button>
         </Group>
       </Modal>
@@ -337,7 +355,7 @@ export default function TagsPage() {
         onClose={handleDrawerClose}
         position="right"
         size="80%"
-        title={drawerTag ? `标签「${drawerTag.name}」下的文章` : '文章列表'}
+        title={drawerTag ? t('drawerTitle', { name: drawerTag.name }) : t('drawerFallbackTitle')}
       >
         {drawerTag && <PostList key={drawerTag.id} initialTagId={String(drawerTag.id)} />}
       </Drawer>

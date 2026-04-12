@@ -1,4 +1,5 @@
 import { requireRole } from '@/server/auth'
+import { jsonError } from '@/server/lib/api-response'
 import { safeParseJson } from '@/server/lib/request'
 import { logActivity } from '@/server/services/activity-logs'
 import { exportCustomStylesAsZip } from '@/server/services/custom-styles'
@@ -35,19 +36,29 @@ export async function POST(request: NextRequest) {
   if (error) return error
 
   const ids = Array.isArray(body?.ids) ? body.ids : null
-  if (!ids || ids.length === 0 || !ids.every((id: unknown) => Number.isInteger(id) && (id as number) > 0)) {
-    return NextResponse.json(
-      { success: false, code: 'VALIDATION_ERROR', message: '未指定要导出的自定义 CSS' },
-      { status: 400 },
-    )
+  if (
+    !ids ||
+    ids.length === 0 ||
+    !ids.every((id: unknown) => Number.isInteger(id) && (id as number) > 0)
+  ) {
+    return jsonError({
+      source: request,
+      namespace: 'admin.api.customStyles',
+      key: 'exportSelectionRequired',
+      code: 'VALIDATION_ERROR',
+      status: 400,
+    })
   }
 
   const buf = await exportCustomStylesAsZip(ids as number[])
   if (buf.byteLength === 0) {
-    return NextResponse.json(
-      { success: false, code: 'VALIDATION_ERROR', message: '没有可导出的自定义 CSS' },
-      { status: 400 },
-    )
+    return jsonError({
+      source: request,
+      namespace: 'admin.api.customStyles',
+      key: 'exportEmpty',
+      code: 'VALIDATION_ERROR',
+      status: 400,
+    })
   }
 
   await logActivity(request, guard.user.id, 'export_custom_styles')

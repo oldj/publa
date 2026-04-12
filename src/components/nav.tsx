@@ -7,6 +7,7 @@
 
 import clsx from 'clsx'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import { usePathname } from 'next/navigation'
 
 interface MenuItem {
@@ -23,19 +24,19 @@ interface Props {
   siteSlogan?: string
 }
 
-const defaultMenus: MenuItem[] = [
-  { id: 0, title: '首页', url: '/', target: '_self' },
-  { id: 1, title: '文章', url: '/posts', target: '_self' },
-  { id: 2, title: '留言', url: '/guestbook', target: '_self' },
-  { id: 3, title: '关于', url: '/about', target: '_self' },
-]
-
 export default function Nav({
   menus,
   siteTitle = 'Publa',
   siteSlogan = 'Yet Another Amazing Blog',
 }: Props) {
+  const t = useTranslations('frontend.nav.defaultMenus')
   const pathname = usePathname()
+  const defaultMenus: MenuItem[] = [
+    { id: 0, title: t('home'), url: '/', target: '_self' },
+    { id: 1, title: t('posts'), url: '/posts', target: '_self' },
+    { id: 2, title: t('guestbook'), url: '/guestbook', target: '_self' },
+    { id: 3, title: t('about'), url: '/about', target: '_self' },
+  ]
   const menuItems = menus && menus.length > 0 ? menus : defaultMenus
 
   // 收集所有内部菜单 URL（排除外链和空白）

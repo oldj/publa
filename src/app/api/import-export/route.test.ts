@@ -34,8 +34,10 @@ describe('/api/import-export POST', () => {
       ok: true,
       user: { id: 1, username: 'admin', role: 'owner' },
     })
-    mockImportContentData.mockResolvedValue(['文章: 1 条'])
-    mockImportSettingsData.mockResolvedValue(['设置: 1 条'])
+    mockImportContentData.mockResolvedValue([{ key: 'contentItems', values: { count: 1 } }])
+    mockImportSettingsData.mockResolvedValue([
+      { key: 'settingsItems', values: { count: 1, defaultedCount: 0 } },
+    ])
   })
 
   it('未登录时返回 401', async () => {
@@ -104,6 +106,8 @@ describe('/api/import-export POST', () => {
 
     expect(response.status).toBe(200)
     expect(json.success).toBe(true)
+    expect(Array.isArray(json.data.results)).toBe(true)
+    expect(typeof json.data.results[0]).toBe('string')
     expect(mockImportContentData).toHaveBeenCalledWith(expect.anything(), 2)
   })
 
@@ -162,6 +166,7 @@ describe('/api/import-export POST', () => {
 
     expect(response.status).toBe(400)
     expect(json.code).toBe('IMPORT_FAILED')
-    expect(json.message).toContain('FOREIGN KEY constraint failed')
+    expect(typeof json.message).toBe('string')
+    expect(json.message.length).toBeGreaterThan(0)
   })
 })

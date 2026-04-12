@@ -102,8 +102,12 @@ describe('/api/email-settings', () => {
 
   it('非法通知配置会被拒绝', async () => {
     mockNormalizeSettingsPayload.mockImplementationOnce(() => {
-      const error = new Error('以下设置项的值类型不合法：emailNotifyNewComment')
-      error.name = 'SettingsValidationError'
+      const error = Object.assign(new Error('Invalid settings values'), {
+        name: 'SettingsValidationError',
+        invalidKeys: [],
+        invalidValueKeys: ['emailNotifyNewComment'],
+        reason: 'INVALID_VALUES' as const,
+      })
       throw error
     })
 

@@ -6,6 +6,7 @@
 'use client'
 
 import lodash from 'lodash'
+import { useTranslations } from 'next-intl'
 import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import CaptchaInput from 'src/components/captcha-input'
@@ -19,6 +20,8 @@ interface Props {
 
 const FeedbackForm = (props: Props) => {
   const { onSuccess } = props
+  const t = useTranslations('frontend.guestbook.form')
+  const tCommon = useTranslations('common')
   const [loading, setLoading] = useState(false)
   const {
     register,
@@ -64,8 +67,8 @@ const FeedbackForm = (props: Props) => {
         if (r && r.success) {
           dialog.Alert({
             icon: 'success',
-            title: '留言成功',
-            message: '留言已收到，感谢您的留言！',
+            title: t('successTitle'),
+            message: t('successMessage'),
           })
           refreshCaptcha()
           const cached = lodash.pick(values, ['username', 'email', 'url'])
@@ -74,16 +77,16 @@ const FeedbackForm = (props: Props) => {
             onSuccess()
           }
         } else if (r.code) {
-          let message = '出错了，留言失败！'
+          let message = t('errors.general')
           switch (r.code) {
             case 'INVALID_CAPTCHA':
-              message = '请输入正确的验证码。'
+              message = t('errors.invalidCaptcha')
               break
             case 'CONTENT_TOO_LONG':
-              message = `留言内容不能超过 ${GUESTBOOK_MAX_LENGTH} 字符。`
+              message = t('errors.contentTooLong', { max: GUESTBOOK_MAX_LENGTH })
               break
             case 'RATE_LIMITED':
-              message = '提交过于频繁，请稍后再试。'
+              message = t('errors.rateLimited')
               break
           }
 
@@ -104,7 +107,7 @@ const FeedbackForm = (props: Props) => {
       })
       .catch((e) => {
         console.error(e)
-        dialog.Alert({ icon: 'error', message: '网络错误，请稍后重试。' })
+        dialog.Alert({ icon: 'error', message: t('errors.network') })
       })
       .finally(() => {
         // refreshCaptcha()
@@ -123,7 +126,7 @@ const FeedbackForm = (props: Props) => {
         ref={refForm}
       >
         <label>
-          你的称呼 <span>*</span>
+          {t('fields.username')} <span>*</span>
         </label>
         {/*label="你的称呼"*/}
         {/*name="username"*/}
@@ -139,7 +142,7 @@ const FeedbackForm = (props: Props) => {
         {/*  ]}*/}
         {/*>*/}
         <label>
-          电子邮件 <span>*</span>
+          {t('fields.email')} <span>*</span>
         </label>
         <input maxLength={100} required={true} {...register('email')} />
 
@@ -153,7 +156,8 @@ const FeedbackForm = (props: Props) => {
         {/*  rules={[{ required: false }, { type: 'url', message: '请输入一个合法的 URL 地址。' }]}*/}
         {/*>*/}
         <label>
-          站点<span className="feedback-form-info">（选填）</span>
+          {t('fields.website')}
+          <span className="feedback-form-info">{tCommon('labels.optional')}</span>
         </label>
         <input maxLength={200} {...register('url')} />
 
@@ -168,7 +172,7 @@ const FeedbackForm = (props: Props) => {
         {/*  <Input.TextArea rows={8} maxLength={4096} />*/}
         {/*</Form.Item>*/}
         <label>
-          留言 <span>*</span>
+          {t('fields.content')} <span>*</span>
         </label>
         <textarea
           rows={8}
@@ -193,8 +197,8 @@ const FeedbackForm = (props: Props) => {
         {/*  <CaptchaInput setRefresh={(fn) => (refreshCaptcha = fn)} />*/}
         {/*</Form.Item>*/}
         <label>
-          验证码 <span>*</span>
-          <span className="feedback-form-info">（不区分大小写）</span>
+          {t('fields.captcha')} <span>*</span>
+          <span className="feedback-form-info">{tCommon('labels.caseInsensitive')}</span>
         </label>
         <CaptchaInput
           setRefresh={(fn: () => void) => (refreshCaptcha = fn)}
@@ -203,7 +207,7 @@ const FeedbackForm = (props: Props) => {
         />
 
         <Button type="primary" htmlType="submit" size="large" disabled={loading} loading={loading}>
-          {loading ? '提交中，请稍候……' : '提交留言'}
+          {loading ? t('submitting') : t('submit')}
         </Button>
       </form>
     </div>

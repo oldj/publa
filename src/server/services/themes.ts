@@ -24,10 +24,7 @@ export interface ThemeRow {
 
 /** 查询所有主题（内置 + 自定义），按排序字段升序 */
 export async function listThemes(): Promise<ThemeRow[]> {
-  return db
-    .select()
-    .from(themes)
-    .orderBy(asc(themes.sortOrder), asc(themes.id))
+  return db.select().from(themes).orderBy(asc(themes.sortOrder), asc(themes.id))
 }
 
 export async function getThemeById(id: number) {
@@ -58,14 +55,14 @@ export async function createTheme(input: ThemeInput) {
 }
 
 export class BuiltinThemeError extends Error {
-  constructor(message = '内置主题不可修改或删除') {
+  constructor(message = 'Builtin themes cannot be modified or deleted') {
     super(message)
     this.name = 'BuiltinThemeError'
   }
 }
 
 export class ActiveThemeError extends Error {
-  constructor(message = '无法删除当前正在使用的主题，请先切换到其他主题') {
+  constructor(message = 'Cannot delete the active theme') {
     super(message)
     this.name = 'ActiveThemeError'
   }
@@ -94,7 +91,7 @@ export async function updateTheme(id: number, input: Partial<ThemeInput>) {
 
 export async function deleteTheme(id: number) {
   const current = await getThemeById(id)
-  if (!current) return { success: false as const, message: '主题不存在' }
+  if (!current) return { success: false as const, code: 'NOT_FOUND' as const }
   if (current.builtinKey) {
     throw new BuiltinThemeError()
   }

@@ -6,6 +6,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import { useState } from 'react'
 import { ICategory, ITag } from 'typings'
 
@@ -18,6 +19,7 @@ interface IProps {
 
 export default function footer(props: IProps) {
   let { categories, tags, footerCopyright, enableSearch } = props
+  const t = useTranslations('frontend.footer')
   const [kw, setKw] = useState('')
 
   const onSearch = () => {
@@ -41,7 +43,7 @@ export default function footer(props: IProps) {
     <footer className="site-footer">
       <div className="site-footer-content">
         <div className="site-footer-block">
-          <h3>分类</h3>
+          <h3>{t('categories')}</h3>
           <ul className="site-footer-categories">
             {categories.map((i) => (
               <li key={i.id}>
@@ -55,7 +57,7 @@ export default function footer(props: IProps) {
           {enableSearch && (
             <div className="site-footer-search">
               <input
-                placeholder="Search in Google"
+                placeholder={t('searchPlaceholder')}
                 // allowClear
                 onChange={(e) => setKw(e.target.value)}
                 onKeyDown={(e) => {
@@ -64,19 +66,21 @@ export default function footer(props: IProps) {
                   }
                 }}
               />
-              <button onClick={() => onSearch()}>搜索</button>
+              <button onClick={() => onSearch()}>{t('searchButton')}</button>
             </div>
           )}
 
           <div className="site-footer-rss">
             <a href="/feed" target="_blank">
-              可通过 <strong>RSS</strong> 订阅本站
+              {t('rssPrefix')}
+              <strong>RSS</strong>
+              {t('rssSuffix')}
             </a>
           </div>
         </div>
 
         <div className="site-footer-block">
-          <h3>标签</h3>
+          <h3>{t('tags')}</h3>
           <div className="site-footer-tags">
             {tags.map((i) => (
               <Link href={`/posts/list?tag=${encodeURIComponent(i.name)}`} key={i.id}>

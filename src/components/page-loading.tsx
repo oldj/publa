@@ -3,8 +3,13 @@
  * @homepage: https://oldj.net
  */
 
+'use client'
+
+import { useTranslations } from 'next-intl'
+
 const PageLoading = () => {
-  return <div className="page-loading">loading...</div>
+  const t = useTranslations('common')
+  return <div className="page-loading">{t('loading')}</div>
 }
 
 export default PageLoading

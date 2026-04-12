@@ -1,10 +1,13 @@
+import ClientI18nBridge from '@/components/ClientI18nBridge'
 import HeadElements from '@/components/HeadElements'
 import NProgressBar from '@/components/NProgress'
+import { resolveLocale } from '@/i18n/resolve-locale'
 import { buildFaviconHref, getFaviconConfigFromSettings } from '@/server/services/favicon'
-import { getAllSettings } from '@/server/services/settings'
+import { getAllSettings, type LooseSettingType } from '@/server/services/settings'
 import '@/styles/globals.scss'
 import { Metadata } from 'next'
 import { headers } from 'next/headers'
+import { NextIntlClientProvider } from 'next-intl'
 import { Suspense } from 'react'
 
 export const dynamic = 'force-dynamic'
@@ -45,7 +48,7 @@ export const viewport = {
 
 export default async function RootLayout({ children }: { children: any }) {
   // 从数据库读取设置
-  let siteSettings: Record<string, unknown> = {}
+  let siteSettings: LooseSettingType = {}
   try {
     siteSettings = await getAllSettings()
   } catch {
@@ -60,17 +63,24 @@ export default async function RootLayout({ children }: { children: any }) {
   const pathname = headersList.get('x-pathname') || ''
   const isFrontend = !pathname.startsWith('/admin') && !pathname.startsWith('/setup')
 
+  // 解析当前 locale 用于 <html lang>。NextIntlClientProvider 会自动从
+  // getRequestConfig 继承 locale 与 messages，这里不需要再显式传
+  const locale = await resolveLocale()
+
   return (
-    <html lang="zh">
+    <html lang={locale}>
       <head>
         <link rel="alternate" type="application/rss+xml" title={rssTitle} href="/rss.xml" />
         {isFrontend && customHeadHtml && <HeadElements html={customHeadHtml} />}
       </head>
       <body data-role="body">
-        <Suspense fallback={null}>
-          <NProgressBar />
-        </Suspense>
-        {children}
+        <NextIntlClientProvider>
+          <ClientI18nBridge />
+          <Suspense fallback={null}>
+            <NProgressBar />
+          </Suspense>
+          {children}
+        </NextIntlClientProvider>
       </body>
     </html>
   )

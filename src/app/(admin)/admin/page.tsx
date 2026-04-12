@@ -9,6 +9,7 @@ import {
   IconUsers,
 } from '@tabler/icons-react'
 import { and, count, eq, isNull } from 'drizzle-orm'
+import { getTranslations } from 'next-intl/server'
 
 async function getStats() {
   const [postCount] = await db
@@ -40,24 +41,49 @@ async function getStats() {
 
 export default async function AdminDashboard() {
   const stats = await getStats()
+  const t = await getTranslations('admin.dashboard')
 
   const statCards = [
-    { title: '文章', value: stats.posts, icon: IconFileText, color: 'blue' },
-    { title: '评论', value: stats.comments, icon: IconMessage, color: 'green' },
-    { title: '待审评论', value: stats.pendingComments, icon: IconAlertCircle, color: 'orange' },
-    { title: '留言', value: stats.guestbook, icon: IconMailbox, color: 'violet' },
-    { title: '用户', value: stats.users, icon: IconUsers, color: 'teal' },
+    {
+      key: 'posts',
+      title: t('stats.posts'),
+      value: stats.posts,
+      icon: IconFileText,
+      color: 'blue',
+    },
+    {
+      key: 'comments',
+      title: t('stats.comments'),
+      value: stats.comments,
+      icon: IconMessage,
+      color: 'green',
+    },
+    {
+      key: 'pendingComments',
+      title: t('stats.pendingComments'),
+      value: stats.pendingComments,
+      icon: IconAlertCircle,
+      color: 'orange',
+    },
+    {
+      key: 'guestbook',
+      title: t('stats.guestbook'),
+      value: stats.guestbook,
+      icon: IconMailbox,
+      color: 'violet',
+    },
+    { key: 'users', title: t('stats.users'), value: stats.users, icon: IconUsers, color: 'teal' },
   ]
 
   return (
-    <Box mt="md">
-      <Title order={3} mb="lg">
-        仪表盘
+    <Box mt="md" data-role="admin-dashboard-page">
+      <Title order={3} mb="lg" data-role="admin-dashboard-title">
+        {t('title')}
       </Title>
 
       <SimpleGrid cols={{ base: 1, xs: 2, md: 3, lg: 5 }}>
         {statCards.map((stat) => (
-          <Paper key={stat.title} withBorder p="md" radius="md">
+          <Paper key={stat.key} withBorder p="md" radius="md">
             <Group justify="space-between">
               <div>
                 <Text c="dimmed" tt="uppercase" fw={700} fz="xs">

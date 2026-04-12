@@ -1,5 +1,6 @@
-import { getCurrentUser } from '@/server/auth'
+import { requireCurrentUser } from '@/server/auth'
 import { db } from '@/server/db'
+import { jsonError, jsonSuccess } from '@/server/lib/api-response'
 import { renderMarkdown, htmlToText } from '@/server/lib/markdown'
 import { isUniqueConstraintError, parseIntParam, safeParseJson } from '@/server/lib/request'
 import {
@@ -12,16 +13,28 @@ import {
 import { publishDraft, saveDraft } from '@/server/services/revisions'
 import { parsePageDraftMetadata } from '@/shared/revision-metadata'
 import { logActivity } from '@/server/services/activity-logs'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
+
+function getPathValidationKey(
+  code:
+    | 'REQUIRED'
+    | 'ENDS_WITH_SLASH'
+    | 'STARTS_WITH_SLASH'
+    | 'STARTS_WITH_HYPHEN'
+    | 'ENDS_WITH_HYPHEN'
+    | 'RESERVED',
+) {
+  if (code === 'REQUIRED') return 'pathRequired'
+  if (code === 'ENDS_WITH_SLASH') return 'pathEndsWithSlash'
+  if (code === 'STARTS_WITH_SLASH') return 'pathStartsWithSlash'
+  if (code === 'STARTS_WITH_HYPHEN') return 'pathStartsWithHyphen'
+  if (code === 'ENDS_WITH_HYPHEN') return 'pathEndsWithHyphen'
+  return 'pathReserved'
+}
 
 export async function GET(request: NextRequest) {
-  const user = await getCurrentUser()
-  if (!user) {
-    return NextResponse.json(
-      { success: false, code: 'UNAUTHORIZED', message: 'Unauthorized' },
-      { status: 401 },
-    )
-  }
+  const guard = await requireCurrentUser()
+  if (!guard.ok) return guard.response
 
   const { searchParams } = new URL(request.url)
   const page = parseIntParam(searchParams.get('page'), 1, 1)
@@ -30,17 +43,12 @@ export async function GET(request: NextRequest) {
   const search = searchParams.get('search') || undefined
 
   const result = await listPages({ page, pageSize, status, search })
-  return NextResponse.json({ success: true, data: result })
+  return jsonSuccess(result)
 }
 
 export async function POST(request: NextRequest) {
-  const user = await getCurrentUser()
-  if (!user) {
-    return NextResponse.json(
-      { success: false, code: 'UNAUTHORIZED', message: 'Unauthorized' },
-      { status: 401 },
-    )
-  }
+  const guard = await requireCurrentUser()
+  if (!guard.ok) return guard.response
 
   const { data: body, error } = await safeParseJson(request)
   if (error) return error
@@ -48,38 +56,51 @@ export async function POST(request: NextRequest) {
   // 创建空草稿（首次自动保存时调用）
   if (body.createEmpty) {
     const page = await createEmptyPage()
-    return NextResponse.json({ success: true, data: page })
+    return jsonSuccess(page)
   }
 
   if (!body.title || !body.path) {
-    return NextResponse.json(
-      { success: false, code: 'VALIDATION_ERROR', message: '标题和路径不能为空' },
-      { status: 400 },
-    )
+    return jsonError({
+      source: request,
+      namespace: 'admin.api.pages',
+      key: 'titleAndPathRequired',
+      code: 'VALIDATION_ERROR',
+      status: 400,
+    })
   }
 
   // 定时发布必须提供发布时间
   if (body.status === 'scheduled' && !body.publishedAt) {
-    return NextResponse.json(
-      { success: false, code: 'VALIDATION_ERROR', message: '定时发布必须指定发布时间' },
-      { status: 400 },
-    )
+    return jsonError({
+      source: request,
+      namespace: 'admin.api.pages',
+      key: 'publishedAtRequired',
+      code: 'VALIDATION_ERROR',
+      status: 400,
+    })
   }
 
   const pathCheck = validatePagePath(body.path)
   if (!pathCheck.valid) {
-    return NextResponse.json(
-      { success: false, code: 'INVALID_PATH', message: pathCheck.message },
-      { status: 400 },
-    )
+    return jsonError({
+      source: request,
+      namespace: 'admin.api.pages',
+      key: getPathValidationKey(pathCheck.code),
+      values: pathCheck.values,
+      code: 'INVALID_PATH',
+      status: 400,
+    })
   }
 
   const pathAvailable = await isPagePathAvailable(body.path)
   if (!pathAvailable) {
-    return NextResponse.json(
-      { success: false, code: 'DUPLICATE_PATH', message: '该路径已被使用' },
-      { status: 400 },
-    )
+    return jsonError({
+      source: request,
+      namespace: 'admin.api.pages',
+      key: 'duplicatePath',
+      code: 'DUPLICATE_PATH',
+      status: 400,
+    })
   }
 
   // 根据内容类型处理
@@ -120,22 +141,25 @@ export async function POST(request: NextRequest) {
               publishedAt: page.publishedAt,
             }),
           },
-          user.id,
+          guard.user.id,
           tx,
         )
-        await publishDraft('page', page.id, user.id, tx)
+        await publishDraft('page', page.id, guard.user.id, tx)
       })
     }
 
-    await logActivity(request, user.id, 'create_page')
+    await logActivity(request, guard.user.id, 'create_page')
 
-    return NextResponse.json({ success: true, data: page })
+    return jsonSuccess(page)
   } catch (err) {
     if (isUniqueConstraintError(err)) {
-      return NextResponse.json(
-        { success: false, code: 'DUPLICATE_PATH', message: '该路径已被使用' },
-        { status: 400 },
-      )
+      return jsonError({
+        source: request,
+        namespace: 'admin.api.pages',
+        key: 'duplicatePath',
+        code: 'DUPLICATE_PATH',
+        status: 400,
+      })
     }
     throw err
   }

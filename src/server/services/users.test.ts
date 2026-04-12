@@ -191,7 +191,7 @@ describe('deleteUser', () => {
   it('不能删除自己', async () => {
     const result = await deleteUser(1, 1)
     expect(result.success).toBe(false)
-    expect(result.message).toBe('不能删除自己')
+    if (!result.success) expect(result.code).toBe('CANNOT_DELETE_SELF')
 
     // 用户仍然存在
     const fetched = await getUserById(1)
@@ -201,7 +201,7 @@ describe('deleteUser', () => {
   it('删除不存在的用户', async () => {
     const result = await deleteUser(999, 1)
     expect(result.success).toBe(false)
-    expect(result.message).toBe('用户不存在')
+    if (!result.success) expect(result.code).toBe('NOT_FOUND')
   })
 
   it('站长可以删除其他站长', async () => {

@@ -1,3 +1,7 @@
+const createNextIntlPlugin = require('next-intl/plugin')
+
+const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts')
+
 const next_configs = {
   output: 'standalone',
   allowedDevOrigins: ['127.0.0.1', '*.oldj.net', '*.tominlab.com'],
@@ -43,4 +47,4 @@ const next_configs = {
   },
 }
 
-module.exports = next_configs
+module.exports = withNextIntl(next_configs)

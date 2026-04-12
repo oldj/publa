@@ -1,16 +1,12 @@
-import { getCurrentUser } from '@/server/auth'
+import { requireCurrentUser } from '@/server/auth'
+import { jsonSuccess } from '@/server/lib/api-response'
 import { parseIntParam } from '@/server/lib/request'
 import { listComments } from '@/server/services/comments'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 
 export async function GET(request: NextRequest) {
-  const user = await getCurrentUser()
-  if (!user) {
-    return NextResponse.json(
-      { success: false, code: 'UNAUTHORIZED', message: 'Unauthorized' },
-      { status: 401 },
-    )
-  }
+  const guard = await requireCurrentUser()
+  if (!guard.ok) return guard.response
 
   const { searchParams } = new URL(request.url)
   const page = parseIntParam(searchParams.get('page'), 1, 1)
@@ -21,5 +17,5 @@ export async function GET(request: NextRequest) {
     : undefined
 
   const result = await listComments({ page, pageSize, status, contentId })
-  return NextResponse.json({ success: true, data: result })
+  return jsonSuccess(result)
 }

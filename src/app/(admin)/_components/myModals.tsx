@@ -1,5 +1,6 @@
 import { Button, Stack } from '@mantine/core'
 import { modals } from '@mantine/modals'
+import { getClientTranslator } from '@/i18n/client-runtime'
 
 interface ModalOptions {
   title?: string | null
@@ -10,17 +11,17 @@ interface ModalOptions {
 
 function renderMessage(message: React.ReactNode): React.ReactNode {
   if (typeof message !== 'string') return message
-  return message.split('\n').flatMap((part, i) =>
-    i === 0 ? [part] : [<br key={i} />, part],
-  )
+  return message.split('\n').flatMap((part, i) => (i === 0 ? [part] : [<br key={i} />, part]))
 }
 
 function getTitle(title: string | null | undefined): string | undefined {
+  const tCommon = getClientTranslator('common')
   if (title === null) return undefined
-  return title || '提示'
+  return title || tCommon('modal.title')
 }
 
 async function alert(options: ModalOptions): Promise<boolean> {
+  const tCommon = getClientTranslator('common')
   return new Promise((resolve) => {
     let resolved = false
     const id = modals.open({
@@ -38,16 +39,19 @@ async function alert(options: ModalOptions): Promise<boolean> {
               modals.close(id)
             }}
           >
-            {options.okText || '确定'}
+            {options.okText || tCommon('actions.confirm')}
           </Button>
         </Stack>
       ),
-      onClose: () => { if (!resolved) resolve(true) },
+      onClose: () => {
+        if (!resolved) resolve(true)
+      },
     })
   })
 }
 
 async function confirm(options: ModalOptions): Promise<boolean> {
+  const tCommon = getClientTranslator('common')
   return new Promise((resolve) => {
     let resolved = false
     modals.openConfirmModal({
@@ -56,12 +60,20 @@ async function confirm(options: ModalOptions): Promise<boolean> {
       withCloseButton: options.title !== null,
       children: <div>{renderMessage(options.message)}</div>,
       labels: {
-        confirm: options.okText || '确定',
-        cancel: options.cancelText || '取消',
+        confirm: options.okText || tCommon('actions.confirm'),
+        cancel: options.cancelText || tCommon('actions.cancel'),
       },
-      onCancel: () => { resolved = true; resolve(false) },
-      onConfirm: () => { resolved = true; resolve(true) },
-      onClose: () => { if (!resolved) resolve(false) },
+      onCancel: () => {
+        resolved = true
+        resolve(false)
+      },
+      onConfirm: () => {
+        resolved = true
+        resolve(true)
+      },
+      onClose: () => {
+        if (!resolved) resolve(false)
+      },
     })
   })
 }

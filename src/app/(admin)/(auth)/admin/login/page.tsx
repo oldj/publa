@@ -1,14 +1,17 @@
 'use client'
 
+import { useAdminUrl } from '@/app/(admin)/_components/AdminPathContext'
 import { notify } from '@/lib/notify'
 import { normalizePassword, normalizeUsername } from '@/lib/user-input'
 import { version } from '@/lib/version'
-import { useAdminUrl } from '@/app/(admin)/_components/AdminPathContext'
 import { Button, Container, Paper, PasswordInput, Text, TextInput, Title } from '@mantine/core'
+import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
 export default function AdminLoginPage() {
+  const t = useTranslations('admin.login')
+  const tCommon = useTranslations('common')
   const router = useRouter()
   const adminUrl = useAdminUrl()
   const [loading, setLoading] = useState(false)
@@ -22,7 +25,7 @@ export default function AdminLoginPage() {
     const normalizedPassword = normalizePassword(password)
 
     if (!normalizedUsername || !normalizedPassword) {
-      notify({ color: 'red', message: '请输入用户名和密码' })
+      notify({ color: 'red', message: t('errors.emptyCredentials') })
       return
     }
 
@@ -38,10 +41,10 @@ export default function AdminLoginPage() {
       if (data.success) {
         router.push(adminUrl())
       } else {
-        notify({ color: 'red', message: data.message || '登录失败' })
+        notify({ color: 'red', message: data.message || t('errors.loginFailed') })
       }
     } catch {
-      notify({ color: 'red', message: '网络错误' })
+      notify({ color: 'red', message: tCommon('errors.network') })
     } finally {
       setLoading(false)
     }
@@ -49,32 +52,41 @@ export default function AdminLoginPage() {
 
   return (
     <Container size={420} my={80}>
-      <Title ta="center">Publa 管理后台</Title>
+      <Title ta="center">{t('title')}</Title>
       <Text c="dimmed" size="sm" ta="center" mt={5}>
-        请输入管理员账号登录
+        {t('subtitle')}
       </Text>
 
       <Paper withBorder shadow="sm" p={22} pb={40} mt={30} radius="md">
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} data-role="admin-login-form">
           <TextInput
-            label="用户名"
-            placeholder="请输入用户名"
+            label={t('fields.username')}
+            placeholder={t('fields.usernamePlaceholder')}
             required
             radius="md"
+            data-role="admin-login-username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
           />
           <PasswordInput
-            label="密码"
-            placeholder="请输入密码"
+            label={t('fields.password')}
+            placeholder={t('fields.passwordPlaceholder')}
             required
             mt="md"
             radius="md"
+            data-role="admin-login-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
-          <Button fullWidth mt="xl" radius="md" type="submit" loading={loading}>
-            登录
+          <Button
+            fullWidth
+            mt="xl"
+            radius="md"
+            type="submit"
+            loading={loading}
+            data-role="admin-login-submit"
+          >
+            {t('submit')}
           </Button>
         </form>
       </Paper>

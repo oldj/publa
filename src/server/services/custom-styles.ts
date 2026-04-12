@@ -21,10 +21,7 @@ export interface CustomStyleRow {
 }
 
 export async function listCustomStyles(): Promise<CustomStyleRow[]> {
-  return db
-    .select()
-    .from(customStyles)
-    .orderBy(asc(customStyles.sortOrder), asc(customStyles.id))
+  return db.select().from(customStyles).orderBy(asc(customStyles.sortOrder), asc(customStyles.id))
 }
 
 export async function getCustomStyleById(id: number) {
@@ -70,7 +67,7 @@ export async function updateCustomStyle(id: number, input: Partial<CustomStyleIn
 
 export async function deleteCustomStyle(id: number) {
   const current = await getCustomStyleById(id)
-  if (!current) return { success: false as const, message: '自定义 CSS 不存在' }
+  if (!current) return { success: false as const, code: 'NOT_FOUND' as const }
   await db.delete(customStyles).where(eq(customStyles.id, id))
   return { success: true as const }
 }

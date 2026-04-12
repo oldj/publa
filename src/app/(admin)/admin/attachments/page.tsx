@@ -47,6 +47,7 @@ import {
 } from '@tabler/icons-react'
 import dayjs from 'dayjs'
 import { nanoid } from 'nanoid'
+import { useTranslations } from 'next-intl'
 import { useCallback, useEffect, useState } from 'react'
 import { useCurrentUser } from '../../_components/AdminCountsContext'
 import adminStyles from '../../_components/AdminShell.module.scss'
@@ -96,6 +97,9 @@ const providerLabel: Record<string, string> = {
 }
 
 export default function AttachmentsPage() {
+  const t = useTranslations('admin.attachmentsPage')
+  const tCommon = useTranslations('common')
+  const tApi = useTranslations('admin.api.attachments')
   const currentUser = useCurrentUser()
   const canManageConfig = currentUser?.role === 'owner'
   const [data, setData] = useState<{
@@ -197,12 +201,12 @@ export default function AttachmentsPage() {
       })
       const json = await res.json()
       if (json.success) {
-        notify({ color: 'green', message: '连接成功' })
+        notify({ color: 'green', message: t('messages.connectionSuccess') })
       } else {
-        notify({ color: 'red', message: json.message || '连接失败' })
+        notify({ color: 'red', message: json.message || tApi('connectionFailed') })
       }
     } catch {
-      notify({ color: 'red', message: '连接失败' })
+      notify({ color: 'red', message: tApi('connectionFailed') })
     } finally {
       setTesting(false)
     }
@@ -220,14 +224,14 @@ export default function AttachmentsPage() {
       })
       const json = await res.json()
       if (json.success) {
-        notify({ color: 'green', message: '保存成功' })
+        notify({ color: 'green', message: tCommon('save.success') })
         setConfigOpened(false)
         fetchConfig()
       } else {
-        notify({ color: 'red', message: json.message || '保存失败' })
+        notify({ color: 'red', message: json.message || tCommon('errors.saveFailed') })
       }
     } catch {
-      notify({ color: 'red', message: '网络错误' })
+      notify({ color: 'red', message: tCommon('errors.network') })
     } finally {
       setSaving(false)
     }
@@ -245,15 +249,21 @@ export default function AttachmentsPage() {
         const res = await fetch('/api/attachments', { method: 'POST', body: formData })
         const json = await res.json()
         if (!json.success) {
-          notify({ color: 'red', message: `上传 ${file.name} 失败：${json.message}` })
+          notify({
+            color: 'red',
+            message: t('messages.uploadItemFailedWithMessage', {
+              name: file.name,
+              message: json.message || tCommon('errors.uploadFailed'),
+            }),
+          })
         }
       } catch {
-        notify({ color: 'red', message: `上传 ${file.name} 失败` })
+        notify({ color: 'red', message: t('messages.uploadItemFailed', { name: file.name }) })
       }
     }
 
     setUploading(false)
-    notify({ color: 'green', message: '上传完成' })
+    notify({ color: 'green', message: t('messages.uploadComplete') })
     fetchData()
   }
 
@@ -276,9 +286,14 @@ export default function AttachmentsPage() {
   }
 
   const handleDelete = async (id: number, name: string) => {
-    if (!(await myModal.confirm({ message: `确定要删除「${name}」吗？` }))) return
+    if (!(await myModal.confirm({ message: t('confirm.deleteOne', { name }) }))) return
     const nid = `delete-${id}`
-    notifications.show({ id: nid, loading: true, message: '正在删除…', autoClose: false })
+    notifications.show({
+      id: nid,
+      loading: true,
+      message: t('notifications.deleting'),
+      autoClose: false,
+    })
     const res = await fetch(`/api/attachments?id=${id}`, { method: 'DELETE' })
     const json = await res.json()
     if (json.success) {
@@ -287,7 +302,7 @@ export default function AttachmentsPage() {
         loading: false,
         color: 'green',
         icon: <IconCheck size={18} />,
-        message: '删除成功',
+        message: t('notifications.deleted'),
         autoClose: 2000,
       })
       setSelected((prev) => {
@@ -306,7 +321,7 @@ export default function AttachmentsPage() {
         loading: false,
         color: 'red',
         icon: <IconX size={18} />,
-        message: json.message || '删除失败',
+        message: json.message || tCommon('errors.deleteFailed'),
         autoClose: 4000,
       })
     }
@@ -314,7 +329,7 @@ export default function AttachmentsPage() {
 
   const handleBatchDelete = async () => {
     if (selected.size === 0) return
-    if (!(await myModal.confirm({ message: `确定要删除选中的 ${selected.size} 个附件吗？` })))
+    if (!(await myModal.confirm({ message: t('confirm.deleteMany', { count: selected.size }) })))
       return
 
     const nid = 'batch-delete'
@@ -322,7 +337,7 @@ export default function AttachmentsPage() {
     notifications.show({
       id: nid,
       loading: true,
-      message: `正在删除 ${total} 个附件…`,
+      message: t('notifications.deletingMany', { count: total }),
       autoClose: false,
     })
 
@@ -340,7 +355,7 @@ export default function AttachmentsPage() {
         loading: false,
         color: 'orange',
         icon: <IconX size={18} />,
-        message: `已删除 ${successCount} 个，${failCount} 个删除失败`,
+        message: t('notifications.batchDeletedPartial', { successCount, failCount }),
         autoClose: 4000,
       })
     } else {
@@ -349,7 +364,7 @@ export default function AttachmentsPage() {
         loading: false,
         color: 'green',
         icon: <IconCheck size={18} />,
-        message: `已删除 ${successCount} 个附件`,
+        message: t('notifications.batchDeletedSuccess', { count: successCount }),
         autoClose: 2000,
       })
     }
@@ -363,7 +378,7 @@ export default function AttachmentsPage() {
 
   const handleCopyUrl = (url: string) => {
     navigator.clipboard.writeText(url)
-    notify({ color: 'green', message: '已复制链接' })
+    notify({ color: 'green', message: t('messages.copySuccess') })
   }
 
   const openDetail = (att: Attachment) => {
@@ -402,15 +417,15 @@ export default function AttachmentsPage() {
       })
       const json = await res.json()
       if (json.success) {
-        notify({ color: 'green', message: '重命名成功' })
+        notify({ color: 'green', message: t('messages.renameSuccess') })
         setRenameOpened(false)
         setDetailAttachment(json.data)
         fetchData()
       } else {
-        notify({ color: 'red', message: json.message || '重命名失败' })
+        notify({ color: 'red', message: json.message || tApi('renameFailed') })
       }
     } catch {
-      notify({ color: 'red', message: '网络错误' })
+      notify({ color: 'red', message: tCommon('errors.network') })
     } finally {
       setRenaming(false)
     }
@@ -428,7 +443,7 @@ export default function AttachmentsPage() {
     <Box mt="md">
       <Group justify="space-between" mb="lg">
         <Group gap="sm">
-          <Title order={3}>附件管理</Title>
+          <Title order={3}>{t('title')}</Title>
           {canManageConfig &&
             (isConfigured ? (
               <Badge variant="light" color="green" leftSection={<IconCloud size={12} />}>
@@ -436,13 +451,13 @@ export default function AttachmentsPage() {
               </Badge>
             ) : (
               <Badge variant="light" color="orange" leftSection={<IconCloudOff size={12} />}>
-                未配置
+                {t('badges.unconfigured')}
               </Badge>
             ))}
         </Group>
         {canManageConfig && (
           <Button variant="light" leftSection={<IconSettings size={16} />} onClick={openConfig}>
-            配置
+            {t('buttons.config')}
           </Button>
         )}
       </Group>
@@ -467,10 +482,10 @@ export default function AttachmentsPage() {
           </Dropzone.Idle>
           <div>
             <Text size="lg" inline>
-              {isConfigured ? '拖拽文件到此处或点击选择文件' : '请先配置存储服务'}
+              {isConfigured ? t('upload.ready') : t('upload.needConfig')}
             </Text>
             <Text size="sm" c="dimmed" inline mt={7}>
-              支持多文件上传
+              {t('upload.hint')}
             </Text>
           </div>
         </Group>
@@ -486,7 +501,7 @@ export default function AttachmentsPage() {
             leftSection={<IconTrash size={14} />}
             onClick={handleBatchDelete}
           >
-            删除选中 ({selected.size})
+            {t('buttons.deleteSelected', { count: selected.size })}
           </Button>
         ) : (
           <div />
@@ -533,7 +548,7 @@ export default function AttachmentsPage() {
                 />
               </Table.Th>
               <Table.Th style={{ width: 64 }} />
-              <Table.Th>文件</Table.Th>
+              <Table.Th>{t('columns.file')}</Table.Th>
               <Table.Th style={{ width: 50 }} />
             </Table.Tr>
           </Table.Thead>
@@ -586,7 +601,7 @@ export default function AttachmentsPage() {
                 </Table.Td>
                 <Table.Td style={{ width: 120 }}>
                   <Group gap={4}>
-                    <Tooltip label="复制链接" position="top" withArrow>
+                    <Tooltip label={t('tooltips.copyLink')} position="top" withArrow>
                       <ActionIcon
                         variant="subtle"
                         color="gray"
@@ -596,7 +611,7 @@ export default function AttachmentsPage() {
                         <IconLink size={16} />
                       </ActionIcon>
                     </Tooltip>
-                    <Tooltip label="编辑" position="top" withArrow>
+                    <Tooltip label={t('tooltips.edit')} position="top" withArrow>
                       <ActionIcon
                         variant="subtle"
                         color="gray"
@@ -606,7 +621,7 @@ export default function AttachmentsPage() {
                         <IconPencil size={16} />
                       </ActionIcon>
                     </Tooltip>
-                    <Tooltip label="删除" position="top" withArrow>
+                    <Tooltip label={t('tooltips.delete')} position="top" withArrow>
                       <ActionIcon
                         variant="subtle"
                         color="red"
@@ -658,7 +673,7 @@ export default function AttachmentsPage() {
                   {formatSize(att.size)}
                 </Text>
                 <Group gap={4}>
-                  <Tooltip label="复制链接" position="top" withArrow>
+                  <Tooltip label={t('tooltips.copyLink')} position="top" withArrow>
                     <ActionIcon
                       variant="subtle"
                       color="gray"
@@ -668,7 +683,7 @@ export default function AttachmentsPage() {
                       <IconLink size={14} />
                     </ActionIcon>
                   </Tooltip>
-                  <Tooltip label="编辑" position="top" withArrow>
+                  <Tooltip label={t('tooltips.edit')} position="top" withArrow>
                     <ActionIcon
                       variant="subtle"
                       color="gray"
@@ -678,7 +693,7 @@ export default function AttachmentsPage() {
                       <IconPencil size={14} />
                     </ActionIcon>
                   </Tooltip>
-                  <Tooltip label="删除" position="top" withArrow>
+                  <Tooltip label={t('tooltips.delete')} position="top" withArrow>
                     <ActionIcon
                       variant="subtle"
                       color="red"
@@ -697,7 +712,7 @@ export default function AttachmentsPage() {
 
       {data?.items.length === 0 && (
         <Text ta="center" c="dimmed" py="xl">
-          暂无附件
+          {t('empty')}
         </Text>
       )}
 
@@ -705,7 +720,7 @@ export default function AttachmentsPage() {
         <Group justify="center" mt="md" gap="md">
           {data.itemCount > 0 && (
             <Text size="sm" c="dimmed">
-              共 {data.itemCount} 个
+              {t('totalCount', { count: data.itemCount })}
             </Text>
           )}
           {data.pageCount > 1 && (
@@ -724,14 +739,14 @@ export default function AttachmentsPage() {
         padding={0}
         styles={{ body: { display: 'flex', justifyContent: 'center' } }}
       >
-        {previewUrl && <Image src={previewUrl} alt="preview" fit="contain" mah="80vh" />}
+        {previewUrl && <Image src={previewUrl} alt={t('previewAlt')} fit="contain" mah="80vh" />}
       </Modal>
 
       {/* 附件详情 Drawer */}
       <Drawer
         opened={!!detailAttachment}
         onClose={() => setDetailAttachment(null)}
-        title="附件详情"
+        title={t('detail.title')}
         position="right"
         size="lg"
       >
@@ -751,7 +766,7 @@ export default function AttachmentsPage() {
               <Table.Tbody>
                 <Table.Tr>
                   <Table.Td fw={500} w={100}>
-                    文件名
+                    {t('detail.fields.filename')}
                   </Table.Td>
                   <Table.Td>
                     <Text size="sm" style={{ wordBreak: 'break-all' }}>
@@ -760,7 +775,7 @@ export default function AttachmentsPage() {
                   </Table.Td>
                 </Table.Tr>
                 <Table.Tr>
-                  <Table.Td fw={500}>原始文件名</Table.Td>
+                  <Table.Td fw={500}>{t('detail.fields.originalFilename')}</Table.Td>
                   <Table.Td>
                     <Text size="sm" style={{ wordBreak: 'break-all' }}>
                       {detailAttachment.originalFilename}
@@ -768,13 +783,13 @@ export default function AttachmentsPage() {
                   </Table.Td>
                 </Table.Tr>
                 <Table.Tr>
-                  <Table.Td fw={500}>存储路径</Table.Td>
+                  <Table.Td fw={500}>{t('detail.fields.storageKey')}</Table.Td>
                   <Table.Td>
                     <Group gap="xs" wrap="nowrap">
                       <Text size="sm" style={{ wordBreak: 'break-all' }}>
                         {detailAttachment.storageKey}
                       </Text>
-                      <Tooltip label="修改" withArrow>
+                      <Tooltip label={t('tooltips.rename')} withArrow>
                         <ActionIcon
                           variant="subtle"
                           color="gray"
@@ -789,13 +804,13 @@ export default function AttachmentsPage() {
                   </Table.Td>
                 </Table.Tr>
                 <Table.Tr>
-                  <Table.Td fw={500}>类型</Table.Td>
+                  <Table.Td fw={500}>{t('detail.fields.type')}</Table.Td>
                   <Table.Td>
                     <Text size="sm">{detailAttachment.mimeType}</Text>
                   </Table.Td>
                 </Table.Tr>
                 <Table.Tr>
-                  <Table.Td fw={500}>存储</Table.Td>
+                  <Table.Td fw={500}>{t('detail.fields.storage')}</Table.Td>
                   <Table.Td>
                     <Text size="sm">
                       {providerLabel[detailAttachment.storageProvider] ||
@@ -804,14 +819,14 @@ export default function AttachmentsPage() {
                   </Table.Td>
                 </Table.Tr>
                 <Table.Tr>
-                  <Table.Td fw={500}>大小</Table.Td>
+                  <Table.Td fw={500}>{t('detail.fields.size')}</Table.Td>
                   <Table.Td>
                     <Text size="sm">{formatSize(detailAttachment.size)}</Text>
                   </Table.Td>
                 </Table.Tr>
                 {detailAttachment.width && detailAttachment.height && (
                   <Table.Tr>
-                    <Table.Td fw={500}>尺寸</Table.Td>
+                    <Table.Td fw={500}>{t('detail.fields.dimensions')}</Table.Td>
                     <Table.Td>
                       <Text size="sm">
                         {detailAttachment.width} × {detailAttachment.height}
@@ -820,7 +835,7 @@ export default function AttachmentsPage() {
                   </Table.Tr>
                 )}
                 <Table.Tr>
-                  <Table.Td fw={500}>URL</Table.Td>
+                  <Table.Td fw={500}>{t('detail.fields.url')}</Table.Td>
                   <Table.Td>
                     <Group gap="xs" wrap="nowrap">
                       <Anchor
@@ -831,7 +846,7 @@ export default function AttachmentsPage() {
                       >
                         {detailAttachment.publicUrl}
                       </Anchor>
-                      <Tooltip label="复制链接" withArrow>
+                      <Tooltip label={t('tooltips.copyLink')} withArrow>
                         <ActionIcon
                           variant="subtle"
                           color="gray"
@@ -846,7 +861,7 @@ export default function AttachmentsPage() {
                   </Table.Td>
                 </Table.Tr>
                 <Table.Tr>
-                  <Table.Td fw={500}>上传时间</Table.Td>
+                  <Table.Td fw={500}>{t('detail.fields.uploadedAt')}</Table.Td>
                   <Table.Td>
                     <Text size="sm">
                       {dayjs(detailAttachment.createdAt).format('YYYY-MM-DD HH:mm:ss')}
@@ -863,14 +878,14 @@ export default function AttachmentsPage() {
               leftSection={<IconTrash size={16} />}
               onClick={async () => {
                 const confirmed = await myModal.confirm({
-                  message: `确定要删除「${detailAttachment.originalFilename}」吗？`,
+                  message: t('confirm.deleteOne', { name: detailAttachment.originalFilename }),
                 })
                 if (!confirmed) return
                 const nid = `delete-detail-${detailAttachment.id}`
                 notifications.show({
                   id: nid,
                   loading: true,
-                  message: '正在删除…',
+                  message: t('notifications.deleting'),
                   autoClose: false,
                 })
                 const res = await fetch(`/api/attachments?id=${detailAttachment.id}`, {
@@ -883,7 +898,7 @@ export default function AttachmentsPage() {
                     loading: false,
                     color: 'green',
                     icon: <IconCheck size={18} />,
-                    message: '删除成功',
+                    message: t('notifications.deleted'),
                     autoClose: 2000,
                   })
                   setDetailAttachment(null)
@@ -898,13 +913,13 @@ export default function AttachmentsPage() {
                     loading: false,
                     color: 'red',
                     icon: <IconX size={18} />,
-                    message: json.message || '删除失败',
+                    message: json.message || tCommon('errors.deleteFailed'),
                     autoClose: 4000,
                   })
                 }
               }}
             >
-              删除附件
+              {t('buttons.deleteAttachment')}
             </Button>
           </Stack>
         )}
@@ -914,16 +929,16 @@ export default function AttachmentsPage() {
       <Modal
         opened={renameOpened}
         onClose={() => setRenameOpened(false)}
-        title="修改存储路径"
+        title={t('renameModal.title')}
         centered
       >
         <Stack gap="md">
           <TextInput
-            label="存储路径"
+            label={t('renameModal.storageKey')}
             value={renameKey}
             onChange={(e) => setRenameKey(e.target.value)}
             rightSection={
-              <Tooltip label="随机命名" withArrow>
+              <Tooltip label={t('tooltips.randomName')} withArrow>
                 <ActionIcon variant="subtle" color="gray" onClick={handleRandomName}>
                   <IconDice3 size={16} />
                 </ActionIcon>
@@ -932,10 +947,10 @@ export default function AttachmentsPage() {
           />
           <Group justify="flex-end">
             <Button variant="default" onClick={() => setRenameOpened(false)}>
-              取消
+              {tCommon('actions.cancel')}
             </Button>
             <Button onClick={handleRename} loading={renaming}>
-              确认
+              {tCommon('actions.confirm')}
             </Button>
           </Group>
         </Stack>
@@ -945,20 +960,20 @@ export default function AttachmentsPage() {
       <Drawer
         opened={configOpened}
         onClose={() => setConfigOpened(false)}
-        title="存储配置"
+        title={t('config.title')}
         position="right"
         size="md"
       >
         {configForm && (
           <Stack gap="md">
             <Select
-              label="存储服务商"
-              placeholder="请选择"
+              label={t('config.fields.provider')}
+              placeholder={t('config.fields.providerPlaceholder')}
               data={[
-                { value: 's3', label: 'S3（AWS / MinIO / 兼容 S3 协议）' },
-                { value: 'r2', label: 'R2（Cloudflare 对象存储）' },
-                { value: 'oss', label: 'OSS（阿里云对象存储）' },
-                { value: 'cos', label: 'COS（腾讯云对象存储）' },
+                { value: 's3', label: t('config.providers.s3') },
+                { value: 'r2', label: t('config.providers.r2') },
+                { value: 'oss', label: t('config.providers.oss') },
+                { value: 'cos', label: t('config.providers.cos') },
               ]}
               value={configForm.storageProvider || null}
               onChange={(v) => setField('storageProvider', v || '')}
@@ -966,31 +981,31 @@ export default function AttachmentsPage() {
 
             {configForm.storageProvider === 's3' && (
               <>
-                <Divider label="S3 配置" labelPosition="left" />
+                <Divider label={t('config.sections.s3')} labelPosition="left" />
                 <TextInput
-                  label="Endpoint"
+                  label={t('config.fields.endpoint')}
                   placeholder="https://s3.amazonaws.com"
                   value={configForm.storageS3Endpoint}
                   onChange={(e) => setField('storageS3Endpoint', e.target.value)}
                 />
                 <TextInput
-                  label="Region"
+                  label={t('config.fields.region')}
                   placeholder="us-east-1"
                   value={configForm.storageS3Region}
                   onChange={(e) => setField('storageS3Region', e.target.value)}
                 />
                 <TextInput
-                  label="Bucket"
+                  label={t('config.fields.bucket')}
                   value={configForm.storageS3Bucket}
                   onChange={(e) => setField('storageS3Bucket', e.target.value)}
                 />
                 <TextInput
-                  label="Access Key"
+                  label={t('config.fields.accessKey')}
                   value={configForm.storageS3AccessKey}
                   onChange={(e) => setField('storageS3AccessKey', e.target.value)}
                 />
                 <TextInput
-                  label="Secret Key"
+                  label={t('config.fields.secretKey')}
                   value={configForm.storageS3SecretKey}
                   onChange={(e) => setField('storageS3SecretKey', e.target.value)}
                 />
@@ -999,25 +1014,25 @@ export default function AttachmentsPage() {
 
             {configForm.storageProvider === 'oss' && (
               <>
-                <Divider label="OSS 配置" labelPosition="left" />
+                <Divider label={t('config.sections.oss')} labelPosition="left" />
                 <TextInput
-                  label="Region"
+                  label={t('config.fields.region')}
                   placeholder="oss-cn-hangzhou"
                   value={configForm.storageOssRegion}
                   onChange={(e) => setField('storageOssRegion', e.target.value)}
                 />
                 <TextInput
-                  label="Bucket"
+                  label={t('config.fields.bucket')}
                   value={configForm.storageOssBucket}
                   onChange={(e) => setField('storageOssBucket', e.target.value)}
                 />
                 <TextInput
-                  label="AccessKey ID"
+                  label={t('config.fields.accessKeyId')}
                   value={configForm.storageOssAccessKeyId}
                   onChange={(e) => setField('storageOssAccessKeyId', e.target.value)}
                 />
                 <TextInput
-                  label="AccessKey Secret"
+                  label={t('config.fields.accessKeySecret')}
                   value={configForm.storageOssAccessKeySecret}
                   onChange={(e) => setField('storageOssAccessKeySecret', e.target.value)}
                 />
@@ -1026,26 +1041,26 @@ export default function AttachmentsPage() {
 
             {configForm.storageProvider === 'cos' && (
               <>
-                <Divider label="COS 配置" labelPosition="left" />
+                <Divider label={t('config.sections.cos')} labelPosition="left" />
                 <TextInput
-                  label="Region"
+                  label={t('config.fields.region')}
                   placeholder="ap-guangzhou"
                   value={configForm.storageCosRegion}
                   onChange={(e) => setField('storageCosRegion', e.target.value)}
                 />
                 <TextInput
-                  label="Bucket"
+                  label={t('config.fields.bucket')}
                   placeholder="bucket-1234567890"
                   value={configForm.storageCosBucket}
                   onChange={(e) => setField('storageCosBucket', e.target.value)}
                 />
                 <TextInput
-                  label="SecretId"
+                  label={t('config.fields.secretId')}
                   value={configForm.storageCosSecretId}
                   onChange={(e) => setField('storageCosSecretId', e.target.value)}
                 />
                 <TextInput
-                  label="SecretKey"
+                  label={t('config.fields.secretKey')}
                   value={configForm.storageCosSecretKey}
                   onChange={(e) => setField('storageCosSecretKey', e.target.value)}
                 />
@@ -1054,35 +1069,35 @@ export default function AttachmentsPage() {
 
             {configForm.storageProvider === 'r2' && (
               <>
-                <Divider label="R2 配置" labelPosition="left" />
+                <Divider label={t('config.sections.r2')} labelPosition="left" />
                 <TextInput
-                  label="Account ID"
-                  description="Cloudflare 账户 ID，可在仪表盘右侧找到"
+                  label={t('config.fields.accountId')}
+                  description={t('config.fields.accountIdDescription')}
                   value={configForm.storageR2AccountId}
                   onChange={(e) => setField('storageR2AccountId', e.target.value)}
                 />
                 <TextInput
-                  label="Bucket"
+                  label={t('config.fields.bucket')}
                   value={configForm.storageR2Bucket}
                   onChange={(e) => setField('storageR2Bucket', e.target.value)}
                 />
                 <TextInput
-                  label="Access Key ID"
+                  label={t('config.fields.accessKeyId')}
                   value={configForm.storageR2AccessKey}
                   onChange={(e) => setField('storageR2AccessKey', e.target.value)}
                 />
                 <TextInput
-                  label="Secret Access Key"
+                  label={t('config.fields.secretKey')}
                   value={configForm.storageR2SecretKey}
                   onChange={(e) => setField('storageR2SecretKey', e.target.value)}
                 />
               </>
             )}
 
-            <Divider label="通用配置" labelPosition="left" />
+            <Divider label={t('config.sections.general')} labelPosition="left" />
             <TextInput
-              label="附件服务地址"
-              description="可选。如 https://cdn.xxx.com，用于拼接附件的完整访问地址"
+              label={t('config.fields.attachmentBaseUrl')}
+              description={t('config.fields.attachmentBaseUrlDescription')}
               placeholder="https://cdn.xxx.com"
               value={configForm.attachmentBaseUrl}
               onChange={(e) => setField('attachmentBaseUrl', e.target.value)}
@@ -1096,11 +1111,11 @@ export default function AttachmentsPage() {
                   loading={testing}
                   leftSection={<IconCheck size={16} />}
                 >
-                  测试连接
+                  {t('buttons.testConnection')}
                 </Button>
               )}
               <Button onClick={handleSaveConfig} loading={saving}>
-                保存
+                {tCommon('actions.save')}
               </Button>
             </Group>
           </Stack>

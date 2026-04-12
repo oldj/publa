@@ -1,0 +1,143 @@
+{
+  "nav": {
+    "defaultMenus": {
+      "home": "首页",
+      "posts": "文章",
+      "guestbook": "留言",
+      "about": "关于"
+    }
+  },
+  "footer": {
+    "categories": "分类",
+    "tags": "标签",
+    "searchPlaceholder": "在 Google 中搜索",
+    "searchButton": "搜索",
+    "rssPrefix": "可通过 ",
+    "rssSuffix": " 订阅本站"
+  },
+  "captcha": {
+    "refreshAlt": "点击刷新"
+  },
+  "previewNotice": {
+    "message": "预览模式 - 当前页面仅管理员或编辑可见"
+  },
+  "toc": {
+    "title": "目录"
+  },
+  "notFound": {
+    "title": "404 - 页面没有找到",
+    "description": "这个页面不存在或者已过期。",
+    "home": "首页",
+    "back": "返回上一页"
+  },
+  "dynamicPage": {
+    "notFoundTitle": "页面不存在"
+  },
+  "goBackButton": {
+    "label": "返回上一页"
+  },
+  "posts": {
+    "title": "文章",
+    "listTitle": "文章列表",
+    "categoryPrefix": "分类：",
+    "tagPrefix": "标签：",
+    "list": {
+      "readMore": "阅读全文",
+      "empty": "没有记录"
+    },
+    "detail": {
+      "category": "分类：",
+      "tags": "标签：",
+      "manage": "[文章管理]",
+      "previous": "前一篇",
+      "next": "后一篇",
+      "none": "无",
+      "related": "相关文章：",
+      "noRelated": "暂无相关文章",
+      "comments": "评论：",
+      "noComments": "暂无评论",
+      "writeComment": "发表评论：",
+      "commentHelp": "电子邮件地址不会被公开。必填项已用 * 标注。",
+      "commentsClosed": "评论已关闭。",
+      "backToTop": "回到顶部"
+    }
+  },
+  "taxonomy": {
+    "backToAllPosts": "返回所有文章列表",
+    "categoryNotFound": "分类不存在",
+    "tagNotFound": "标签不存在"
+  },
+  "commentItem": {
+    "wroteAt": "在 {time} 写道：",
+    "reply": "回复",
+    "collapse": "收起"
+  },
+  "guestbook": {
+    "title": "留言板",
+    "disabled": "留言板未开启",
+    "form": {
+      "fields": {
+        "username": "你的称呼",
+        "email": "电子邮件",
+        "website": "站点",
+        "content": "留言",
+        "captcha": "验证码"
+      },
+      "submit": "提交留言",
+      "submitting": "提交中，请稍候……",
+      "successTitle": "留言成功",
+      "successMessage": "留言已收到，感谢您的留言！",
+      "errors": {
+        "general": "出错了，留言失败！",
+        "invalidCaptcha": "请输入正确的验证码。",
+        "contentTooLong": "留言内容不能超过 {max} 字符。",
+        "rateLimited": "提交过于频繁，请稍后再试。",
+        "network": "网络错误，请稍后重试。"
+      }
+    }
+  },
+  "commentForm": {
+    "fields": {
+      "content": "评论",
+      "username": "你的称呼",
+      "email": "电子邮件",
+      "website": "站点",
+      "captcha": "验证码"
+    },
+    "submit": "提交评论",
+    "submitting": "提交中，请稍候……",
+    "successTitle": "评论成功",
+    "approvedSuccess": "评论成功，感谢你的评论！",
+    "pendingSuccess": "评论成功，将在审核后展示！",
+    "errors": {
+      "general": "出错了，评论失败！",
+      "invalidCaptcha": "请输入正确的验证码。",
+      "commentDisabled": "该文章不可评论！",
+      "invalidParent": "父评论无效。",
+      "nestedReplyNotAllowed": "不允许回复子评论。",
+      "contentTooLong": "评论内容不能超过 {max} 字符。",
+      "rateLimited": "提交过于频繁，请稍后再试。",
+      "network": "网络错误，请稍后重试。"
+    }
+  },
+  "seed": {
+    "aboutPage": {
+      "title": "关于",
+      "contentRaw": "# 关于\n\n欢迎来到我的博客！",
+      "contentHtml": "<h1>关于</h1>\n<p>欢迎来到我的博客！</p>"
+    }
+  },
+  "api": {
+    "comments": {
+      "slugRequired": "slug 不能为空",
+      "contentAndUsernameRequired": "用户名和内容不能为空"
+    },
+    "guestbook": {
+      "contentAndUsernameRequired": "用户名和内容不能为空"
+    },
+    "posts": {
+      "slugRequired": "slug 不能为空",
+      "notFound": "文章不存在"
+    }
+  }
+}

@@ -1,6 +1,8 @@
 import { db } from '@/server/db'
 import { maybeFirst } from '@/server/db/query'
 import { users } from '@/server/db/schema'
+import type { TranslationValues } from '@/i18n/core'
+import { jsonError } from '@/server/lib/api-response'
 import bcrypt from 'bcryptjs'
 import { eq } from 'drizzle-orm'
 import { SignJWT, jwtVerify, type JWTPayload } from 'jose'
@@ -26,6 +28,13 @@ interface TokenPayload extends JWTPayload {
 }
 
 type AuthGuardResult = { ok: true; user: AuthUser } | { ok: false; response: NextResponse }
+type TranslatedMessage =
+  | string
+  | {
+      namespace: string
+      key: string
+      values?: TranslationValues
+    }
 
 export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, SALT_ROUNDS)
@@ -126,19 +135,40 @@ export function hasRole(
   return roleList.includes(user.role)
 }
 
-export function unauthorizedResponse(message = 'Unauthorized') {
-  return NextResponse.json({ success: false, code: 'UNAUTHORIZED', message }, { status: 401 })
+async function buildAuthErrorResponse(
+  code: 'UNAUTHORIZED' | 'FORBIDDEN',
+  fallbackKey: 'unauthorized' | 'forbidden',
+  message?: TranslatedMessage,
+) {
+  if (typeof message === 'string') {
+    return NextResponse.json(
+      { success: false, code, message },
+      { status: code === 'UNAUTHORIZED' ? 401 : 403 },
+    )
+  }
+
+  return jsonError({
+    namespace: message?.namespace ?? 'common.api',
+    key: message?.key ?? fallbackKey,
+    values: message?.values,
+    code,
+    status: code === 'UNAUTHORIZED' ? 401 : 403,
+  })
 }
 
-export function forbiddenResponse(message = 'Forbidden') {
-  return NextResponse.json({ success: false, code: 'FORBIDDEN', message }, { status: 403 })
+export async function unauthorizedResponse(message?: TranslatedMessage) {
+  return buildAuthErrorResponse('UNAUTHORIZED', 'unauthorized', message)
+}
+
+export async function forbiddenResponse(message?: TranslatedMessage) {
+  return buildAuthErrorResponse('FORBIDDEN', 'forbidden', message)
 }
 
 export async function requireCurrentUser(): Promise<AuthGuardResult> {
   try {
     const user = await getCurrentUser()
     if (!user) {
-      return { ok: false, response: unauthorizedResponse() }
+      return { ok: false, response: await unauthorizedResponse() }
     }
 
     return { ok: true, user }
@@ -146,10 +176,12 @@ export async function requireCurrentUser(): Promise<AuthGuardResult> {
     if (isAuthConfigError(error)) {
       return {
         ok: false,
-        response: NextResponse.json(
-          { success: false, code: 'CONFIGURATION_ERROR', message: 'Authentication is unavailable' },
-          { status: 503 },
-        ),
+        response: await jsonError({
+          namespace: 'common.api',
+          key: 'authenticationUnavailable',
+          code: 'CONFIGURATION_ERROR',
+          status: 503,
+        }),
       }
     }
     throw error
@@ -158,13 +190,13 @@ export async function requireCurrentUser(): Promise<AuthGuardResult> {
 
 export async function requireRole(
   roles: AuthRole | AuthRole[],
-  message = 'Forbidden',
+  message?: TranslatedMessage,
 ): Promise<AuthGuardResult> {
   const guard = await requireCurrentUser()
   if (!guard.ok) return guard
 
   if (!hasRole(guard.user, roles)) {
-    return { ok: false, response: forbiddenResponse(message) }
+    return { ok: false, response: await forbiddenResponse(message) }
   }
 
   return guard

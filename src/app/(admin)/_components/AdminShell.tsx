@@ -12,6 +12,7 @@ import {
   IconSettings,
   IconWorld,
 } from '@tabler/icons-react'
+import { useTranslations } from 'next-intl'
 import { AdminCountsProvider, useAdminCounts } from './AdminCountsContext'
 import { useAdminUrl } from './AdminPathContext'
 import classes from './AdminShell.module.scss'
@@ -19,67 +20,88 @@ import { NavLinksGroup, type NavLinksGroupProps } from './NavLinksGroup'
 import { UserButton } from './UserButton'
 
 function NavLinks({ user }: { user: AuthUser | null }) {
+  const t = useTranslations('admin.shell')
   const { counts } = useAdminCounts()
   const adminUrl = useAdminUrl()
   const isOwner = user?.role === 'owner'
   const isAdmin = user?.role === 'admin'
 
   const navData: NavLinksGroupProps[] = [
-    { id: 'dashboard', label: '仪表盘', icon: IconGauge, link: adminUrl() },
+    { id: 'dashboard', label: t('dashboard'), icon: IconGauge, link: adminUrl() },
     {
       id: 'content',
-      label: '内容',
+      label: t('content'),
       icon: IconNotes,
       initiallyOpened: true,
       links: [
-        { label: '文章', link: adminUrl('/posts') },
-        { label: '分类', link: adminUrl('/categories') },
-        { label: '标签', link: adminUrl('/tags') },
-        { label: '页面', link: adminUrl('/pages') },
-        { label: '附件', link: adminUrl('/attachments') },
+        { id: 'posts', label: t('posts'), link: adminUrl('/posts') },
+        { id: 'categories', label: t('categories'), link: adminUrl('/categories') },
+        { id: 'tags', label: t('tags'), link: adminUrl('/tags') },
+        { id: 'pages', label: t('pages'), link: adminUrl('/pages') },
+        { id: 'attachments', label: t('attachments'), link: adminUrl('/attachments') },
       ],
     },
     {
       id: 'interactions',
-      label: '互动',
+      label: t('interactions'),
       icon: IconMessage,
       initiallyOpened: true,
       links: [
-        { label: '评论', link: adminUrl('/comments'), badge: counts?.pendingComments || 0 },
-        { label: '留言', link: adminUrl('/guestbook'), badge: counts?.unreadGuestbook || 0 },
+        {
+          id: 'comments',
+          label: t('comments'),
+          link: adminUrl('/comments'),
+          badge: counts?.pendingComments || 0,
+        },
+        {
+          id: 'guestbook',
+          label: t('guestbook'),
+          link: adminUrl('/guestbook'),
+          badge: counts?.unreadGuestbook || 0,
+        },
       ],
     },
     {
       id: 'site',
-      label: '站点',
+      label: t('site'),
       icon: IconWorld,
       links: [
-        ...(isOwner || isAdmin ? [{ label: '菜单', link: adminUrl('/menus') }] : []),
-        ...(isOwner || isAdmin ? [{ label: '跳转', link: adminUrl('/redirects') }] : []),
-        ...(isOwner || isAdmin ? [{ label: '主题', link: adminUrl('/themes') }] : []),
+        ...(isOwner || isAdmin
+          ? [{ id: 'menus', label: t('menus'), link: adminUrl('/menus') }]
+          : []),
+        ...(isOwner || isAdmin
+          ? [{ id: 'redirects', label: t('redirects'), link: adminUrl('/redirects') }]
+          : []),
+        ...(isOwner || isAdmin
+          ? [{ id: 'themes', label: t('themes'), link: adminUrl('/themes') }]
+          : []),
       ],
     },
     ...(isOwner || isAdmin
       ? [
           {
             id: 'email',
-            label: '邮件',
+            label: t('email'),
             icon: IconMail,
             links: [
-              { label: '邮件通知', link: adminUrl('/email') },
-              { label: '邮件日志', link: adminUrl('/email-logs') },
+              { id: 'email-notify', label: t('emailNotify'), link: adminUrl('/email') },
+              { id: 'email-logs', label: t('emailLogs'), link: adminUrl('/email-logs') },
             ],
           },
         ]
       : []),
     {
       id: 'system',
-      label: '系统',
+      label: t('system'),
       icon: IconSettings,
       links: [
-        { label: '用户', link: adminUrl('/users') },
-        ...(isOwner || isAdmin ? [{ label: '设置', link: adminUrl('/settings') }] : []),
-        ...(isOwner || isAdmin ? [{ label: '导入导出', link: adminUrl('/import-export') }] : []),
+        { id: 'users', label: t('users'), link: adminUrl('/users') },
+        ...(isOwner || isAdmin
+          ? [{ id: 'settings', label: t('settings'), link: adminUrl('/settings') }]
+          : []),
+        ...(isOwner || isAdmin
+          ? [{ id: 'import-export', label: t('importExport'), link: adminUrl('/import-export') }]
+          : []),
       ],
     },
   ].filter((item) => !item.links || item.links.length > 0)
@@ -122,7 +144,7 @@ export function AdminShell({
             </Group>
           </div>
 
-          <ScrollArea className={classes.links}>
+          <ScrollArea className={classes.links} data-role="admin-nav">
             <div className={classes.linksInner}>
               <NavLinks user={user} />
             </div>

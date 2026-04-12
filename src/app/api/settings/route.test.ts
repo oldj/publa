@@ -131,8 +131,12 @@ describe('/api/settings', () => {
 
   it('通过 /api/settings 写入敏感字段会被拒绝', async () => {
     mockNormalizeSettingsPayload.mockImplementationOnce(() => {
-      const error = new Error('不支持修改以下设置项：storageS3SecretKey')
-      error.name = 'SettingsValidationError'
+      const error = {
+        name: 'SettingsValidationError',
+        invalidKeys: ['storageS3SecretKey'],
+        invalidValueKeys: [],
+        reason: 'INVALID_KEYS',
+      }
       throw error
     })
 
@@ -155,8 +159,12 @@ describe('/api/settings', () => {
 
   it('通过 /api/settings 写入对象值会被拒绝', async () => {
     mockNormalizeSettingsPayload.mockImplementationOnce(() => {
-      const error = new Error('以下设置项的值类型不合法：siteTitle')
-      error.name = 'SettingsValidationError'
+      const error = {
+        name: 'SettingsValidationError',
+        invalidKeys: [],
+        invalidValueKeys: ['siteTitle'],
+        reason: 'INVALID_VALUES',
+      }
       throw error
     })
 

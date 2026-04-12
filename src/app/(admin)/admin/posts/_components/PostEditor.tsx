@@ -13,6 +13,7 @@ import ContentTypeSelector from '@/components/editors/ContentTypeSelector'
 import RichTextEditorWrapper, {
   type RichTextEditorHandle,
 } from '@/components/editors/RichTextEditorWrapper'
+import { getClientErrorMessage } from '@/lib/client-error'
 import { notify } from '@/lib/notify'
 import {
   Alert,
@@ -30,6 +31,7 @@ import {
 } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { IconAlertTriangle } from '@tabler/icons-react'
+import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { shouldCreateDraftRecord } from '../../_lib/draft-persistence'
@@ -128,6 +130,8 @@ function createEmptyPostForm(): FormState {
 export default function PostEditor({ postId }: { postId?: number }) {
   const router = useRouter()
   const adminUrl = useAdminUrl()
+  const t = useTranslations('admin.editor.post')
+  const tCommon = useTranslations('common')
   const [loading, setLoading] = useState(false)
   const [categories, setCategories] = useState<Category[]>([])
   const [allTags, setAllTags] = useState<Tag[]>([])
@@ -163,11 +167,11 @@ export default function PostEditor({ postId }: { postId?: number }) {
       notify({
         id: AUTO_SAVE_FAIL_ID,
         color: 'red',
-        message: '自动保存连续失败，请检查网络连接',
+        message: t('autoSaveFailed'),
         autoClose: false,
       })
     }
-  }, [])
+  }, [t])
   const clearAutoSaveFail = useCallback(() => {
     autoSaveFailCountRef.current = 0
     notifications.hide(AUTO_SAVE_FAIL_ID)
@@ -189,14 +193,25 @@ export default function PostEditor({ postId }: { postId?: number }) {
     }
   }, [])
 
-  const uploadImage = useCallback(async (file: File): Promise<string> => {
-    const formData = new FormData()
-    formData.append('file', file)
-    const res = await fetch('/api/attachments', { method: 'POST', body: formData })
-    const json = await res.json()
-    if (!json.success) throw new Error(json.message || '上传失败')
-    return json.data.publicUrl
-  }, [])
+  const uploadImage = useCallback(
+    async (file: File): Promise<string> => {
+      try {
+        const formData = new FormData()
+        formData.append('file', file)
+        const res = await fetch('/api/attachments', { method: 'POST', body: formData })
+        const json = await res.json()
+        if (!json.success) throw new Error(json.message || tCommon('errors.uploadFailed'))
+        return json.data.publicUrl
+      } catch (error) {
+        const message = getClientErrorMessage(error, {
+          networkMessage: tCommon('errors.network'),
+          fallbackMessage: tCommon('errors.uploadFailed'),
+        })
+        throw new Error(message)
+      }
+    },
+    [tCommon],
+  )
 
   // 富文本编辑器引用
   const richTextRef = useRef<RichTextEditorHandle>(null)
@@ -327,7 +342,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
         if (!active) return
 
         if (!json.success) {
-          notify({ color: 'red', message: '文章不存在' })
+          notify({ color: 'red', message: t('notFound') })
           router.push(adminUrl('/posts'))
           return
         }
@@ -423,7 +438,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
         if (!active) return
         if (error instanceof Error && error.name === 'AbortError') return
 
-        notify({ color: 'red', message: '加载文章失败' })
+        notify({ color: 'red', message: t('loadFailed') })
         router.push(adminUrl('/posts'))
       })
       .finally(() => {
@@ -436,7 +451,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
       active = false
       controller.abort()
     }
-  }, [postId, adminUrl, router, getEditor, getMetaSnapshot, makeSnapshot, resetEditorState])
+  }, [postId, adminUrl, router, getEditor, getMetaSnapshot, makeSnapshot, resetEditorState, t])
 
   // 同步 ref 以供定时器读取最新值
   useEffect(() => {
@@ -521,25 +536,28 @@ export default function PostEditor({ postId }: { postId?: number }) {
     [getCurrentContent],
   )
 
-  const ensurePendingPostId = useCallback(async (silent = false) => {
-    if (pendingCreatedPostIdRef.current) return pendingCreatedPostIdRef.current
+  const ensurePendingPostId = useCallback(
+    async (silent = false) => {
+      if (pendingCreatedPostIdRef.current) return pendingCreatedPostIdRef.current
 
-    const res = await fetch('/api/posts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ createEmpty: true }),
-    })
-    const json = await res.json()
-    if (!json.success) {
-      if (!silent) {
-        notify({ color: 'red', message: json.message || '创建草稿失败' })
+      const res = await fetch('/api/posts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ createEmpty: true }),
+      })
+      const json = await res.json()
+      if (!json.success) {
+        if (!silent) {
+          notify({ color: 'red', message: json.message || t('createDraftFailed') })
+        }
+        return null
       }
-      return null
-    }
 
-    pendingCreatedPostIdRef.current = json.data.id
-    return json.data.id as number
-  }, [])
+      pendingCreatedPostIdRef.current = json.data.id
+      return json.data.id as number
+    },
+    [t],
+  )
 
   const getTargetPostId = useCallback(() => postId ?? pendingCreatedPostIdRef.current, [postId])
 
@@ -566,7 +584,10 @@ export default function PostEditor({ postId }: { postId?: number }) {
           if (silent) {
             onAutoSaveFail()
           } else {
-            notify({ color: 'red', message: draftSave.json.message || '保存草稿失败' })
+            notify({
+              color: 'red',
+              message: draftSave.json.message || tCommon('errors.saveFailed'),
+            })
           }
           return null
         }
@@ -590,7 +611,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
         if (silent) {
           onAutoSaveFail()
         } else {
-          notify({ color: 'red', message: '网络错误' })
+          notify({ color: 'red', message: tCommon('errors.network') })
         }
         return null
       } finally {
@@ -689,10 +710,10 @@ export default function PostEditor({ postId }: { postId?: number }) {
         setAutoSaveTime(draftSave.json.data.updatedAt)
         window.open(`/posts/--preview-${targetPostId}`, '_blank')
       } else {
-        notify({ color: 'red', message: draftSave.json.message || '保存失败' })
+        notify({ color: 'red', message: draftSave.json.message || tCommon('errors.saveFailed') })
       }
     } catch {
-      notify({ color: 'red', message: '网络错误' })
+      notify({ color: 'red', message: tCommon('errors.network') })
     } finally {
       setLoading(false)
     }
@@ -715,12 +736,12 @@ export default function PostEditor({ postId }: { postId?: number }) {
         lastAutoSaveContent.current = draftSave.content.contentRaw
         lastAutoSaveMetaRef.current = getMetaSnapshot(formState)
         setAutoSaveTime(draftSave.json.data.updatedAt)
-        notify({ color: 'green', message: '草稿已保存' })
+        notify({ color: 'green', message: t('draftSaved') })
       } else {
-        notify({ color: 'red', message: draftSave.json.message || '保存失败' })
+        notify({ color: 'red', message: draftSave.json.message || tCommon('errors.saveFailed') })
       }
     } catch {
-      notify({ color: 'red', message: '网络错误' })
+      notify({ color: 'red', message: tCommon('errors.network') })
     } finally {
       setLoading(false)
     }
@@ -733,11 +754,11 @@ export default function PostEditor({ postId }: { postId?: number }) {
     // 仅发布/定时发布时校验必填字段
     if (status !== 'draft') {
       if (!form.title) {
-        notify({ color: 'red', message: '标题不能为空' })
+        notify({ color: 'red', message: t('titleRequired') })
         return
       }
       if (!form.slug) {
-        notify({ color: 'red', message: 'Slug 不能为空' })
+        notify({ color: 'red', message: t('slugRequired') })
         return
       }
     }
@@ -772,9 +793,9 @@ export default function PostEditor({ postId }: { postId?: number }) {
         setPublishTab(
           status === 'published' ? 'published' : status === 'scheduled' ? 'scheduled' : 'draft',
         )
-        let msg = '发布成功'
-        if (status === 'draft') msg = '已转为草稿'
-        else if (status === 'scheduled') msg = '定时发布已设置'
+        let msg = t('publishSuccess')
+        if (status === 'draft') msg = t('convertedToDraft')
+        else if (status === 'scheduled') msg = t('scheduledSet')
         notify({ color: 'green', message: msg })
         savedSnapshot.current = makeSnapshot(
           { ...form, status, publishedAt: newPublishedAt, contentRaw: content.contentRaw },
@@ -796,10 +817,10 @@ export default function PostEditor({ postId }: { postId?: number }) {
           router.push(adminUrl(`/posts/${nextId}`))
         }
       } else {
-        notify({ color: 'red', message: json.message || '操作失败' })
+        notify({ color: 'red', message: json.message || t('operationFailed') })
       }
     } catch {
-      notify({ color: 'red', message: '网络错误' })
+      notify({ color: 'red', message: tCommon('errors.network') })
     } finally {
       setLoading(false)
     }
@@ -817,7 +838,8 @@ export default function PostEditor({ postId }: { postId?: number }) {
     <div style={{ position: 'relative' }}>
       <EditorHeader
         entityId={postId}
-        entityLabel="文章"
+        entityKey="post"
+        entityLabel={t('entityLabel')}
         backUrl={adminUrl('/posts')}
         status={form.status}
         dirty={dirty}
@@ -886,23 +908,25 @@ export default function PostEditor({ postId }: { postId?: number }) {
         <Grid.Col span={{ base: 12, md: 8 }}>
           <Stack>
             <TextInput
-              label="标题"
-              placeholder="文章标题"
+              label={t('fields.title')}
+              placeholder={t('fields.titlePlaceholder')}
               size="lg"
+              data-role="post-title-input"
               value={form.title}
               onChange={(e) => setField('title', e.target.value)}
             />
 
             <TextInput
-              label="Slug"
-              placeholder="post-url-slug"
+              label={t('fields.slug')}
+              placeholder={t('fields.slugPlaceholder')}
+              data-role="post-slug-input"
               value={form.slug}
               onChange={(e) => setField('slug', e.target.value)}
               error={
                 form.slug.startsWith('-')
-                  ? 'Slug 不能以 - 开头'
+                  ? t('fields.slugStartsWithHyphen')
                   : form.slug.endsWith('-')
-                    ? 'Slug 不能以 - 结尾'
+                    ? t('fields.slugEndsWithHyphen')
                     : undefined
               }
             />
@@ -912,7 +936,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
                 value={contentType}
                 onChange={async (newType) => {
                   if (newType === contentType) return
-                  const warning = '切换内容类型可能导致格式或数据丢失，确定要切换吗？'
+                  const warning = t('contentSwitchWarning')
                   if (!(await myModal.confirm({ message: warning }))) return
 
                   const ed = getEditor()
@@ -987,7 +1011,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
             {/* 富文本编辑器（用 display:none 隐藏而非卸载） */}
             <RichTextEditorWrapper
               editorRef={richTextRef}
-              placeholder="开始撰写文章内容..."
+              placeholder={t('fields.contentPlaceholder')}
               onImageUpload={uploadImage}
               checkStorageConfig={checkStorageConfig}
               onUpdate={() => {
@@ -1007,9 +1031,13 @@ export default function PostEditor({ postId }: { postId?: number }) {
             {/* Markdown / HTML 文本编辑器 */}
             {contentType !== 'richtext' && (
               <Textarea
-                label={contentType === 'markdown' ? 'Markdown 内容' : 'HTML 内容'}
+                label={
+                  contentType === 'markdown' ? t('fields.markdownContent') : t('fields.htmlContent')
+                }
                 placeholder={
-                  contentType === 'markdown' ? '在此输入 Markdown...' : '在此输入 HTML...'
+                  contentType === 'markdown'
+                    ? t('fields.markdownPlaceholder')
+                    : t('fields.htmlPlaceholder')
                 }
                 autosize
                 minRows={20}
@@ -1024,8 +1052,8 @@ export default function PostEditor({ postId }: { postId?: number }) {
             )}
 
             <Textarea
-              label="摘要"
-              placeholder="文章摘要（可选，留空则自动截取）"
+              label={t('fields.excerpt')}
+              placeholder={t('fields.excerptPlaceholder')}
               autosize
               minRows={3}
               value={form.excerpt}
@@ -1054,29 +1082,34 @@ export default function PostEditor({ postId }: { postId?: number }) {
                 const isPast = new Date(publishedAt) <= new Date()
                 await handleSave(isPast ? 'published' : 'scheduled', { publishedAt })
               }}
-              entityLabel="文章"
+              entityLabel={t('entityLabel')}
             />
 
             {postId && (
               <Paper withBorder p="md">
-                <Button variant="subtle" fullWidth onClick={() => setHistoryOpen(true)}>
-                  查看历史版本
+                <Button
+                  variant="subtle"
+                  fullWidth
+                  onClick={() => setHistoryOpen(true)}
+                  data-role="post-editor-history-button"
+                >
+                  {t('historyButton')}
                 </Button>
               </Paper>
             )}
 
             <Paper withBorder p="md">
               <Text fw={500} mb="sm">
-                文章设置
+                {t('sections.settings')}
               </Text>
               <TextInput
-                label="头图"
-                placeholder="输入图片 URL"
+                label={t('fields.coverImage')}
+                placeholder={t('fields.coverImagePlaceholder')}
                 value={form.coverImage}
                 onChange={(e) => setField('coverImage', e.target.value)}
               />
               <Checkbox
-                label="置顶"
+                label={t('fields.pinned')}
                 mt="sm"
                 checked={form.pinned}
                 onChange={(e) => setField('pinned', e.currentTarget.checked)}
@@ -1085,11 +1118,11 @@ export default function PostEditor({ postId }: { postId?: number }) {
 
             <Paper withBorder p="md">
               <Text fw={500} mb="sm">
-                分类与标签
+                {t('sections.taxonomy')}
               </Text>
               <Select
-                label="分类"
-                placeholder="选择分类"
+                label={t('fields.category')}
+                placeholder={t('fields.categoryPlaceholder')}
                 clearable
                 searchable
                 data={categories.map((c) => ({ value: String(c.id), label: c.name }))}
@@ -1098,8 +1131,8 @@ export default function PostEditor({ postId }: { postId?: number }) {
               />
 
               <TagsInput
-                label="标签"
-                placeholder="输入标签名，回车添加"
+                label={t('fields.tags')}
+                placeholder={t('fields.tagsPlaceholder')}
                 mt="sm"
                 data={allTags.map((t) => t.name)}
                 value={form.tagNames}
@@ -1109,7 +1142,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
 
             <Paper withBorder p="md">
               <Text fw={500} mb="sm">
-                评论
+                {t('sections.comments')}
               </Text>
               {(globalCommentOff || globalShowCommentsOff) && (
                 <Alert
@@ -1121,19 +1154,19 @@ export default function PostEditor({ postId }: { postId?: number }) {
                   fz="xs"
                 >
                   {globalCommentOff && globalShowCommentsOff
-                    ? '评论和评论列表显示已在系统设置中全局关闭，此处的设置不会生效。'
+                    ? t('comments.globalDisabledBoth')
                     : globalCommentOff
-                      ? '评论已在系统设置中全局关闭，"允许评论"设置不会生效。'
-                      : '评论列表显示已在系统设置中全局关闭，"显示评论"设置不会生效。'}
+                      ? t('comments.globalDisabledComment')
+                      : t('comments.globalDisabledList')}
                 </Alert>
               )}
               <Checkbox
-                label="显示评论"
+                label={t('comments.showComments')}
                 checked={form.showComments}
                 onChange={(e) => setField('showComments', e.currentTarget.checked)}
               />
               <Checkbox
-                label="允许评论"
+                label={t('comments.allowComments')}
                 mt="xs"
                 checked={form.allowComment}
                 disabled={!form.showComments}
@@ -1143,17 +1176,17 @@ export default function PostEditor({ postId }: { postId?: number }) {
 
             <Paper withBorder p="md">
               <Text fw={500} mb="sm">
-                SEO
+                {t('sections.seo')}
               </Text>
               <TextInput
-                label="SEO 标题"
-                placeholder="可选"
+                label={t('fields.seoTitle')}
+                placeholder={t('fields.optionalPlaceholder')}
                 value={form.seoTitle}
                 onChange={(e) => setField('seoTitle', e.target.value)}
               />
               <Textarea
-                label="SEO 描述"
-                placeholder="可选"
+                label={t('fields.seoDescription')}
+                placeholder={t('fields.optionalPlaceholder')}
                 mt="sm"
                 autosize
                 minRows={2}

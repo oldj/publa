@@ -1,5 +1,6 @@
 import { Button, Group, Modal, Stack, TextInput, Textarea } from '@mantine/core'
 import type { Editor } from '@tiptap/react'
+import { useTranslations } from 'next-intl'
 
 interface MathModalProps {
   editor: Editor | null
@@ -20,6 +21,8 @@ export default function MathModal({
   mathEditType,
   mathEditPos,
 }: MathModalProps) {
+  const tCommon = useTranslations('common')
+  const t = useTranslations('admin.editor.mathModal')
   const handleConfirm = () => {
     if (!editor || !mathLatex.trim()) return
     const type = mathEditType.current
@@ -56,7 +59,7 @@ export default function MathModal({
     <Modal
       opened={opened}
       onClose={onClose}
-      title={mathEditType.current === 'inlineMath' ? '编辑行内公式' : '编辑公式块'}
+      title={mathEditType.current === 'inlineMath' ? t('editInline') : t('editBlock')}
       size="lg"
       centered
     >
@@ -64,7 +67,7 @@ export default function MathModal({
         {mathEditType.current === 'blockMath' ? (
           <Textarea
             label="LaTeX"
-            placeholder="输入 LaTeX 公式，如 \int_0^\infty x^2 dx"
+            placeholder={t('placeholderBlock')}
             autosize
             minRows={3}
             value={mathLatex}
@@ -75,7 +78,7 @@ export default function MathModal({
         ) : (
           <TextInput
             label="LaTeX"
-            placeholder="输入 LaTeX 公式，如 E=mc^2"
+            placeholder={t('placeholderInline')}
             value={mathLatex}
             onChange={(e) => setMathLatex(e.target.value)}
             styles={{ input: { fontFamily: 'monospace' } }}
@@ -84,9 +87,9 @@ export default function MathModal({
         )}
         <Group justify="flex-end">
           <Button variant="default" onClick={onClose}>
-            取消
+            {tCommon('actions.cancel')}
           </Button>
-          <Button onClick={handleConfirm}>确定</Button>
+          <Button onClick={handleConfirm}>{tCommon('actions.confirm')}</Button>
         </Group>
       </Stack>
     </Modal>

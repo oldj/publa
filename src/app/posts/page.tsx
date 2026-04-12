@@ -1,11 +1,13 @@
 import BasicLayout from '@/layouts/basic'
+import { getServerTranslator } from '@/i18n/server'
 import { getFrontendArchive } from '@/server/services/posts-frontend'
 import dayjs from 'dayjs'
 import { Metadata } from 'next'
 import Link from 'next/link'
 
-export const metadata: Metadata = {
-  title: '文章列表',
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerTranslator('frontend.posts')
+  return { title: t('title') }
 }
 
 interface IArchiveOfYear {
@@ -18,12 +20,13 @@ interface IArchiveOfYear {
 }
 
 export default async function Page() {
+  const { t } = await getServerTranslator('frontend.posts')
   const data = await getData()
 
   return (
     <BasicLayout>
       <div className="posts-archive">
-        <h1 className="page_title">文章</h1>
+        <h1 className="page_title">{t('title')}</h1>
 
         {data.archives.map((o) => {
           return (

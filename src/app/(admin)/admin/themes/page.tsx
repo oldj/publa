@@ -1,6 +1,7 @@
 'use client'
 
 import myModal from '@/app/(admin)/_components/myModals'
+import { getClientErrorMessage } from '@/lib/client-error'
 import { notify } from '@/lib/notify'
 import {
   DndContext,
@@ -42,6 +43,8 @@ import {
   IconTrash,
   IconUpload,
 } from '@tabler/icons-react'
+import { isBuiltinKey } from '@/shared/builtin-themes'
+import { useTranslations } from 'next-intl'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAdminUrl } from '../../_components/AdminPathContext'
@@ -83,6 +86,7 @@ function SortableThemeRow({
   onEdit: (theme: Theme) => void
   onDelete: (theme: Theme) => void
 }) {
+  const t = useTranslations('admin.themesPage')
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: theme.id,
   })
@@ -111,7 +115,7 @@ function SortableThemeRow({
             color="gray"
             {...attributes}
             {...listeners}
-            aria-label="拖拽排序"
+            aria-label={t('aria.drag')}
             style={{ cursor: 'grab' }}
           >
             <IconGripVertical size={18} />
@@ -123,10 +127,14 @@ function SortableThemeRow({
             styles={{ body: { alignItems: 'center' } }}
             label={
               <Group gap="xs">
-                <Text>{theme.name}</Text>
+                <Text>
+                  {isBuiltinKey(theme.builtinKey)
+                    ? t(`builtinNames.${theme.builtinKey}`)
+                    : theme.name}
+                </Text>
                 {isBuiltin && (
                   <Text size="xs" c="dimmed">
-                    （内置）
+                    {t('builtin')}
                   </Text>
                 )}
               </Group>
@@ -136,14 +144,18 @@ function SortableThemeRow({
 
         {!isBuiltin && (
           <Group gap="xs" wrap="nowrap">
-            <ActionIcon variant="subtle" onClick={() => onEdit(theme)} aria-label="编辑主题">
+            <ActionIcon
+              variant="subtle"
+              onClick={() => onEdit(theme)}
+              aria-label={t('aria.editTheme')}
+            >
               <IconPencil size={16} />
             </ActionIcon>
             <ActionIcon
               variant="subtle"
               color="red"
               onClick={() => onDelete(theme)}
-              aria-label="删除主题"
+              aria-label={t('aria.deleteTheme')}
             >
               <IconTrash size={16} />
             </ActionIcon>
@@ -167,6 +179,7 @@ function SortableCustomStyleRow({
   onEdit: (item: CustomStyle) => void
   onDelete: (item: CustomStyle) => void
 }) {
+  const t = useTranslations('admin.themesPage')
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.id,
   })
@@ -194,7 +207,7 @@ function SortableCustomStyleRow({
             color="gray"
             {...attributes}
             {...listeners}
-            aria-label="拖拽排序"
+            aria-label={t('aria.drag')}
             style={{ cursor: 'grab' }}
           >
             <IconGripVertical size={18} />
@@ -209,14 +222,14 @@ function SortableCustomStyleRow({
         </Group>
 
         <Group gap="xs" wrap="nowrap">
-          <ActionIcon variant="subtle" onClick={() => onEdit(item)} aria-label="编辑">
+          <ActionIcon variant="subtle" onClick={() => onEdit(item)} aria-label={t('aria.edit')}>
             <IconPencil size={16} />
           </ActionIcon>
           <ActionIcon
             variant="subtle"
             color="red"
             onClick={() => onDelete(item)}
-            aria-label="删除"
+            aria-label={t('aria.delete')}
           >
             <IconTrash size={16} />
           </ActionIcon>
@@ -229,6 +242,8 @@ function SortableCustomStyleRow({
 export default function ThemesPage() {
   const router = useRouter()
   const adminUrl = useAdminUrl()
+  const t = useTranslations('admin.themesPage')
+  const tCommon = useTranslations('common')
   const currentUser = useCurrentUser()
   const [themes, setThemes] = useState<Theme[]>([])
   const [customStyles, setCustomStyles] = useState<CustomStyle[]>([])
@@ -298,7 +313,8 @@ export default function ThemesPage() {
     if (stylesRes.success) setCustomStyles(stylesRes.data)
     if (settingsRes.success) {
       const s = settingsRes.data as Record<string, unknown>
-      const themeId = typeof s.activeThemeId === 'number' && s.activeThemeId > 0 ? s.activeThemeId : null
+      const themeId =
+        typeof s.activeThemeId === 'number' && s.activeThemeId > 0 ? s.activeThemeId : null
       const styleIds = Array.isArray(s.activeCustomStyleIds)
         ? (s.activeCustomStyleIds as number[])
         : []
@@ -349,12 +365,12 @@ export default function ThemesPage() {
       if (json.success) {
         setSavedThemeId(pendingThemeId)
         setSavedCustomStyleIds(pendingCustomStyleIds)
-        notify({ color: 'green', message: '已保存，前台生效' })
+        notify({ color: 'green', message: t('messages.saved') })
       } else {
-        notify({ color: 'red', message: json.message || '保存失败' })
+        notify({ color: 'red', message: json.message || tCommon('errors.saveFailed') })
       }
     } catch {
-      notify({ color: 'red', message: '网络错误' })
+      notify({ color: 'red', message: tCommon('errors.network') })
     } finally {
       setSaving(false)
     }
@@ -399,37 +415,46 @@ export default function ThemesPage() {
   }
 
   const handleDeleteTheme = async (theme: Theme) => {
-    if (!(await myModal.confirm({ message: `确定要删除主题「${theme.name}」吗？` }))) return
+    if (!(await myModal.confirm({ message: t('deleteThemeConfirm', { name: theme.name }) }))) return
     const res = await fetch(`/api/themes/${theme.id}`, { method: 'DELETE' })
     const json = await res.json()
     if (json.success) {
-      notify({ color: 'green', message: '删除成功' })
+      notify({ color: 'green', message: tCommon('messages.deleteSuccess') })
       refreshLists()
     } else {
-      notify({ color: 'red', message: json.message || '删除失败' })
+      notify({ color: 'red', message: json.message || tCommon('errors.deleteFailed') })
     }
   }
 
   const handleDeleteCustomStyle = async (item: CustomStyle) => {
-    if (!(await myModal.confirm({ message: `确定要删除自定义 CSS「${item.name}」吗？` }))) return
+    if (!(await myModal.confirm({ message: t('deleteCustomStyleConfirm', { name: item.name }) })))
+      return
     const res = await fetch(`/api/custom-styles/${item.id}`, { method: 'DELETE' })
     const json = await res.json()
     if (json.success) {
-      notify({ color: 'green', message: '删除成功' })
+      notify({ color: 'green', message: tCommon('messages.deleteSuccess') })
       refreshLists()
     } else {
-      notify({ color: 'red', message: json.message || '删除失败' })
+      notify({ color: 'red', message: json.message || tCommon('errors.deleteFailed') })
     }
   }
 
   const persistOrder = async (apiBase: string, ids: number[]) => {
-    const res = await fetch(apiBase, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'reorder', ids }),
-    })
-    const json = await res.json()
-    if (!json.success) throw new Error(json.message || '排序保存失败')
+    try {
+      const res = await fetch(apiBase, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'reorder', ids }),
+      })
+      const json = await res.json()
+      if (!json.success) throw new Error(json.message || t('messages.reorderFailed'))
+    } catch (error) {
+      const message = getClientErrorMessage(error, {
+        networkMessage: tCommon('errors.network'),
+        fallbackMessage: t('messages.reorderFailed'),
+      })
+      throw new Error(message)
+    }
   }
 
   const handleThemeDragEnd = async (event: DragEndEvent) => {
@@ -442,17 +467,20 @@ export default function ThemesPage() {
     const next = arrayMove(themes, oldIndex, newIndex).map((t, i) => ({ ...t, sortOrder: i + 1 }))
     setThemes(next)
     try {
-      await persistOrder('/api/themes', next.map((t) => t.id))
+      await persistOrder(
+        '/api/themes',
+        next.map((t) => t.id),
+      )
     } catch (err) {
       setThemes(previous)
-      notify({ color: 'red', message: err instanceof Error ? err.message : '排序保存失败' })
+      notify({
+        color: 'red',
+        message: err instanceof Error ? err.message : t('messages.reorderFailed'),
+      })
     }
   }
 
-  const handleImportFile = async (
-    kind: ExportKind,
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
+  const handleImportFile = async (kind: ExportKind, event: React.ChangeEvent<HTMLInputElement>) => {
     const input = event.target
     const file = input.files?.[0]
     if (!file) return
@@ -467,14 +495,17 @@ export default function ThemesPage() {
         const skipped = json.data?.skipped ?? 0
         notify({
           color: 'green',
-          message: `导入成功，新增 ${imported} 项${skipped > 0 ? `，跳过 ${skipped} 项` : ''}`,
+          message:
+            skipped > 0
+              ? t('messages.importSuccessWithSkipped', { imported, skipped })
+              : t('messages.importSuccess', { imported }),
         })
         refreshLists()
       } else {
-        notify({ color: 'red', message: json.message || '导入失败' })
+        notify({ color: 'red', message: json.message || tCommon('errors.importFailed') })
       }
     } catch {
-      notify({ color: 'red', message: '网络错误' })
+      notify({ color: 'red', message: tCommon('errors.network') })
     } finally {
       // 允许再次选择同名文件
       input.value = ''
@@ -494,19 +525,25 @@ export default function ThemesPage() {
     }))
     setCustomStyles(next)
     try {
-      await persistOrder('/api/custom-styles', next.map((t) => t.id))
+      await persistOrder(
+        '/api/custom-styles',
+        next.map((t) => t.id),
+      )
     } catch (err) {
       setCustomStyles(previous)
-      notify({ color: 'red', message: err instanceof Error ? err.message : '排序保存失败' })
+      notify({
+        color: 'red',
+        message: err instanceof Error ? err.message : t('messages.reorderFailed'),
+      })
     }
   }
 
   return (
     <Box mt="md">
       <PageHeader
-        title="主题"
+        title={t('title')}
         dirty={dirty}
-        dirtyMessage="选中项已变化，需保存后方可生效"
+        dirtyMessage={t('dirtyMessage')}
         loading={saving}
         onSave={handleSave}
         extra={
@@ -515,7 +552,7 @@ export default function ThemesPage() {
             leftSection={<IconExternalLink size={16} />}
             onClick={handlePreview}
           >
-            预览
+            {t('preview')}
           </Button>
         }
       />
@@ -523,7 +560,7 @@ export default function ThemesPage() {
       <Grid>
         <Grid.Col span={{ base: 12, md: 6 }}>
           <Group justify="space-between" mb="md">
-            <Title order={4}>主题</Title>
+            <Title order={4}>{t('themeTitle')}</Title>
             <Group gap="xs">
               <Button
                 size="xs"
@@ -531,7 +568,7 @@ export default function ThemesPage() {
                 leftSection={<IconDownload size={14} />}
                 onClick={openThemeExport}
               >
-                导出
+                {t('export')}
               </Button>
               <Button
                 size="xs"
@@ -539,25 +576,25 @@ export default function ThemesPage() {
                 leftSection={<IconUpload size={14} />}
                 onClick={() => themeFileInputRef.current?.click()}
               >
-                导入
+                {t('import')}
               </Button>
               <Button
                 size="xs"
                 leftSection={<IconPlus size={14} />}
                 onClick={() => openCreate('theme')}
               >
-                新建
+                {t('new')}
               </Button>
             </Group>
           </Group>
           <Text size="sm" c="dimmed" mb="sm">
-            单选，用于提供前台基础样式
+            {t('themeDescription')}
           </Text>
 
           {themes.length === 0 ? (
             <Paper withBorder p="xl" radius="md">
               <Text ta="center" c="dimmed">
-                暂无主题
+                {t('emptyThemes')}
               </Text>
             </Paper>
           ) : (
@@ -589,7 +626,7 @@ export default function ThemesPage() {
 
         <Grid.Col span={{ base: 12, md: 6 }}>
           <Group justify="space-between" mb="md">
-            <Title order={4}>自定义 CSS</Title>
+            <Title order={4}>{t('customStyleTitle')}</Title>
             <Group gap="xs">
               <Button
                 size="xs"
@@ -597,7 +634,7 @@ export default function ThemesPage() {
                 leftSection={<IconDownload size={14} />}
                 onClick={openCustomStyleExport}
               >
-                导出
+                {t('export')}
               </Button>
               <Button
                 size="xs"
@@ -605,25 +642,25 @@ export default function ThemesPage() {
                 leftSection={<IconUpload size={14} />}
                 onClick={() => customStyleFileInputRef.current?.click()}
               >
-                导入
+                {t('import')}
               </Button>
               <Button
                 size="xs"
                 leftSection={<IconPlus size={14} />}
                 onClick={() => openCreate('custom-style')}
               >
-                新建
+                {t('new')}
               </Button>
             </Group>
           </Group>
           <Text size="sm" c="dimmed" mb="sm">
-            多选，可同时叠加多个样式片段
+            {t('customStyleDescription')}
           </Text>
 
           {customStyles.length === 0 ? (
             <Paper withBorder p="xl" radius="md">
               <Text ta="center" c="dimmed">
-                暂无自定义 CSS
+                {t('emptyCustomStyles')}
               </Text>
             </Paper>
           ) : (

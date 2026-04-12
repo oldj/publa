@@ -1,54 +1,47 @@
-import { getCurrentUser } from '@/server/auth'
+import { requireCurrentUser } from '@/server/auth'
+import { jsonError, jsonSuccess } from '@/server/lib/api-response'
 import { renderMarkdown, htmlToText } from '@/server/lib/markdown'
 import { parseIdParam, safeParseJson } from '@/server/lib/request'
 import { getPostById } from '@/server/services/posts'
 import { saveDraft, getDraft, deleteDraft } from '@/server/services/revisions'
 import { parsePostDraftMetadata } from '@/shared/revision-metadata'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const user = await getCurrentUser()
-  if (!user) {
-    return NextResponse.json(
-      { success: false, code: 'UNAUTHORIZED', message: 'Unauthorized' },
-      { status: 401 },
-    )
-  }
+  const guard = await requireCurrentUser()
+  if (!guard.ok) return guard.response
 
   const { id: idStr } = await params
-  const { id: postId, error: idError } = parseIdParam(idStr)
+  const { id: postId, error: idError } = await parseIdParam(idStr)
   if (idError) return idError
   const draft = await getDraft('post', postId)
-  return NextResponse.json({
-    success: true,
-    data: draft
+  return jsonSuccess(
+    draft
       ? {
           ...draft,
           metadata: parsePostDraftMetadata(draft.metadata),
         }
       : null,
-  })
+  )
 }
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const user = await getCurrentUser()
-  if (!user) {
-    return NextResponse.json(
-      { success: false, code: 'UNAUTHORIZED', message: 'Unauthorized' },
-      { status: 401 },
-    )
-  }
+  const guard = await requireCurrentUser()
+  if (!guard.ok) return guard.response
 
   const { id: idStr } = await params
-  const { id: postId, error: idError } = parseIdParam(idStr)
+  const { id: postId, error: idError } = await parseIdParam(idStr)
   if (idError) return idError
 
   const post = await getPostById(postId)
   if (!post) {
-    return NextResponse.json(
-      { success: false, code: 'NOT_FOUND', message: '文章不存在' },
-      { status: 404 },
-    )
+    return jsonError({
+      source: request,
+      namespace: 'admin.api.posts',
+      key: 'notFound',
+      code: 'NOT_FOUND',
+      status: 404,
+    })
   }
 
   const { data: body, error } = await safeParseJson(request)
@@ -80,27 +73,22 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       contentText: contentText || '',
       metadata: parsePostDraftMetadata(body.metadata),
     },
-    user.id,
+    guard.user.id,
   )
 
-  return NextResponse.json({ success: true, data: result })
+  return jsonSuccess(result)
 }
 
 export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const user = await getCurrentUser()
-  if (!user) {
-    return NextResponse.json(
-      { success: false, code: 'UNAUTHORIZED', message: 'Unauthorized' },
-      { status: 401 },
-    )
-  }
+  const guard = await requireCurrentUser()
+  if (!guard.ok) return guard.response
 
   const { id: idStr } = await params
-  const { id: postId, error: idError } = parseIdParam(idStr)
+  const { id: postId, error: idError } = await parseIdParam(idStr)
   if (idError) return idError
   await deleteDraft('post', postId)
-  return NextResponse.json({ success: true })
+  return jsonSuccess()
 }

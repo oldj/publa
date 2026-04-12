@@ -2,77 +2,83 @@
  * 数据库初始数据脚本
  * 用于系统首次初始化时填充默认数据
  */
-import { serializeSettingValue } from '@/server/services/settings'
-import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core'
+import { getMessage } from '@/i18n/core'
+import enFrontend from '@/messages/en/frontend.json'
+import {
+  getDefaultSettingsPayload,
+  serializeSettingValue,
+  type PartialSettingType,
+} from '@/server/services/settings'
 import { eq } from 'drizzle-orm'
+import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core'
 import { db, dbReady } from './index'
 import { contents, menus, settings, themes } from './schema'
 import { isoNow } from './schema/shared'
 
-/** 默认系统设置（原生类型，插入时自动 JSON 序列化） */
-const defaultSettings = (
-  [
-    { key: 'siteTitle', value: 'Publa' },
-    { key: 'siteSlogan', value: 'Yet Another Amazing Blog' },
-    { key: 'siteDescription', value: '' },
-    { key: 'siteUrl', value: '' },
-    { key: 'language', value: 'zh' },
-    { key: 'timezone', value: 'Asia/Shanghai' },
-    { key: 'faviconUrl', value: '' },
-    { key: 'faviconMode', value: 'default' },
-    { key: 'faviconData', value: '' },
-    { key: 'faviconMimeType', value: '' },
-    { key: 'faviconVersion', value: '' },
-    { key: 'defaultTheme', value: 'light' },
-    { key: 'enableComment', value: true },
-    { key: 'showCommentsGlobally', value: true },
-    { key: 'defaultApprove', value: false },
-    { key: 'enableRss', value: true },
-    { key: 'rssTitle', value: '' },
-    { key: 'rssDescription', value: '' },
-    { key: 'rssContent', value: 'full' },
-    { key: 'rssLimit', value: 20 },
-    { key: 'enableGuestbook', value: true },
-    { key: 'enableSearch', value: true },
-    { key: 'guestbookWelcome', value: '欢迎给我留言！' },
-    // 底部版权
-    { key: 'footerCopyright', value: '{SITE_NAME} &copy; {FULL_YEAR}' },
-    // 自定义 HTML
-    { key: 'customAfterPostHtml', value: '' },
-    { key: 'customHeadHtml', value: '' },
-    { key: 'customBodyStartHtml', value: '' },
-    { key: 'customBodyEndHtml', value: '' },
-    // 主题与自定义 CSS 选中状态。activeThemeId 在内置主题插入后写入
-    { key: 'activeCustomStyleIds', value: [] },
-  ] as { key: string; value: unknown }[]
-).map(({ key, value }) => ({ key, value: serializeSettingValue(key, value) }))
+type Messages = Record<string, unknown>
+
+/** 按 locale 动态加载 frontend 翻译，找不到时回退英文 */
+async function loadFrontendMessages(language: string): Promise<Messages> {
+  if (language === 'en') return enFrontend
+  try {
+    return (await import(`../../messages/${language}/frontend.json`)).default
+  } catch {
+    return enFrontend
+  }
+}
+
+/** 从已加载的 messages 取翻译，找不到时回退英文 */
+function seedMsg(messages: Messages, path: string): string {
+  const msg = getMessage(messages, path)
+  if (typeof msg === 'string') return msg
+  return getMessage(enFrontend, path) as string
+}
+
+function buildSeedSettings(language?: string) {
+  const payload: PartialSettingType = getDefaultSettingsPayload()
+  // activeThemeId 依赖内置主题真实 id，统一交给 ensureBuiltinThemes 动态写入。
+  delete payload.activeThemeId
+
+  if (language) {
+    payload.language = language
+  }
+
+  return Object.entries(payload).map(([key, value]) => ({
+    key,
+    value: serializeSettingValue(key, value),
+  }))
+}
 
 /** 内置主题。三项均不可编辑、不可删除，仅可参与排序和被选中 */
 const BUILTIN_THEMES = [
-  { name: '浅色', builtinKey: 'light', sortOrder: 1 },
-  { name: '深色', builtinKey: 'dark', sortOrder: 2 },
-  { name: '空白', builtinKey: 'blank', sortOrder: 3 },
+  { name: 'Light', builtinKey: 'light', sortOrder: 1 },
+  { name: 'Dark', builtinKey: 'dark', sortOrder: 2 },
+  { name: 'Blank', builtinKey: 'blank', sortOrder: 3 },
 ] as const
 
-/** 默认菜单项 */
-const defaultMenus = [
-  { title: '首页', url: '/', sortOrder: 0, target: '_self' as const },
-  { title: '文章', url: '/posts', sortOrder: 1, target: '_self' as const },
-  { title: '留言', url: '/guestbook', sortOrder: 2, target: '_self' as const },
-  { title: '关于', url: '/about', sortOrder: 3, target: '_self' as const },
-]
+function buildDefaultMenus(msg: Messages) {
+  const m = (key: string) => seedMsg(msg, `nav.defaultMenus.${key}`)
+  return [
+    { title: m('home'), url: '/', sortOrder: 0, target: '_self' as const },
+    { title: m('posts'), url: '/posts', sortOrder: 1, target: '_self' as const },
+    { title: m('guestbook'), url: '/guestbook', sortOrder: 2, target: '_self' as const },
+    { title: m('about'), url: '/about', sortOrder: 3, target: '_self' as const },
+  ]
+}
 
-/** 默认关于页面 */
-const defaultAboutPage = {
-  type: 'page' as const,
-  title: '关于',
-  path: 'about',
-  contentType: 'markdown' as const,
-  contentRaw: '# 关于\n\n欢迎来到我的博客！',
-  contentHtml: '<h1>关于</h1>\n<p>欢迎来到我的博客！</p>',
-  template: 'default' as const,
-  status: 'published' as const,
-  publishedAt: new Date().toISOString(),
+function buildDefaultAboutPage(msg: Messages) {
+  const m = (key: string) => seedMsg(msg, `seed.aboutPage.${key}`)
+  return {
+    type: 'page' as const,
+    title: m('title'),
+    path: 'about',
+    contentType: 'markdown' as const,
+    contentRaw: m('contentRaw'),
+    contentHtml: m('contentHtml'),
+    template: 'default' as const,
+    status: 'published' as const,
+    publishedAt: new Date().toISOString(),
+  }
 }
 
 /** 默认 robots.txt 页面 */
@@ -89,7 +95,12 @@ const defaultRobotsTxt = {
   publishedAt: new Date().toISOString(),
 }
 
-export async function seed(tx?: BaseSQLiteDatabase<any, any, any>) {
+export interface SeedOptions {
+  /** 初始化时选定的界面语言，会覆盖默认的 'zh' */
+  language?: string
+}
+
+export async function seed(tx?: BaseSQLiteDatabase<any, any, any>, options: SeedOptions = {}) {
   // 未传入事务时，CLI 脚本和非 Next.js 入口需要等待数据库初始化完成
   if (!tx) {
     await dbReady
@@ -97,21 +108,25 @@ export async function seed(tx?: BaseSQLiteDatabase<any, any, any>) {
 
   const conn = tx ?? db
 
+  const language = options.language ?? 'zh'
+  const effectiveSettings = buildSeedSettings(language)
+  const frontendMsg = await loadFrontendMessages(language)
+
   // 插入默认设置（跳过已存在的）
-  for (const item of defaultSettings) {
+  for (const item of effectiveSettings) {
     await conn.insert(settings).values(item).onConflictDoNothing()
   }
 
   // 检查是否已有菜单
   const existingMenus = await conn.select().from(menus)
   if (existingMenus.length === 0) {
-    await conn.insert(menus).values(defaultMenus)
+    await conn.insert(menus).values(buildDefaultMenus(frontendMsg))
   }
 
   // 检查是否已有关于页面
   const existingPages = await conn.select().from(contents)
   if (existingPages.length === 0) {
-    await conn.insert(contents).values([defaultAboutPage, defaultRobotsTxt])
+    await conn.insert(contents).values([buildDefaultAboutPage(frontendMsg), defaultRobotsTxt])
   }
 
   // 幂等写入内置主题与默认 activeThemeId
@@ -147,11 +162,7 @@ export async function ensureBuiltinThemes(
   }
 
   // 默认选中"浅色"主题（若尚未设置）
-  const lightTheme = await conn
-    .select()
-    .from(themes)
-    .where(eq(themes.builtinKey, 'light'))
-    .limit(1)
+  const lightTheme = await conn.select().from(themes).where(eq(themes.builtinKey, 'light')).limit(1)
   if (lightTheme.length > 0) {
     await conn
       .insert(settings)

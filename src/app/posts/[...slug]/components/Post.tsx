@@ -16,6 +16,7 @@ import katex from 'katex'
 import renderMathInElement from 'katex/contrib/auto-render'
 import 'katex/dist/katex.css'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { IoChevronUp } from 'react-icons/io5'
@@ -43,6 +44,7 @@ interface IProps {
 
 export default function Post(props: IProps) {
   const { account, post, html, headers, afterPostHtml, adminPath = 'admin' } = props
+  const t = useTranslations('frontend.posts.detail')
   const router = useRouter()
   const [comments, setComments] = useState<IComment[]>(post?.comments || [])
   // const [html, setHTML] = useState<string>('')
@@ -231,7 +233,7 @@ export default function Post(props: IProps) {
       <div className="post-detail-props">
         {post.category && (
           <span>
-            <strong>分类：</strong>
+            <strong>{t('category')}</strong>
             <Link href={`/posts/list?category=${encodeURIComponent(post.category.name)}`}>
               {post.category.name}
             </Link>
@@ -239,7 +241,7 @@ export default function Post(props: IProps) {
         )}
 
         <span>
-          <strong>标签：</strong>
+          <strong>{t('tags')}</strong>
           {post.tags.map((t) => (
             <Link key={t.id} href={`/posts/list?tag=${encodeURIComponent(t.name)}`}>
               {t.name}
@@ -252,7 +254,7 @@ export default function Post(props: IProps) {
         {account?.isStaff && (
           <span>
             <Link href={`/${adminPath}/posts/${post.id}`} target={'_blank'}>
-              [文章管理]
+              {t('manage')}
             </Link>
           </span>
         )}
@@ -266,8 +268,8 @@ export default function Post(props: IProps) {
             router.push(post.previous.url)
           }}
         >
-          <span className="post-detail-label">前一篇</span>
-          {post.previous ? <Link href={post.previous.url}>{post.previous.title}</Link> : '无'}
+          <span className="post-detail-label">{t('previous')}</span>
+          {post.previous ? <Link href={post.previous.url}>{post.previous.title}</Link> : t('none')}
         </div>
         <div
           className={clsx('post-detail-next', !post?.next && 'is-disabled')}
@@ -276,13 +278,13 @@ export default function Post(props: IProps) {
             router.push(post.next.url)
           }}
         >
-          <span className="post-detail-label">后一篇</span>
-          {post.next ? <Link href={post.next.url}>{post.next.title}</Link> : '无'}
+          <span className="post-detail-label">{t('next')}</span>
+          {post.next ? <Link href={post.next.url}>{post.next.title}</Link> : t('none')}
         </div>
       </div>
 
       <div className="post-detail-related">
-        <h2>相关文章：</h2>
+        <h2>{t('related')}</h2>
         {post.related.length > 0 ? (
           <ul>
             {post.related.map((i, idx) => (
@@ -292,16 +294,16 @@ export default function Post(props: IProps) {
             ))}
           </ul>
         ) : (
-          <div className="post-detail-no-records">暂无相关文章</div>
+          <div className="post-detail-no-records">{t('noRelated')}</div>
         )}
       </div>
 
       {post.canShowComments && (
         <>
           <div className="post-comments">
-            <h2>评论：</h2>
+            <h2>{t('comments')}</h2>
             {comments.length === 0 ? (
-              <div className="post-detail-no-records">暂无评论</div>
+              <div className="post-detail-no-records">{t('noComments')}</div>
             ) : (
               comments.map((i) => <Comment data={i} key={i.id} refreshComments={refreshComments} />)
             )}
@@ -309,8 +311,8 @@ export default function Post(props: IProps) {
 
           {post.canComment ? (
             <div className="post-comment-form">
-              <h2>发表评论：</h2>
-              <div className="post-detail-info">电子邮件地址不会被公开。必填项已用 * 标注。</div>
+              <h2>{t('writeComment')}</h2>
+              <div className="post-detail-info">{t('commentHelp')}</div>
 
               <CommentForm
                 contentId={post.id}
@@ -323,7 +325,7 @@ export default function Post(props: IProps) {
               />
             </div>
           ) : (
-            <div className="post-comment-closed">评论已关闭。</div>
+            <div className="post-comment-closed">{t('commentsClosed')}</div>
           )}
         </>
       )}
@@ -341,7 +343,7 @@ export default function Post(props: IProps) {
       {showBackToTop && (
         <div className="back-to-top-wrapper">
           <button
-            title={'回到顶部'}
+            title={t('backToTop')}
             className={clsx('back-to-top', 'animate__animated animate__fadeIn')}
             onClick={() => {
               window.scrollTo(0, 0)

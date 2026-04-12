@@ -85,4 +85,48 @@ describe('/api/setup POST', () => {
     const allUsers = await testDb.select().from(users)
     expect(allUsers).toHaveLength(0)
   })
+
+  it('合法 language 字段会透传给 seed', async () => {
+    const response = await POST(new Request('http://localhost/api/setup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: 'owner',
+        password: 'pass123',
+        language: 'en',
+      }),
+    }) as any)
+
+    expect(response.status).toBe(200)
+    expect(mockSeed).toHaveBeenCalledWith(expect.anything(), { language: 'en' })
+  })
+
+  it('缺失 language 字段时使用默认 locale', async () => {
+    const response = await POST(new Request('http://localhost/api/setup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: 'owner',
+        password: 'pass123',
+      }),
+    }) as any)
+
+    expect(response.status).toBe(200)
+    expect(mockSeed).toHaveBeenCalledWith(expect.anything(), { language: 'en' })
+  })
+
+  it('非法 language 字段会被忽略并使用默认 locale', async () => {
+    const response = await POST(new Request('http://localhost/api/setup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: 'owner',
+        password: 'pass123',
+        language: 'fr',
+      }),
+    }) as any)
+
+    expect(response.status).toBe(200)
+    expect(mockSeed).toHaveBeenCalledWith(expect.anything(), { language: 'en' })
+  })
 })

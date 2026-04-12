@@ -1,5 +1,6 @@
 import { maybeFirst } from '@/server/db/query'
 import * as schema from '@/server/db/schema'
+import ver from '@/version.json'
 import { asc, eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { setupTestDb, testDb } from './__test__/setup'
@@ -11,6 +12,8 @@ const {
   importSettingsData,
   validateImportData,
 } = await import('./import-export')
+
+const PUBLA_VERSION = ver.join('.')
 
 beforeEach(async () => {
   await setupTestDb()
@@ -93,20 +96,26 @@ async function seedSettingsData() {
 
 describe('validateImportData', () => {
   it('缺少 meta 信息', () => {
-    expect(validateImportData({})).toEqual({ valid: false, message: '缺少 meta 信息' })
-    expect(validateImportData({ meta: {} })).toEqual({ valid: false, message: '缺少 meta 信息' })
+    expect(validateImportData({})).toEqual({ valid: false, code: 'META_REQUIRED' })
+    expect(validateImportData({ meta: {} })).toEqual({ valid: false, code: 'META_REQUIRED' })
   })
 
   it('不支持的版本', () => {
     const result = validateImportData({ meta: { type: 'content', version: '1.0' } })
-    expect(result.valid).toBe(false)
-    expect(result.message).toContain('1.0')
+    expect(result).toEqual({
+      valid: false,
+      code: 'UNSUPPORTED_VERSION',
+      values: { version: '1.0' },
+    })
   })
 
   it('未知的数据类型', () => {
     const result = validateImportData({ meta: { type: 'unknown', version: '2.0' } })
-    expect(result.valid).toBe(false)
-    expect(result.message).toContain('unknown')
+    expect(result).toEqual({
+      valid: false,
+      code: 'UNKNOWN_TYPE',
+      values: { type: 'unknown' },
+    })
   })
 
   it('内容数据缺少必要字段', () => {
@@ -116,8 +125,11 @@ describe('validateImportData', () => {
       tags: [],
       // 缺少 contents
     })
-    expect(result.valid).toBe(false)
-    expect(result.message).toContain('contents')
+    expect(result).toEqual({
+      valid: false,
+      code: 'MISSING_FIELD',
+      values: { field: 'contents' },
+    })
   })
 
   it('内容数据校验通过', () => {
@@ -135,8 +147,11 @@ describe('validateImportData', () => {
       meta: { type: 'settings', version: '2.0' },
       // 缺少 settings
     })
-    expect(result.valid).toBe(false)
-    expect(result.message).toContain('settings')
+    expect(result).toEqual({
+      valid: false,
+      code: 'MISSING_FIELD',
+      values: { field: 'settings' },
+    })
   })
 
   it('设置数据校验通过', () => {
@@ -179,6 +194,7 @@ describe('exportContentData', () => {
     const data = await exportContentData()
     expect(data.meta.type).toBe('content')
     expect(data.meta.version).toBe('2.0')
+    expect(data.meta.publaVersion).toBe(PUBLA_VERSION)
     expect(data.meta.exportedAt).toBeDefined()
   })
 
@@ -230,6 +246,7 @@ describe('exportSettingsData', () => {
     const data = await exportSettingsData()
     expect(data.meta.type).toBe('settings')
     expect(data.meta.version).toBe('2.0')
+    expect(data.meta.publaVersion).toBe(PUBLA_VERSION)
   })
 
   it('导出包含所有设置表', async () => {
@@ -271,6 +288,21 @@ describe('exportSettingsData', () => {
     expect(keys).not.toContain('jwtSecret')
   })
 
+  it('导出设置数据会忽略未知或废弃设置项', async () => {
+    await testDb.insert(schema.settings).values([
+      { key: 'siteTitle', value: '"我的博客"' },
+      { key: 'allowThemeToggle', value: 'true' },
+      { key: 'legacySetting', value: '"legacy"' },
+    ])
+
+    const data = await exportSettingsData()
+    const keys = data.settings.map((item) => item.key)
+
+    expect(keys).toContain('siteTitle')
+    expect(keys).not.toContain('allowThemeToggle')
+    expect(keys).not.toContain('legacySetting')
+  })
+
   it('导出设置数据会按真实类型输出 value', async () => {
     await testDb.insert(schema.settings).values([
       { key: 'siteTitle', value: '"我的博客"' },
@@ -300,9 +332,9 @@ describe('exportSettingsData', () => {
       { id: 101, name: '浅色', css: '', sortOrder: 1, builtinKey: 'light' },
       { id: 102, name: '自定义主题', css: 'body{color:red}', sortOrder: 10, builtinKey: null },
     ])
-    await testDb.insert(schema.customStyles).values([
-      { id: 201, name: '片段 A', css: '.a{}', sortOrder: 1 },
-    ])
+    await testDb
+      .insert(schema.customStyles)
+      .values([{ id: 201, name: '片段 A', css: '.a{}', sortOrder: 1 }])
 
     const data = await exportSettingsData()
     expect(data.themes).toHaveLength(2)
@@ -353,10 +385,10 @@ describe('importContentData', () => {
       1,
     )
 
-    expect(results).toContain('分类: 1 条')
-    expect(results).toContain('标签: 1 条')
+    expect(results).toContainEqual({ key: 'contentCategories', values: { count: 1 } })
+    expect(results).toContainEqual({ key: 'contentTags', values: { count: 1 } })
     // 空数组不出现在结果中
-    expect(results.find((r) => r.includes('内容'))).toBeUndefined()
+    expect(results.find((r) => r.key === 'contentItems')).toBeUndefined()
   })
 
   it('导出后再导入数据一致', async () => {
@@ -927,8 +959,11 @@ describe('importSettingsData', () => {
     )
 
     const allSettings = await testDb.select().from(schema.settings)
-    expect(allSettings).toHaveLength(1)
-    expect(allSettings[0].value).toBe('"新标题"')
+    const map = Object.fromEntries(allSettings.map((item) => [item.key, item.value]))
+    expect(map.siteTitle).toBe('"新标题"')
+    expect(map.siteSlogan).toBe('"Yet Another Amazing Blog"')
+    expect(map.enableComment).toBe('true')
+    expect(map.rssLimit).toBe('20')
   })
 
   it('导入设置时保留现有敏感字段并忽略导入数据中的敏感字段', async () => {
@@ -984,6 +1019,54 @@ describe('importSettingsData', () => {
     expect(map.enableComment).toBe('false')
     expect(map.rssLimit).toBe('20')
     expect(map.emailNotifyNewComment).toBe('{"enabled":true,"userIds":[1]}')
+  })
+
+  it('导入设置时忽略未知或废弃设置项', async () => {
+    await importSettingsData(
+      {
+        settings: [
+          { key: 'siteTitle', value: '新站点' },
+          { key: 'allowThemeToggle', value: true },
+          { key: 'legacySetting', value: 'legacy' },
+        ],
+      },
+      1,
+    )
+
+    const allSettings = await testDb.select().from(schema.settings)
+    const map = Object.fromEntries(allSettings.map((s) => [s.key, s.value]))
+
+    expect(map.siteTitle).toBe('"新站点"')
+    expect(map.allowThemeToggle).toBeUndefined()
+    expect(map.legacySetting).toBeUndefined()
+  })
+
+  it('导入缺失字段时会按默认值补齐并落库', async () => {
+    await importSettingsData(
+      {
+        settings: [{ key: 'siteTitle', value: '测试站' }],
+      },
+      1,
+    )
+
+    const settingsRows = await testDb.select().from(schema.settings)
+    const map = Object.fromEntries(settingsRows.map((item) => [item.key, item.value]))
+    const [lightTheme] = await testDb
+      .select({ id: schema.themes.id })
+      .from(schema.themes)
+      .where(eq(schema.themes.builtinKey, 'light'))
+      .limit(1)
+
+    expect(map.siteTitle).toBe('"测试站"')
+    expect(map.siteSlogan).toBe('"Yet Another Amazing Blog"')
+    expect(map.enableComment).toBe('true')
+    expect(map.showCommentsGlobally).toBe('true')
+    expect(map.rssLimit).toBe('20')
+    expect(map.guestbookWelcome).toBe('""')
+    expect(map.emailSmtpEncryption).toBe('"tls"')
+    expect(map.emailNotifyNewComment).toBe('{"enabled":false,"userIds":[]}')
+    expect(map.activeCustomStyleIds).toBe('[]')
+    expect(map.activeThemeId).toBe(String(lightTheme?.id))
   })
 
   it('覆盖导入菜单和跳转规则', async () => {
@@ -1153,7 +1236,10 @@ describe('importSettingsData', () => {
   it('返回导入结果摘要', async () => {
     const results = await importSettingsData(
       {
-        settings: [{ key: 'k1', value: 'v1' }],
+        settings: [
+          { key: 'siteTitle', value: 'v1' },
+          { key: 'allowThemeToggle', value: true },
+        ],
         menus: [{ id: 1, title: '菜单', url: '/' }],
         redirectRules: [
           { id: 1, sortOrder: 1, pathRegex: '^/old$', redirectTo: '/new', redirectType: '301' },
@@ -1166,18 +1252,23 @@ describe('importSettingsData', () => {
       1,
     )
 
-    expect(results).toContain('设置: 1 条')
-    expect(results).toContain('菜单: 1 条')
-    expect(results).toContain('跳转规则: 1 条')
-    expect(results.find((r) => r.includes('用户'))).toContain('新建 1 个')
-    expect(results.find((r) => r.includes('用户'))).toContain('更新 1 个')
+    expect(results).toContainEqual({
+      key: 'settingsItems',
+      values: { count: 1, defaultedCount: expect.any(Number) },
+    })
+    expect(results).toContainEqual({ key: 'settingsMenus', values: { count: 1 } })
+    expect(results).toContainEqual({ key: 'settingsRedirectRules', values: { count: 1 } })
+    expect(results).toContainEqual({
+      key: 'settingsUsers',
+      values: { createdCount: 1, updatedCount: 1 },
+    })
   })
 
   it('导入覆盖 themes 与 customStyles，并补齐内置主题', async () => {
     // 预置一条自定义主题，期望导入后被清空
-    await testDb.insert(schema.themes).values([
-      { id: 800, name: '旧主题', css: 'body{}', sortOrder: 1, builtinKey: null },
-    ])
+    await testDb
+      .insert(schema.themes)
+      .values([{ id: 800, name: '旧主题', css: 'body{}', sortOrder: 1, builtinKey: null }])
 
     await importSettingsData(
       {
@@ -1250,12 +1341,15 @@ describe('importSettingsData', () => {
     await importSettingsData(exported, 1)
 
     const allSettings = await testDb.select().from(schema.settings)
-    expect(allSettings).toHaveLength(4)
+    expect(allSettings.length).toBeGreaterThanOrEqual(4)
     expect(allSettings.find((s) => s.key === 'siteTitle')?.value).toBe('"我的博客"')
     expect(allSettings.find((s) => s.key === 'enableComment')?.value).toBe('false')
     expect(allSettings.find((s) => s.key === 'rssLimit')?.value).toBe('20')
     expect(allSettings.find((s) => s.key === 'emailNotifyNewComment')?.value).toBe(
       '{"enabled":true,"userIds":[1]}',
+    )
+    expect(allSettings.find((s) => s.key === 'siteSlogan')?.value).toBe(
+      '"Yet Another Amazing Blog"',
     )
 
     const allRedirectRules = await testDb.select().from(schema.redirectRules)

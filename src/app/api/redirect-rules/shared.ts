@@ -1,28 +1,27 @@
 import { RedirectRuleValidationError } from '@/server/services/redirect-rules'
-import { NextResponse } from 'next/server'
+import { jsonError } from '@/server/lib/api-response'
 
-function toValidationMessage(error: RedirectRuleValidationError): string {
+function toValidationKey(error: RedirectRuleValidationError): string {
   switch (error.code) {
     case 'INVALID_PATH_REGEX':
-      return '匹配路径正则表达式无效'
+      return 'invalidPathRegex'
     case 'INVALID_REDIRECT_TO':
-      return '跳转目标必须是站内路径或 http/https URL'
+      return 'invalidRedirectTo'
     case 'INVALID_REDIRECT_TYPE':
-      return '跳转类型无效'
+      return 'invalidRedirectType'
     case 'INVALID_REORDER_IDS':
-      return '排序数据无效'
+      return 'invalidReorder'
     default:
-      return '请求数据无效'
+      return 'invalidPayload'
   }
 }
 
-export function validationErrorResponse(error: RedirectRuleValidationError) {
-  return NextResponse.json(
-    {
-      success: false,
-      code: 'VALIDATION_ERROR',
-      message: toValidationMessage(error),
-    },
-    { status: 400 },
-  )
+export function validationErrorResponse(error: RedirectRuleValidationError, source?: Request) {
+  return jsonError({
+    source,
+    namespace: 'admin.api.redirectRules',
+    key: toValidationKey(error),
+    code: 'VALIDATION_ERROR',
+    status: 400,
+  })
 }

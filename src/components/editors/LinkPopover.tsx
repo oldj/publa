@@ -2,14 +2,10 @@
 
 import { ActionIcon, Popover, TextInput, Tooltip } from '@mantine/core'
 import { RichTextEditor } from '@mantine/tiptap'
-import {
-  IconCornerDownLeft,
-  IconExternalLink,
-  IconLink,
-  IconLinkOff,
-} from '@tabler/icons-react'
+import { IconCornerDownLeft, IconExternalLink, IconLink, IconLinkOff } from '@tabler/icons-react'
 import { isAllowedUri } from '@tiptap/extension-link'
 import type { Editor } from '@tiptap/react'
+import { useTranslations } from 'next-intl'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 // 链接操作 hook，参考 tiptap 官方 LinkPopover 的 useLinkHandler
@@ -115,11 +111,23 @@ function useLinkPopover(editor: Editor | null) {
     window.open(href, '_blank', 'noopener,noreferrer')
   }, [editor])
 
-  return { url, setUrl, isOpen, isActive, manualOpen, openPopover, closePopover, setLink, removeLink, openLink }
+  return {
+    url,
+    setUrl,
+    isOpen,
+    isActive,
+    manualOpen,
+    openPopover,
+    closePopover,
+    setLink,
+    removeLink,
+    openLink,
+  }
 }
 
 // 链接 Popover 组件，参考 tiptap 官方 LinkPopover 的 UX 模式
 export default function LinkPopoverControl({ editor }: { editor: Editor | null }) {
+  const t = useTranslations('admin.editor.linkPopover')
   const {
     url,
     setUrl,
@@ -155,14 +163,18 @@ export default function LinkPopoverControl({ editor }: { editor: Editor | null }
       position="bottom"
     >
       <Popover.Target>
-        <RichTextEditor.Control onClick={handleClick} active={isOpen || isActive} title="插入链接">
+        <RichTextEditor.Control
+          onClick={handleClick}
+          active={isOpen || isActive}
+          title={t('insertLink')}
+        >
           <IconLink size={16} />
         </RichTextEditor.Control>
       </Popover.Target>
       <Popover.Dropdown style={{ padding: 8 }}>
         <div style={{ display: 'flex', gap: 8, minWidth: 360, alignItems: 'center' }}>
           <TextInput
-            placeholder="输入链接地址..."
+            placeholder={t('placeholder')}
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             onKeyDown={(e) => {
@@ -177,7 +189,7 @@ export default function LinkPopoverControl({ editor }: { editor: Editor | null }
             style={{ flex: 1 }}
             size="sm"
             rightSection={
-              <Tooltip label="应用链接" withArrow zIndex={10001}>
+              <Tooltip label={t('apply')} withArrow zIndex={10001}>
                 <ActionIcon
                   variant="subtle"
                   size="sm"
@@ -198,13 +210,13 @@ export default function LinkPopoverControl({ editor }: { editor: Editor | null }
             }}
           />
 
-          <Tooltip label="在新窗口打开" withArrow zIndex={10001}>
+          <Tooltip label={t('openInNewTab')} withArrow zIndex={10001}>
             <ActionIcon variant="subtle" size="sm" onClick={openLink} disabled={!isActive}>
               <IconExternalLink size={16} />
             </ActionIcon>
           </Tooltip>
 
-          <Tooltip label="移除链接" withArrow zIndex={10001}>
+          <Tooltip label={t('remove')} withArrow zIndex={10001}>
             <ActionIcon
               variant="subtle"
               color="red"

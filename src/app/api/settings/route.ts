@@ -1,5 +1,7 @@
 import { requireRole } from '@/server/auth'
+import { jsonSuccess } from '@/server/lib/api-response'
 import { safeParseJson } from '@/server/lib/request'
+import { jsonSettingsValidationError } from '@/server/lib/settings-error'
 import { logActivity } from '@/server/services/activity-logs'
 import {
   ADMIN_SETTINGS_KEYS,
@@ -9,14 +11,14 @@ import {
   pickSettings,
   updateSettings,
 } from '@/server/services/settings'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 
 export async function GET() {
   const guard = await requireRole(['owner', 'admin'])
   if (!guard.ok) return guard.response
 
   const data = pickSettings(await getAllSettings(), ADMIN_SETTINGS_KEYS)
-  return NextResponse.json({ success: true, data })
+  return jsonSuccess(data)
 }
 
 export async function PUT(request: NextRequest) {
@@ -33,18 +35,11 @@ export async function PUT(request: NextRequest) {
     await updateSettings(normalized)
   } catch (error) {
     if (isSettingsValidationError(error)) {
-      return NextResponse.json(
-        {
-          success: false,
-          code: 'VALIDATION_ERROR',
-          message: error.message,
-        },
-        { status: 400 },
-      )
+      return jsonSettingsValidationError(error, request)
     }
     throw error
   }
 
   await logActivity(request, guard.user.id, 'update_settings')
-  return NextResponse.json({ success: true })
+  return jsonSuccess()
 }

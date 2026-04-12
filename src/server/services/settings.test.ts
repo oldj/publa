@@ -107,6 +107,25 @@ describe('settings service', () => {
     expect(() => normalizeSettingsPayload([1, 2])).toThrow(SettingsValidationError)
     expect(() => normalizeSettingsPayload('string')).toThrow(SettingsValidationError)
   })
+
+  it('接受受支持的 language 枚举值', () => {
+    expect(normalizeSettingsPayload({ language: 'zh' })).toEqual({ language: 'zh' })
+    expect(normalizeSettingsPayload({ language: 'en' })).toEqual({ language: 'en' })
+  })
+
+  it('拒绝未受支持的 language 字符串', () => {
+    expect(() => normalizeSettingsPayload({ language: 'fr' })).toThrow(SettingsValidationError)
+    expect(() => normalizeSettingsPayload({ language: '' })).toThrow(SettingsValidationError)
+    expect(() => normalizeSettingsPayload({ language: 'ZH' })).toThrow(SettingsValidationError)
+  })
+
+  it('拒绝非字符串类型的 language 值', () => {
+    expect(() => normalizeSettingsPayload({ language: 123 })).toThrow(SettingsValidationError)
+    expect(() => normalizeSettingsPayload({ language: null })).toThrow(SettingsValidationError)
+    expect(() => normalizeSettingsPayload({ language: { zh: true } })).toThrow(
+      SettingsValidationError,
+    )
+  })
 })
 
 describe('toBool', () => {
@@ -173,6 +192,12 @@ describe('pickSettings', () => {
   it('缺失的字符串 key 默认为空字符串', () => {
     const result = pickSettings({}, ['siteTitle'])
     expect(result.siteTitle).toBe('')
+  })
+
+  it('缺失的通知 key 默认为空的 NotifySettingValue', () => {
+    const result = pickSettings({}, ['emailNotifyNewComment', 'emailNotifyNewGuestbook'])
+    expect(result.emailNotifyNewComment).toEqual({ enabled: false, userIds: [] })
+    expect(result.emailNotifyNewGuestbook).toEqual({ enabled: false, userIds: [] })
   })
 })
 

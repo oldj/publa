@@ -1,4 +1,5 @@
 import PreviewNotice from '@/components/PreviewNotice'
+import { getServerTranslator } from '@/i18n/server'
 import BasicLayout from '@/layouts/basic'
 import BlankLayout from '@/layouts/blank'
 import { getCurrentUser } from '@/server/auth'
@@ -15,15 +16,16 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { path } = await params
   const pagePath = path.join('/')
+  const { t } = await getServerTranslator('frontend.dynamicPage')
 
   // 预览模式：通过 ID 获取页面
   const previewId = parsePreviewId(pagePath)
   if (previewId !== null) {
     const user = await getCurrentUser()
-    if (!user) return { title: '页面不存在' }
+    if (!user) return { title: t('notFoundTitle') }
     const page = await getPreviewPage(previewId)
     return {
-      title: page?.seoTitle || page?.title || '页面不存在',
+      title: page?.seoTitle || page?.title || t('notFoundTitle'),
       description: page?.seoDescription || undefined,
     }
   }
@@ -31,7 +33,7 @@ export async function generateMetadata({
   const page = await getPublishedPageByPath(pagePath)
 
   return {
-    title: page?.seoTitle || page?.title || '页面不存在',
+    title: page?.seoTitle || page?.title || t('notFoundTitle'),
     description: page?.seoDescription || undefined,
   }
 }

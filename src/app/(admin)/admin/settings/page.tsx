@@ -1,5 +1,6 @@
 'use client'
 
+import { LOCALE_LABELS, SUPPORTED_LOCALES, isLocale } from '@/i18n/locales'
 import { notify } from '@/lib/notify'
 import {
   Box,
@@ -8,6 +9,7 @@ import {
   Group,
   NumberInput,
   Radio,
+  Select,
   Stack,
   Switch,
   Text,
@@ -15,6 +17,7 @@ import {
   Textarea,
 } from '@mantine/core'
 import { IconExclamationMark } from '@tabler/icons-react'
+import { useTranslations } from 'next-intl'
 import { useAdminUrl } from '@/app/(admin)/_components/AdminPathContext'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react'
@@ -38,6 +41,9 @@ const DEFAULT_FAVICON: FaviconState = {
 }
 
 export default function SettingsPage() {
+  const t = useTranslations('admin.settingsPage')
+  const tLang = useTranslations('admin.settings.languageField')
+  const tCommon = useTranslations('common')
   const router = useRouter()
   const adminUrl = useAdminUrl()
   const currentUser = useCurrentUser()
@@ -107,7 +113,7 @@ export default function SettingsPage() {
         notify({
           color: 'yellow',
           icon: <IconExclamationMark />,
-          message: `自定义 Head HTML 中包含不支持的标签：${names}，这些标签不会被渲染`,
+          message: t('messages.unsupportedHeadTags', { names }),
         })
       }
     }
@@ -121,13 +127,16 @@ export default function SettingsPage() {
       })
       const json = await res.json()
       if (json.success) {
-        notify({ color: 'green', message: '保存成功' })
+        notify({ color: 'green', message: tCommon('save.success') })
         initialSettingsRef.current = { ...settings }
+        // 触发 RSC 重新获取，让根布局基于新设置重新解析 locale，
+        // 从而无需手动刷新即可切换界面语言
+        router.refresh()
       } else {
-        notify({ color: 'red', message: json.message || '保存失败' })
+        notify({ color: 'red', message: json.message || tCommon('save.failed') })
       }
     } catch {
-      notify({ color: 'red', message: '网络错误' })
+      notify({ color: 'red', message: tCommon('errors.network') })
     } finally {
       setLoading(false)
     }
@@ -144,12 +153,12 @@ export default function SettingsPage() {
       const json = await res.json()
       if (json.success) {
         applyFaviconState(json.data)
-        notify({ color: 'green', message: '站点图标已更新' })
+        notify({ color: 'green', message: t('messages.faviconUpdated') })
       } else {
-        notify({ color: 'red', message: json.message || '保存失败' })
+        notify({ color: 'red', message: json.message || tCommon('save.failed') })
       }
     } catch {
-      notify({ color: 'red', message: '网络错误' })
+      notify({ color: 'red', message: tCommon('errors.network') })
     } finally {
       setFaviconAction(null)
     }
@@ -172,12 +181,12 @@ export default function SettingsPage() {
       const json = await res.json()
       if (json.success) {
         applyFaviconState(json.data)
-        notify({ color: 'green', message: '站点图标已上传' })
+        notify({ color: 'green', message: t('messages.faviconUploaded') })
       } else {
-        notify({ color: 'red', message: json.message || '上传失败' })
+        notify({ color: 'red', message: json.message || tCommon('errors.uploadFailed') })
       }
     } catch {
-      notify({ color: 'red', message: '网络错误' })
+      notify({ color: 'red', message: tCommon('errors.network') })
     } finally {
       setFaviconAction(null)
     }
@@ -192,12 +201,12 @@ export default function SettingsPage() {
       const json = await res.json()
       if (json.success) {
         applyFaviconState(json.data)
-        notify({ color: 'green', message: '已恢复默认图标' })
+        notify({ color: 'green', message: t('messages.faviconReset') })
       } else {
-        notify({ color: 'red', message: json.message || '操作失败' })
+        notify({ color: 'red', message: json.message || tCommon('errors.operationFailed') })
       }
     } catch {
-      notify({ color: 'red', message: '网络错误' })
+      notify({ color: 'red', message: tCommon('errors.network') })
     } finally {
       setFaviconAction(null)
     }
@@ -209,44 +218,59 @@ export default function SettingsPage() {
   )
 
   const faviconModeLabel =
-    favicon.mode === 'upload' ? '已上传文件' : favicon.mode === 'url' ? '外链 URL' : '默认图标'
+    favicon.mode === 'upload'
+      ? t('modes.upload')
+      : favicon.mode === 'url'
+        ? t('modes.url')
+        : t('modes.default')
 
   return (
     <Box>
-      <PageHeader title="系统设置" dirty={isDirty} loading={loading} onSave={handleSave} />
+      <PageHeader title={t('title')} dirty={isDirty} loading={loading} onSave={handleSave} />
 
       <Stack>
-        <Divider label="站点信息" labelPosition="left" />
+        <Divider label={t('sections.siteInfo')} labelPosition="left" />
+        <Select
+          label={tLang('label')}
+          description={tLang('description')}
+          value={isLocale(settings.language) ? settings.language : 'en'}
+          onChange={(v) => {
+            if (v) setField('language', v)
+          }}
+          data={SUPPORTED_LOCALES.map((l) => ({ value: l, label: LOCALE_LABELS[l] }))}
+          allowDeselect={false}
+          styles={{ wrapper: { maxWidth: 240 } }}
+        />
         <TextInput
-          label="站点标题"
+          label={t('fields.siteTitle')}
           placeholder="Publa"
           value={String(settings.siteTitle ?? '')}
           onChange={(e) => setField('siteTitle', e.target.value)}
         />
         <TextInput
-          label="站点 Slogan"
+          label={t('fields.siteSlogan')}
           placeholder="Yet Another Amazing Blog"
           value={String(settings.siteSlogan ?? '')}
           onChange={(e) => setField('siteSlogan', e.target.value)}
         />
         <TextInput
-          label="站点描述"
+          label={t('fields.siteDescription')}
           value={String(settings.siteDescription ?? '')}
           onChange={(e) => setField('siteDescription', e.target.value)}
         />
         <TextInput
-          label="站点 URL"
-          description="如 https://www.example.com，结尾不带斜杠，在生成 RSS 和 Atom 链接等场景会用到"
+          label={t('fields.siteUrl')}
+          description={t('fields.siteUrlDescription')}
           placeholder="https://example.com"
           value={String(settings.siteUrl ?? '')}
           onChange={(e) => setField('siteUrl', e.target.value)}
         />
 
-        <Divider label="站点图标" labelPosition="left" mt="md" />
+        <Divider label={t('sections.favicon')} labelPosition="left" mt="md" />
         <Group align="flex-start" wrap="nowrap">
           <Stack gap={6}>
             <Text size="sm" fw={500}>
-              当前预览
+              {t('fields.currentPreview')}
             </Text>
             <div
               style={{
@@ -262,21 +286,21 @@ export default function SettingsPage() {
             >
               <img
                 src={favicon.previewUrl}
-                alt="站点图标预览"
+                alt={t('fields.siteIconPreviewAlt')}
                 width={32}
                 height={32}
                 style={{ display: 'block' }}
               />
             </div>
             <Text size="xs" c="dimmed">
-              当前模式：{faviconModeLabel}
+              {t('fields.currentMode', { mode: faviconModeLabel })}
             </Text>
           </Stack>
 
           <Stack gap="xs" style={{ flex: 1 }}>
             <TextInput
-              label="图标外链 URL"
-              description="仅支持 https:// 地址。应用后会通过站内 /favicon.ico 做统一出口。"
+              label={t('fields.faviconUrl')}
+              description={t('fields.faviconUrlDescription')}
               placeholder="https://example.com/favicon.png"
               value={faviconUrlInput}
               onChange={(e) => setFaviconUrlInput(e.target.value)}
@@ -288,7 +312,7 @@ export default function SettingsPage() {
                 loading={faviconAction === 'url'}
                 disabled={faviconAction !== null && faviconAction !== 'url'}
               >
-                应用 URL
+                {t('fields.applyUrl')}
               </Button>
               <Button
                 component="label"
@@ -296,7 +320,7 @@ export default function SettingsPage() {
                 loading={faviconAction === 'upload'}
                 disabled={faviconAction !== null && faviconAction !== 'upload'}
               >
-                上传图标
+                {t('fields.uploadIcon')}
                 <input
                   hidden
                   type="file"
@@ -311,62 +335,62 @@ export default function SettingsPage() {
                 loading={faviconAction === 'reset'}
                 disabled={faviconAction !== null && faviconAction !== 'reset'}
               >
-                恢复默认
+                {t('fields.resetDefault')}
               </Button>
             </Group>
             <Text size="xs" c="dimmed">
-              支持 ICO、PNG、SVG、WEBP，最大 256KB。上传或应用后立即生效。
+              {t('fields.faviconHelp')}
             </Text>
           </Stack>
         </Group>
 
-        <Divider label="评论设置" labelPosition="left" mt="md" />
+        <Divider label={t('sections.comments')} labelPosition="left" mt="md" />
         <Switch
-          label="全局显示评论列表"
-          description="关闭后，全站所有文章都不显示已有评论列表"
+          label={t('fields.showCommentsGlobally')}
+          description={t('fields.showCommentsGloballyDescription')}
           checked={settings.showCommentsGlobally === true}
           onChange={(e) => setField('showCommentsGlobally', e.currentTarget.checked)}
         />
         <Switch
-          label="全局启用评论"
-          description="关闭后，全站所有文章都不允许提交新评论"
+          label={t('fields.enableComment')}
+          description={t('fields.enableCommentDescription')}
           checked={settings.enableComment === true}
           disabled={settings.showCommentsGlobally === false}
           onChange={(e) => setField('enableComment', e.currentTarget.checked)}
         />
         <Switch
-          label="评论默认通过审核"
+          label={t('fields.defaultApprove')}
           checked={settings.defaultApprove === true}
           onChange={(e) => setField('defaultApprove', e.currentTarget.checked)}
         />
 
-        <Divider label="留言设置" labelPosition="left" mt="md" />
+        <Divider label={t('sections.guestbook')} labelPosition="left" mt="md" />
         <Switch
-          label="启用留言板"
-          description={<>留言板路径：/guestbook</>}
+          label={t('fields.enableGuestbook')}
+          description={<>{t('fields.enableGuestbookDescription')}</>}
           checked={settings.enableGuestbook === true}
           onChange={(e) => setField('enableGuestbook', e.currentTarget.checked)}
         />
         <TextInput
-          label="留言板欢迎语"
-          placeholder="欢迎给我留言！"
+          label={t('fields.guestbookWelcome')}
+          placeholder={t('fields.guestbookWelcomePlaceholder')}
           value={String(settings.guestbookWelcome ?? '')}
           onChange={(e) => setField('guestbookWelcome', e.target.value)}
         />
 
-        <Divider label="RSS 设置" labelPosition="left" mt="md" />
+        <Divider label={t('sections.rss')} labelPosition="left" mt="md" />
         <Radio.Group
-          label="RSS 输出内容"
+          label={t('fields.rssContent')}
           value={String(settings.rssContent ?? 'full')}
           onChange={(v) => setField('rssContent', v)}
         >
           <Group mt="xs">
-            <Radio value="full" label="全文" />
-            <Radio value="excerpt" label="摘要" />
+            <Radio value="full" label={t('fields.rssFull')} />
+            <Radio value="excerpt" label={t('fields.rssExcerpt')} />
           </Group>
         </Radio.Group>
         <NumberInput
-          label="RSS 条数"
+          label={t('fields.rssLimit')}
           min={1}
           max={100}
           value={Number(settings.rssLimit) || 10}
@@ -374,19 +398,19 @@ export default function SettingsPage() {
           style={{ width: 120 }}
         />
 
-        <Divider label="搜索设置" labelPosition="left" mt="md" />
+        <Divider label={t('sections.search')} labelPosition="left" mt="md" />
         <Switch
-          label="启用搜索"
-          description="关闭后，页脚的搜索框将不再显示"
+          label={t('fields.enableSearch')}
+          description={t('fields.enableSearchDescription')}
           checked={settings.enableSearch === true}
           onChange={(e) => setField('enableSearch', e.currentTarget.checked)}
         />
 
-        <Divider label="底部版权" labelPosition="left" mt="md" />
+        <Divider label={t('sections.footer')} labelPosition="left" mt="md" />
         <Textarea
-          label="底部版权信息"
+          label={t('fields.footerCopyright')}
           placeholder="{SITE_NAME} &copy; {FULL_YEAR}"
-          description="支持 HTML，可用 {SITE_NAME} 引用站点名，{FULL_YEAR} 引用当前年份"
+          description={t('fields.footerCopyrightDescription')}
           autosize
           minRows={2}
           value={String(settings.footerCopyright ?? '')}
@@ -394,10 +418,10 @@ export default function SettingsPage() {
           styles={{ input: { maxHeight: 400, overflow: 'auto' } }}
         />
 
-        <Divider label="自定义 HTML" labelPosition="left" mt="md" />
+        <Divider label={t('sections.customHtml')} labelPosition="left" mt="md" />
         <Textarea
-          label="文章末尾自定义 HTML"
-          description="显示在每篇文章内容之后，可用于放置广告代码等"
+          label={t('fields.customAfterPostHtml')}
+          description={t('fields.customAfterPostHtmlDescription')}
           placeholder="<div>...</div>"
           autosize
           minRows={3}
@@ -406,8 +430,8 @@ export default function SettingsPage() {
           styles={{ input: { fontFamily: 'monospace', maxHeight: 400, overflow: 'auto' } }}
         />
         <Textarea
-          label="自定义 Head HTML"
-          description="在 </head> 标签前方插入 HTML，仅支持 <script>、<meta>、<link>、<style> 标签"
+          label={t('fields.customHeadHtml')}
+          description={t('fields.customHeadHtmlDescription')}
           placeholder="<script>...</script>"
           autosize
           minRows={3}
@@ -416,8 +440,8 @@ export default function SettingsPage() {
           styles={{ input: { fontFamily: 'monospace', maxHeight: 400, overflow: 'auto' } }}
         />
         <Textarea
-          label="自定义 Body 头部 HTML"
-          description="在 <body> 标签后方插入 HTML"
+          label={t('fields.customBodyStartHtml')}
+          description={t('fields.customBodyStartHtmlDescription')}
           placeholder="<script>...</script>"
           autosize
           minRows={3}
@@ -426,8 +450,8 @@ export default function SettingsPage() {
           styles={{ input: { fontFamily: 'monospace', maxHeight: 400, overflow: 'auto' } }}
         />
         <Textarea
-          label="自定义 Body 底部 HTML"
-          description="在 </body> 标签前方插入 HTML"
+          label={t('fields.customBodyEndHtml')}
+          description={t('fields.customBodyEndHtmlDescription')}
           placeholder="<script>...</script>"
           autosize
           minRows={3}

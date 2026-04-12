@@ -20,6 +20,7 @@ import {
 } from '@mantine/core'
 import { IconInfoCircle, IconSend } from '@tabler/icons-react'
 import { useAdminUrl } from '@/app/(admin)/_components/AdminPathContext'
+import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useCurrentUser } from '../../_components/AdminCountsContext'
@@ -51,6 +52,9 @@ function parseNotifyConfig(value: unknown): NotifyConfig {
 }
 
 export default function EmailSettingsPage() {
+  const t = useTranslations('admin.emailPage')
+  const tCommon = useTranslations('common')
+  const tApiEmail = useTranslations('admin.api.email')
   const router = useRouter()
   const adminUrl = useAdminUrl()
   const currentUser = useCurrentUser()
@@ -145,7 +149,7 @@ export default function EmailSettingsPage() {
       })
       const json = await res.json()
       if (json.success) {
-        notify({ color: 'green', message: '保存成功' })
+        notify({ color: 'green', message: tCommon('save.success') })
         // 更新已配置的敏感字段状态
         setConfiguredSecrets((prev) => {
           const next = new Set(prev)
@@ -163,10 +167,10 @@ export default function EmailSettingsPage() {
           guestbook: { ...guestbookNotify },
         }
       } else {
-        notify({ color: 'red', message: json.message || '保存失败' })
+        notify({ color: 'red', message: json.message || tCommon('errors.saveFailed') })
       }
     } catch {
-      notify({ color: 'red', message: '网络错误' })
+      notify({ color: 'red', message: tCommon('errors.network') })
     } finally {
       setLoading(false)
     }
@@ -174,7 +178,7 @@ export default function EmailSettingsPage() {
 
   const handleSendTest = async () => {
     if (!testTo) {
-      notify({ color: 'red', message: '请填写收件人邮箱' })
+      notify({ color: 'red', message: tApiEmail('recipientRequired') })
       return
     }
     setTestLoading(true)
@@ -186,12 +190,12 @@ export default function EmailSettingsPage() {
       })
       const json = await res.json()
       if (json.success) {
-        notify({ color: 'green', message: '测试邮件已发送' })
+        notify({ color: 'green', message: t('messages.testSent') })
       } else {
-        notify({ color: 'red', message: json.message || '发送失败' })
+        notify({ color: 'red', message: json.message || tApiEmail('sendFailed') })
       }
     } catch {
-      notify({ color: 'red', message: '网络错误' })
+      notify({ color: 'red', message: tCommon('errors.network') })
     } finally {
       setTestLoading(false)
     }
@@ -235,7 +239,7 @@ export default function EmailSettingsPage() {
                   )}
                   {noEmail && (
                     <Badge size="xs" color="yellow" variant="light">
-                      未设置邮箱
+                      {t('labels.noEmail')}
                     </Badge>
                   )}
                 </Group>
@@ -259,7 +263,7 @@ export default function EmailSettingsPage() {
 
           if (noEmail) {
             return (
-              <Tooltip key={user.id} label="该用户未设置邮箱，无法接收邮件通知" position="right">
+              <Tooltip key={user.id} label={t('tooltips.noEmail')} position="right">
                 {checkbox}
               </Tooltip>
             )
@@ -282,27 +286,27 @@ export default function EmailSettingsPage() {
 
   return (
     <Stack gap="lg">
-      <PageHeader title="邮件通知" dirty={isDirty} loading={loading} onSave={handleSave} />
+      <PageHeader title={t('title')} dirty={isDirty} loading={loading} onSave={handleSave} />
       {/* 邮件发送配置 */}
-      <Divider label="邮件发送配置" labelPosition="left" />
+      <Divider label={t('sections.sendingConfig')} labelPosition="left" />
       <Box>
         <Text fw={500} mb="xs">
-          发送方式
+          {t('fields.sendMethod')}
         </Text>
         <SegmentedControl
           value={provider}
           onChange={(v) => setField('emailProvider', v)}
           data={[
-            { label: '未启用', value: '' },
-            { label: 'Resend', value: 'resend' },
-            { label: 'SMTP', value: 'smtp' },
+            { label: t('providers.disabled'), value: '' },
+            { label: t('providers.resend'), value: 'resend' },
+            { label: t('providers.smtp'), value: 'smtp' },
           ]}
         />
       </Box>
       {provider && (
         <TextInput
-          label="发件人地址"
-          description={provider === 'resend' ? '需在 Resend 控制台完成域名验证' : ''}
+          label={t('fields.fromAddress')}
+          description={provider === 'resend' ? t('descriptions.fromAddress') : ''}
           placeholder="noreply@example.com"
           value={String(settings.emailSmtpFrom ?? '')}
           onChange={(e) => setField('emailSmtpFrom', e.currentTarget.value)}
@@ -310,10 +314,12 @@ export default function EmailSettingsPage() {
       )}
       {provider === 'resend' && (
         <PasswordInput
-          label="Resend API Key"
-          description="登录 Resend 控制台创建 API Key，具有发送权限即可"
+          label={t('fields.resendApiKey')}
+          description={t('descriptions.resendApiKey')}
           placeholder={
-            configuredSecrets.has('emailResendApiKey') ? '已配置，留空保留原值' : 're_...'
+            configuredSecrets.has('emailResendApiKey')
+              ? t('descriptions.configuredPlaceholder')
+              : 're_...'
           }
           value={String(settings.emailResendApiKey ?? '')}
           onChange={(e) => setField('emailResendApiKey', e.currentTarget.value)}
@@ -323,13 +329,13 @@ export default function EmailSettingsPage() {
         <>
           <Group grow>
             <TextInput
-              label="SMTP 主机"
+              label={t('fields.smtpHost')}
               placeholder="smtp.example.com"
               value={String(settings.emailSmtpHost ?? '')}
               onChange={(e) => setField('emailSmtpHost', e.currentTarget.value)}
             />
             <TextInput
-              label="SMTP 端口"
+              label={t('fields.smtpPort')}
               placeholder="587"
               value={String(settings.emailSmtpPort ?? '')}
               onChange={(e) => setField('emailSmtpPort', e.currentTarget.value)}
@@ -337,40 +343,44 @@ export default function EmailSettingsPage() {
           </Group>
           <Group grow>
             <TextInput
-              label="用户名"
+              label={t('fields.username')}
               value={String(settings.emailSmtpUsername ?? '')}
               onChange={(e) => setField('emailSmtpUsername', e.currentTarget.value)}
             />
             <PasswordInput
-              label="密码"
-              placeholder={configuredSecrets.has('emailSmtpPassword') ? '已配置，留空保留原值' : ''}
+              label={t('fields.password')}
+              placeholder={
+                configuredSecrets.has('emailSmtpPassword')
+                  ? t('descriptions.configuredPlaceholder')
+                  : ''
+              }
               value={String(settings.emailSmtpPassword ?? '')}
               onChange={(e) => setField('emailSmtpPassword', e.currentTarget.value)}
             />
           </Group>
           <Select
-            label="加密方式"
+            label={t('fields.encryption')}
             value={String(settings.emailSmtpEncryption ?? 'tls')}
             onChange={(v) => setField('emailSmtpEncryption', v || 'tls')}
             data={[
-              { label: 'TLS (推荐)', value: 'tls' },
-              { label: 'SSL', value: 'ssl' },
-              { label: '无', value: 'none' },
+              { label: t('encryptionOptions.tls'), value: 'tls' },
+              { label: t('encryptionOptions.ssl'), value: 'ssl' },
+              { label: t('encryptionOptions.none'), value: 'none' },
             ]}
           />
         </>
       )}
       {provider && (
         <>
-          <Divider label="发送测试" labelPosition="left" />
+          <Divider label={t('sections.testSend')} labelPosition="left" />
           {isDirty && (
             <Text size="sm" c="orange">
-              请先保存配置，测试邮件将使用已保存的配置发送。
+              {t('hints.saveBeforeTest')}
             </Text>
           )}
           <Group align="flex-end">
             <TextInput
-              label="收件人邮箱"
+              label={t('fields.recipientEmail')}
               placeholder="name@example.com"
               value={testTo}
               onChange={(e) => setTestTo(e.currentTarget.value)}
@@ -382,19 +392,19 @@ export default function EmailSettingsPage() {
               onClick={handleSendTest}
               loading={testLoading}
             >
-              发送测试邮件
+              {t('buttons.sendTest')}
             </Button>
           </Group>
         </>
       )}
       {/* 通知事件配置 */}
-      <Divider label="通知事件" labelPosition="left" />
+      <Divider label={t('sections.events')} labelPosition="left" />
       <Alert icon={<IconInfoCircle size={16} />} color="blue" variant="light">
-        选择需要发送邮件通知的事件，以及通知的接收人。发送时会跳过未设置邮箱的用户。
+        {t('hints.events')}
       </Alert>
       <Box>
         <Switch
-          label="有新的评论"
+          label={t('events.newComment')}
           checked={commentNotify.enabled}
           onChange={(e) => setCommentNotify({ ...commentNotify, enabled: e.currentTarget.checked })}
         />
@@ -402,7 +412,7 @@ export default function EmailSettingsPage() {
       </Box>
       <Box>
         <Switch
-          label="有新的留言"
+          label={t('events.newGuestbook')}
           checked={guestbookNotify.enabled}
           onChange={(e) =>
             setGuestbookNotify({ ...guestbookNotify, enabled: e.currentTarget.checked })

@@ -1,6 +1,7 @@
 'use client'
 
 import { Button, Input } from '@mantine/core'
+import { useTranslations } from 'next-intl'
 
 type ContentType = 'richtext' | 'markdown' | 'html'
 
@@ -10,19 +11,20 @@ interface ContentTypeSelectorProps {
   disabled?: boolean
 }
 
-const data = [
-  { value: 'richtext', label: '富文本' },
-  { value: 'markdown', label: 'Markdown' },
-  { value: 'html', label: 'HTML' },
-]
-
 export default function ContentTypeSelector({
   value,
   onChange,
   disabled,
 }: ContentTypeSelectorProps) {
+  const t = useTranslations('admin.editor.contentTypeSelector')
+  const data = [
+    { value: 'richtext', label: t('richtext') },
+    { value: 'markdown', label: 'Markdown' },
+    { value: 'html', label: 'HTML' },
+  ]
+
   return (
-    <Input.Wrapper label="内容类型">
+    <Input.Wrapper label={t('label')}>
       <Button.Group mt={0}>
         {data.map((item) => (
           <Button

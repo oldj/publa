@@ -1,15 +1,19 @@
 import { runOneMinuteTasks } from '@/cron/1m'
-import { NextRequest, NextResponse } from 'next/server'
+import { jsonError, jsonSuccess } from '@/server/lib/api-response'
+import { NextRequest } from 'next/server'
 
 /** 每分钟定时任务（可由外部手动调用） */
 export async function GET(request: NextRequest) {
   const expectedSecret = process.env.CRON_SECRET?.trim()
 
   if (!expectedSecret && process.env.NODE_ENV === 'production') {
-    return NextResponse.json(
-      { success: false, code: 'CONFIGURATION_ERROR', message: 'CRON_SECRET is not configured' },
-      { status: 503 },
-    )
+    return jsonError({
+      source: request,
+      namespace: 'common.api',
+      key: 'cronSecretNotConfigured',
+      code: 'CONFIGURATION_ERROR',
+      status: 503,
+    })
   }
 
   // 简单的密钥校验，防止外部滥用
@@ -19,13 +23,16 @@ export async function GET(request: NextRequest) {
     request.headers.get('x-cron-secret') ||
     request.nextUrl.searchParams.get('secret')
   if (expectedSecret && secret !== expectedSecret) {
-    return NextResponse.json(
-      { success: false, code: 'UNAUTHORIZED', message: 'Invalid cron secret' },
-      { status: 401 },
-    )
+    return jsonError({
+      source: request,
+      namespace: 'common.api',
+      key: 'invalidCronSecret',
+      code: 'UNAUTHORIZED',
+      status: 401,
+    })
   }
 
   await runOneMinuteTasks()
 
-  return NextResponse.json({ success: true })
+  return jsonSuccess()
 }

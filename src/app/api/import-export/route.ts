@@ -1,4 +1,6 @@
+import { getServerTranslator } from '@/i18n/server'
 import { requireRole } from '@/server/auth'
+import { jsonError, jsonSuccess } from '@/server/lib/api-response'
 import { logActivity } from '@/server/services/activity-logs'
 import {
   exportContentData,
@@ -15,13 +17,6 @@ function formatTimestamp() {
   const date = now.toISOString().substring(0, 10)
   const time = now.toISOString().substring(11, 19).replace(/:/g, '')
   return `${date}-${time}`
-}
-
-function getImportErrorMessage(error: unknown) {
-  if (error instanceof Error && error.message) {
-    return `导入失败：${error.message}`
-  }
-  return '导入失败，请检查数据完整性和关联关系'
 }
 
 /** 获取文件名前缀：优先使用站点标题，回退到 "publa" */
@@ -41,7 +36,10 @@ function contentDisposition(filename: string): string {
 
 /** 导出数据 */
 export async function GET(request: NextRequest) {
-  const guard = await requireRole(['owner', 'admin'], '仅站长和管理员可导出数据')
+  const guard = await requireRole(['owner', 'admin'], {
+    namespace: 'common.api',
+    key: 'forbidden',
+  })
   if (!guard.ok) return guard.response
 
   const type = request.nextUrl.searchParams.get('type') || 'content'
@@ -71,41 +69,66 @@ export async function GET(request: NextRequest) {
 
 /** 导入数据 */
 export async function POST(request: NextRequest) {
-  const guard = await requireRole(['owner', 'admin'], '仅站长和管理员可导入数据')
+  const guard = await requireRole(['owner', 'admin'], {
+    namespace: 'common.api',
+    key: 'forbidden',
+  })
   if (!guard.ok) return guard.response
 
   let data: any
   try {
     data = await request.json()
   } catch {
-    return NextResponse.json(
-      { success: false, code: 'INVALID_FORMAT', message: '解析 JSON 失败' },
-      { status: 400 },
-    )
+    return jsonError({
+      source: request,
+      namespace: 'admin.api.importExport',
+      key: 'invalidJson',
+      code: 'INVALID_FORMAT',
+      status: 400,
+    })
   }
 
   const validation = validateImportData(data)
   if (!validation.valid) {
-    return NextResponse.json(
-      { success: false, code: 'VALIDATION_ERROR', message: validation.message },
-      { status: 400 },
-    )
+    const keyMap = {
+      META_REQUIRED: 'metaRequired',
+      UNSUPPORTED_VERSION: 'unsupportedVersion',
+      MISSING_FIELD: 'missingField',
+      INVALID_FIELD_FORMAT: 'invalidFieldFormat',
+      UNKNOWN_TYPE: 'unknownType',
+    } as const
+
+    return jsonError({
+      source: request,
+      namespace: 'admin.api.importExport',
+      key: keyMap[validation.code],
+      values: validation.values,
+      code: 'VALIDATION_ERROR',
+      status: 400,
+    })
   }
 
   try {
-    let results: string[]
+    let results
     if (validation.type === 'content') {
       results = await importContentData(data, guard.user.id)
     } else {
       results = await importSettingsData(data, guard.user.id)
     }
 
+    const { t } = await getServerTranslator('admin.importExportPage', { source: request })
+    const translatedResults = results.map((item) => t(`results.${item.key}`, item.values))
+
     await logActivity(request, guard.user.id, 'import_data')
-    return NextResponse.json({ success: true, data: { results } })
+    return jsonSuccess({ results: translatedResults })
   } catch (error) {
-    return NextResponse.json(
-      { success: false, code: 'IMPORT_FAILED', message: getImportErrorMessage(error) },
-      { status: 400 },
-    )
+    console.error('[import-export] Failed to import data:', error)
+    return jsonError({
+      source: request,
+      namespace: 'admin.api.importExport',
+      key: 'importFailedFallback',
+      code: 'IMPORT_FAILED',
+      status: 400,
+    })
   }
 }

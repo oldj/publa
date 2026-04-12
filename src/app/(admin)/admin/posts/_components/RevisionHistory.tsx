@@ -1,19 +1,11 @@
 'use client'
 
 import myModal from '@/app/(admin)/_components/myModals'
-import {
-  Badge,
-  Button,
-  Checkbox,
-  Drawer,
-  Group,
-  ScrollArea,
-  Stack,
-  Text,
-} from '@mantine/core'
+import { Badge, Button, Checkbox, Drawer, Group, ScrollArea, Stack, Text } from '@mantine/core'
 import { notify } from '@/lib/notify'
 import { IconRestore, IconTrash } from '@tabler/icons-react'
 import dayjs from 'dayjs'
+import { useTranslations } from 'next-intl'
 import { useCallback, useEffect, useState } from 'react'
 
 interface Revision {
@@ -47,7 +39,15 @@ interface Props {
   onRestore: () => void
 }
 
-export default function RevisionHistory({ targetType, targetId, opened, onClose, onRestore }: Props) {
+export default function RevisionHistory({
+  targetType,
+  targetId,
+  opened,
+  onClose,
+  onRestore,
+}: Props) {
+  const t = useTranslations('admin.revisionHistory')
+  const tCommon = useTranslations('common')
   const [revisions, setRevisions] = useState<Revision[]>([])
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [preview, setPreview] = useState<RevisionDetail | null>(null)
@@ -80,17 +80,17 @@ export default function RevisionHistory({ targetType, targetId, opened, onClose,
   }
 
   const handleRestore = async (id: number) => {
-    if (!(await myModal.confirm({ message: '确定要恢复到此版本吗？这将创建一次新的发布。' }))) return
+    if (!(await myModal.confirm({ message: t('restoreConfirm') }))) return
     setLoading(true)
     try {
       const res = await fetch(`${apiBase}/${id}/restore`, { method: 'POST' })
       const json = await res.json()
       if (json.success) {
-        notify({ color: 'green', message: '版本恢复成功' })
+        notify({ color: 'green', message: t('restoreSuccess') })
         onRestore()
         onClose()
       } else {
-        notify({ color: 'red', message: json.message || '恢复失败' })
+        notify({ color: 'red', message: json.message || t('restoreFailed') })
       }
     } finally {
       setLoading(false)
@@ -99,7 +99,8 @@ export default function RevisionHistory({ targetType, targetId, opened, onClose,
 
   const handleDelete = async () => {
     if (selected.size === 0) return
-    if (!(await myModal.confirm({ message: `确定要删除选中的 ${selected.size} 个版本吗？` }))) return
+    if (!(await myModal.confirm({ message: t('deleteSelectedConfirm', { count: selected.size }) })))
+      return
     setLoading(true)
     try {
       const res = await fetch(apiBase, {
@@ -109,7 +110,7 @@ export default function RevisionHistory({ targetType, targetId, opened, onClose,
       })
       const json = await res.json()
       if (json.success) {
-        notify({ color: 'green', message: '删除成功' })
+        notify({ color: 'green', message: tCommon('messages.deleteSuccess') })
         setSelected(new Set())
         setPreview(null)
         fetchRevisions()
@@ -129,37 +130,41 @@ export default function RevisionHistory({ targetType, targetId, opened, onClose,
   }
 
   return (
-    <Drawer
-      opened={opened}
-      onClose={onClose}
-      title="历史版本"
-      position="right"
-      size="xl"
-    >
+    <Drawer opened={opened} onClose={onClose} title={t('title')} position="right" size="xl">
       <Stack h="calc(100vh - 100px)">
         {revisions.length === 0 ? (
           <Text c="dimmed" ta="center" py="xl">
-            暂无历史版本
+            {t('empty')}
           </Text>
         ) : (
           <>
             {/* 操作栏 */}
             <Group justify="space-between">
               <Group gap="xs">
-                <Text size="sm" c="dimmed">共 {revisions.length} 个版本</Text>
-                <Button variant="subtle" size="xs" onClick={() => setSelected(new Set(revisions.map((r) => r.id)))}>
-                  全选
+                <Text size="sm" c="dimmed">
+                  {t('count', { count: revisions.length })}
+                </Text>
+                <Button
+                  variant="subtle"
+                  size="xs"
+                  onClick={() => setSelected(new Set(revisions.map((r) => r.id)))}
+                >
+                  {t('selectAll')}
                 </Button>
-                <Button variant="subtle" size="xs" onClick={() => {
-                  setSelected((prev) => {
-                    const next = new Set<number>()
-                    for (const r of revisions) {
-                      if (!prev.has(r.id)) next.add(r.id)
-                    }
-                    return next
-                  })
-                }}>
-                  反选
+                <Button
+                  variant="subtle"
+                  size="xs"
+                  onClick={() => {
+                    setSelected((prev) => {
+                      const next = new Set<number>()
+                      for (const r of revisions) {
+                        if (!prev.has(r.id)) next.add(r.id)
+                      }
+                      return next
+                    })
+                  }}
+                >
+                  {t('invertSelection')}
                 </Button>
               </Group>
               {selected.size > 0 && (
@@ -171,13 +176,16 @@ export default function RevisionHistory({ targetType, targetId, opened, onClose,
                   onClick={handleDelete}
                   loading={loading}
                 >
-                  删除选中 ({selected.size})
+                  {t('deleteSelected', { count: selected.size })}
                 </Button>
               )}
             </Group>
 
             {/* 版本列表 */}
-            <ScrollArea style={{ flex: preview ? '0 0 auto' : '1' }} mah={preview ? 200 : undefined}>
+            <ScrollArea
+              style={{ flex: preview ? '0 0 auto' : '1' }}
+              mah={preview ? 200 : undefined}
+            >
               <Stack gap="xs">
                 {revisions.map((rev) => (
                   <Group
@@ -187,7 +195,8 @@ export default function RevisionHistory({ targetType, targetId, opened, onClose,
                       borderRadius: 6,
                       border: '1px solid var(--mantine-color-gray-3)',
                       cursor: 'pointer',
-                      background: preview?.id === rev.id ? 'var(--mantine-color-blue-0)' : undefined,
+                      background:
+                        preview?.id === rev.id ? 'var(--mantine-color-blue-0)' : undefined,
                     }}
                     onClick={() => handlePreview(rev.id)}
                     justify="space-between"
@@ -204,16 +213,23 @@ export default function RevisionHistory({ targetType, targetId, opened, onClose,
                       />
                       <div>
                         <Group gap={4}>
-                          {rev.title && <Text size="sm" fw={500}>{rev.title}</Text>}
+                          {rev.title && (
+                            <Text size="sm" fw={500}>
+                              {rev.title}
+                            </Text>
+                          )}
                           <Badge
                             size="xs"
                             variant="light"
                             color={rev.status === 'published' ? 'green' : 'blue'}
                           >
-                            {rev.status === 'published' ? '发布' : '草稿快照'}
+                            {rev.status === 'published' ? t('published') : t('draftSnapshot')}
                           </Badge>
                         </Group>
-                        <Text size="xs" c="dimmed">{dayjs(rev.updatedAt).format('YYYY-MM-DD HH:mm:ss')} · {formatSize(rev.contentRawSize)}</Text>
+                        <Text size="xs" c="dimmed">
+                          {dayjs(rev.updatedAt).format('YYYY-MM-DD HH:mm:ss')} ·{' '}
+                          {formatSize(rev.contentRawSize)}
+                        </Text>
                       </div>
                     </Group>
                     <Button
@@ -226,7 +242,7 @@ export default function RevisionHistory({ targetType, targetId, opened, onClose,
                       }}
                       loading={loading}
                     >
-                      恢复
+                      {t('restore')}
                     </Button>
                   </Group>
                 ))}
@@ -235,7 +251,14 @@ export default function RevisionHistory({ targetType, targetId, opened, onClose,
 
             {/* 内容预览 */}
             {preview && (
-              <ScrollArea style={{ flex: 1, border: '1px solid var(--mantine-color-gray-3)', borderRadius: 6, padding: 12 }}>
+              <ScrollArea
+                style={{
+                  flex: 1,
+                  border: '1px solid var(--mantine-color-gray-3)',
+                  borderRadius: 6,
+                  padding: 12,
+                }}
+              >
                 <div
                   className="post-content"
                   dangerouslySetInnerHTML={{ __html: preview.contentHtml }}

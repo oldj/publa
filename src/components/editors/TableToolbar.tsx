@@ -1,4 +1,5 @@
 import { Button, Tooltip } from '@mantine/core'
+import { useTranslations } from 'next-intl'
 import {
   IconColumnInsertLeft,
   IconColumnInsertRight,
@@ -16,6 +17,7 @@ interface TableToolbarProps {
 }
 
 export default function TableToolbar({ editor, tableToolbar }: TableToolbarProps) {
+  const t = useTranslations('admin.editor.tableToolbar')
   return (
     <div
       style={{
@@ -30,7 +32,7 @@ export default function TableToolbar({ editor, tableToolbar }: TableToolbarProps
       }}
     >
       <div className="image-bubble-menu" style={{ pointerEvents: 'auto' }}>
-        <Tooltip label="前方插入列" position="top" withArrow>
+        <Tooltip label={t('addColumnBefore')} position="top" withArrow>
           <Button
             size="compact-xs"
             variant="subtle"
@@ -40,7 +42,7 @@ export default function TableToolbar({ editor, tableToolbar }: TableToolbarProps
             <IconColumnInsertLeft size={16} />
           </Button>
         </Tooltip>
-        <Tooltip label="后方插入列" position="top" withArrow>
+        <Tooltip label={t('addColumnAfter')} position="top" withArrow>
           <Button
             size="compact-xs"
             variant="subtle"
@@ -50,7 +52,7 @@ export default function TableToolbar({ editor, tableToolbar }: TableToolbarProps
             <IconColumnInsertRight size={16} />
           </Button>
         </Tooltip>
-        <Tooltip label="删除列" position="top" withArrow>
+        <Tooltip label={t('deleteColumn')} position="top" withArrow>
           <Button
             size="compact-xs"
             variant="subtle"
@@ -63,7 +65,7 @@ export default function TableToolbar({ editor, tableToolbar }: TableToolbarProps
 
         <div style={{ width: 1, height: 16, background: 'var(--mantine-color-gray-3)' }} />
 
-        <Tooltip label="上方插入行" position="top" withArrow>
+        <Tooltip label={t('addRowBefore')} position="top" withArrow>
           <Button
             size="compact-xs"
             variant="subtle"
@@ -73,7 +75,7 @@ export default function TableToolbar({ editor, tableToolbar }: TableToolbarProps
             <IconRowInsertTop size={16} />
           </Button>
         </Tooltip>
-        <Tooltip label="下方插入行" position="top" withArrow>
+        <Tooltip label={t('addRowAfter')} position="top" withArrow>
           <Button
             size="compact-xs"
             variant="subtle"
@@ -83,7 +85,7 @@ export default function TableToolbar({ editor, tableToolbar }: TableToolbarProps
             <IconRowInsertBottom size={16} />
           </Button>
         </Tooltip>
-        <Tooltip label="删除行" position="top" withArrow>
+        <Tooltip label={t('deleteRow')} position="top" withArrow>
           <Button
             size="compact-xs"
             variant="subtle"
@@ -96,7 +98,7 @@ export default function TableToolbar({ editor, tableToolbar }: TableToolbarProps
 
         <div style={{ width: 1, height: 16, background: 'var(--mantine-color-gray-3)' }} />
 
-        <Tooltip label="删除表格" position="top" withArrow>
+        <Tooltip label={t('deleteTable')} position="top" withArrow>
           <Button
             size="compact-xs"
             variant="subtle"

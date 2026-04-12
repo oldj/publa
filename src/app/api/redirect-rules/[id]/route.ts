@@ -1,4 +1,5 @@
 import { requireRole } from '@/server/auth'
+import { jsonError, jsonSuccess } from '@/server/lib/api-response'
 import { parseIdParam, safeParseJson } from '@/server/lib/request'
 import { logActivity } from '@/server/services/activity-logs'
 import {
@@ -7,7 +8,7 @@ import {
   RedirectRuleValidationError,
   updateRedirectRule,
 } from '@/server/services/redirect-rules'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { validationErrorResponse } from '../shared'
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -15,7 +16,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   if (!guard.ok) return guard.response
 
   const { id: idStr } = await params
-  const { id, error: idError } = parseIdParam(idStr)
+  const { id, error: idError } = await parseIdParam(idStr)
   if (idError) return idError
 
   const { data: body, error } = await safeParseJson(request)
@@ -30,17 +31,20 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     })
 
     if (!item) {
-      return NextResponse.json(
-        { success: false, code: 'NOT_FOUND', message: '跳转规则不存在' },
-        { status: 404 },
-      )
+      return jsonError({
+        source: request,
+        namespace: 'admin.api.redirectRules',
+        key: 'notFound',
+        code: 'NOT_FOUND',
+        status: 404,
+      })
     }
 
     await logActivity(request, guard.user.id, 'update_redirect')
-    return NextResponse.json({ success: true, data: item })
+    return jsonSuccess(item)
   } catch (caughtError) {
     if (caughtError instanceof RedirectRuleValidationError) {
-      return validationErrorResponse(caughtError)
+      return validationErrorResponse(caughtError, request)
     }
     throw caughtError
   }
@@ -54,18 +58,21 @@ export async function DELETE(
   if (!guard.ok) return guard.response
 
   const { id: idStr } = await params
-  const { id, error: idError } = parseIdParam(idStr)
+  const { id, error: idError } = await parseIdParam(idStr)
   if (idError) return idError
 
   const existing = await getRedirectRuleById(id)
   if (!existing) {
-    return NextResponse.json(
-      { success: false, code: 'NOT_FOUND', message: '跳转规则不存在' },
-      { status: 404 },
-    )
+    return jsonError({
+      source: request,
+      namespace: 'admin.api.redirectRules',
+      key: 'notFound',
+      code: 'NOT_FOUND',
+      status: 404,
+    })
   }
 
   await deleteRedirectRule(id)
   await logActivity(request, guard.user.id, 'delete_redirect')
-  return NextResponse.json({ success: true })
+  return jsonSuccess()
 }

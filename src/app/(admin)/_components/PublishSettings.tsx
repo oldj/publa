@@ -4,6 +4,7 @@ import { Button, Paper, SegmentedControl, Stack, Text } from '@mantine/core'
 import { DateTimePicker } from '@mantine/dates'
 import '@mantine/dates/styles.css'
 import dayjs from 'dayjs'
+import { useTranslations } from 'next-intl'
 import myModal from './myModals'
 
 export interface PublishSettingsProps {
@@ -42,18 +43,20 @@ export default function PublishSettings({
   onSetScheduled,
   entityLabel,
 }: PublishSettingsProps) {
+  const tCommon = useTranslations('common')
+  const t = useTranslations('admin.editor.publishSettings')
   return (
     <Paper withBorder p="md" mih={200}>
       <Text fw={500} mb="sm">
-        发布设置
+        {t('title')}
       </Text>
       <SegmentedControl
         fullWidth
         value={publishTab}
         data={[
-          { value: 'draft', label: '草稿' },
-          { value: 'scheduled', label: '定时发布' },
-          { value: 'published', label: '已发布' },
+          { value: 'draft', label: tCommon('status.draft') },
+          { value: 'scheduled', label: tCommon('status.scheduled') },
+          { value: 'published', label: tCommon('status.published') },
         ]}
         onChange={onPublishTabChange}
       />
@@ -63,7 +66,7 @@ export default function PublishSettings({
         <Stack mt="sm" gap="xs">
           {currentStatus === 'draft' ? (
             <Text size="sm" c="dimmed">
-              当前为草稿状态
+              {t('currentDraft')}
             </Text>
           ) : (
             <Button
@@ -73,7 +76,7 @@ export default function PublishSettings({
               onClick={async () => {
                 if (
                   !(await myModal.confirm({
-                    message: `确定要将当前${entityLabel}转为草稿状态吗？这个操作将撤销${entityLabel}发布，使其对外部不可见。`,
+                    message: t('convertToDraftConfirm', { entityLabel }),
                   }))
                 )
                   return
@@ -81,7 +84,7 @@ export default function PublishSettings({
               }}
               loading={loading}
             >
-              转为草稿
+              {t('convertToDraft')}
             </Button>
           )}
         </Stack>
@@ -92,33 +95,33 @@ export default function PublishSettings({
         <Stack mt="sm" gap="xs">
           {currentStatus === 'published' ? (
             <Text size="sm" c="dimmed">
-              {entityLabel}已发布，无需定时发布。
+              {t('alreadyPublishedHint', { entityLabel })}
             </Text>
           ) : (
             <>
               <DateTimePicker
-                label="发布时间"
-                placeholder="选择日期和时间"
+                label={t('publishAt')}
+                placeholder={t('pickDateTime')}
                 value={scheduledTime}
                 valueFormat={'YYYY-MM-DD HH:mm'}
                 onChange={(v) => onScheduledTimeChange(v as string | null)}
                 popoverProps={{ shadow: 'md' }}
                 highlightToday
                 presets={[
-                  { value: dayjs().format('YYYY-MM-DD') + ' 10:30', label: '今天 10:30' },
-                  { value: dayjs().format('YYYY-MM-DD') + ' 16:30', label: '今天 16:30' },
-                  { value: dayjs().format('YYYY-MM-DD') + ' 22:30', label: '今天 22:30' },
+                  { value: dayjs().format('YYYY-MM-DD') + ' 10:30', label: t('todayAt1030') },
+                  { value: dayjs().format('YYYY-MM-DD') + ' 16:30', label: t('todayAt1630') },
+                  { value: dayjs().format('YYYY-MM-DD') + ' 22:30', label: t('todayAt2230') },
                   {
                     value: dayjs().add(1, 'day').format('YYYY-MM-DD') + ' 10:30',
-                    label: '明天 10:30',
+                    label: t('tomorrowAt1030'),
                   },
                   {
                     value: dayjs().add(1, 'day').format('YYYY-MM-DD') + ' 16:30',
-                    label: '明天 16:30',
+                    label: t('tomorrowAt1630'),
                   },
                   {
                     value: dayjs().add(1, 'day').format('YYYY-MM-DD') + ' 22:30',
-                    label: '明天 22:30',
+                    label: t('tomorrowAt2230'),
                   },
                 ]}
                 timePickerProps={{ withDropdown: true, popoverProps: { withinPortal: false } }}
@@ -140,14 +143,14 @@ export default function PublishSettings({
                   const isPast = d.isBefore(dayjs())
                   const timeStr = d.format('YYYY-MM-DD HH:mm:ss')
                   const message = isPast
-                    ? `所选时间已过，${entityLabel}将立即发布。\n发布时间：${timeStr}`
-                    : `确定要将${entityLabel}设为定时发布吗？\n发布时间：${timeStr}`
+                    ? t('schedulePastConfirm', { entityLabel, time: timeStr })
+                    : t('scheduleConfirm', { entityLabel, time: timeStr })
                   if (!(await myModal.confirm({ message }))) return
                   onSetScheduled(d.toISOString())
                 }}
                 loading={loading}
               >
-                {currentStatus === 'scheduled' ? '更新定时发布' : '设为定时发布'}
+                {currentStatus === 'scheduled' ? t('updateScheduled') : t('setScheduled')}
               </Button>
             </>
           )}
@@ -159,17 +162,17 @@ export default function PublishSettings({
         <Stack mt="sm" gap="xs">
           {currentStatus !== 'published' && !publishedAt && (
             <Text size="sm" c="dimmed">
-              尚未发布
+              {t('notPublished')}
             </Text>
           )}
           {publishedAt && (
             <Text size="sm" c="dimmed">
-              发布时间：{dayjs(publishedAt).format('YYYY-MM-DD HH:mm:ss')}
+              {t('publishedAt', { time: dayjs(publishedAt).format('YYYY-MM-DD HH:mm:ss') })}
             </Text>
           )}
           {currentStatus === 'published' && dirty && (
             <Text size="sm" c="orange">
-              当前有未发布的修改，可点击顶部「发布」按钮再次发布。
+              {t('dirtyPublishedHint')}
             </Text>
           )}
         </Stack>

@@ -1,4 +1,5 @@
 import { requireRole } from '@/server/auth'
+import { jsonError, jsonSuccess } from '@/server/lib/api-response'
 import { safeParseJson } from '@/server/lib/request'
 import {
   getFaviconConfig,
@@ -7,36 +8,35 @@ import {
   saveFaviconUrl,
   saveUploadedFavicon,
 } from '@/server/services/favicon'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
 function getErrorMessage(error: unknown): string {
-  if (!isFaviconError(error)) return '保存站点图标失败'
+  if (!isFaviconError(error)) return 'saveFailed'
 
   switch (error.code) {
     case 'EMPTY_FILE':
-      return '请选择图标文件'
+      return 'fileRequired'
     case 'FILE_TOO_LARGE':
-      return '图标文件不能超过 256KB'
+      return 'fileTooLarge'
     case 'INVALID_FILE_TYPE':
-      return '仅支持 ICO、PNG、SVG、WEBP 格式'
+      return 'invalidFileType'
     case 'INVALID_URL':
-      return '图标 URL 仅支持 https:// 地址'
+      return 'invalidUrl'
     default:
-      return '保存站点图标失败'
+      return 'saveFailed'
   }
 }
 
-function createValidationErrorResponse(error: unknown) {
-  return NextResponse.json(
-    {
-      success: false,
-      code: 'VALIDATION_ERROR',
-      message: getErrorMessage(error),
-    },
-    { status: 400 },
-  )
+function createValidationErrorResponse(error: unknown, source?: Request) {
+  return jsonError({
+    source,
+    namespace: 'admin.api.favicon',
+    key: getErrorMessage(error),
+    code: 'VALIDATION_ERROR',
+    status: 400,
+  })
 }
 
 export async function GET() {
@@ -44,7 +44,7 @@ export async function GET() {
   if (!guard.ok) return guard.response
 
   const data = await getFaviconConfig()
-  return NextResponse.json({ success: true, data })
+  return jsonSuccess(data)
 }
 
 export async function POST(request: NextRequest) {
@@ -54,10 +54,13 @@ export async function POST(request: NextRequest) {
   const formData = await request.formData()
   const file = formData.get('file')
   if (!(file instanceof File)) {
-    return NextResponse.json(
-      { success: false, code: 'VALIDATION_ERROR', message: '请选择图标文件' },
-      { status: 400 },
-    )
+    return jsonError({
+      source: request,
+      namespace: 'admin.api.favicon',
+      key: 'fileRequired',
+      code: 'VALIDATION_ERROR',
+      status: 400,
+    })
   }
 
   try {
@@ -67,9 +70,9 @@ export async function POST(request: NextRequest) {
       originalFilename: file.name,
       mimeType: file.type,
     })
-    return NextResponse.json({ success: true, data })
+    return jsonSuccess(data)
   } catch (error) {
-    if (isFaviconError(error)) return createValidationErrorResponse(error)
+    if (isFaviconError(error)) return createValidationErrorResponse(error, request)
     throw error
   }
 }
@@ -83,9 +86,9 @@ export async function PUT(request: NextRequest) {
 
   try {
     const data = await saveFaviconUrl(body.url || '')
-    return NextResponse.json({ success: true, data })
+    return jsonSuccess(data)
   } catch (routeError) {
-    if (isFaviconError(routeError)) return createValidationErrorResponse(routeError)
+    if (isFaviconError(routeError)) return createValidationErrorResponse(routeError, request)
     throw routeError
   }
 }
@@ -95,5 +98,5 @@ export async function DELETE() {
   if (!guard.ok) return guard.response
 
   const data = await resetFavicon()
-  return NextResponse.json({ success: true, data })
+  return jsonSuccess(data)
 }
