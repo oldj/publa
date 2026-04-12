@@ -23,7 +23,7 @@
     "success": "Setup succeeded, redirecting to the admin panel"
   },
   "login": {
-    "title": "Publa Admin",
+    "title": "{siteShortTitle} Admin",
     "subtitle": "Please sign in with your administrator account",
     "fields": {
       "username": "Username",
@@ -60,7 +60,9 @@
     "system": "System",
     "users": "Users",
     "settings": "Settings",
-    "importExport": "Import / Export"
+    "importExport": "Import / Export",
+    "editSiteShortTitle": "Edit Site Short Title",
+    "siteShortTitleLabel": "Site short title"
   },
   "dashboard": {
     "title": "Dashboard",

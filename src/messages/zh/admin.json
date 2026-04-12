@@ -23,7 +23,7 @@
     "success": "初始化成功，即将跳转到后台"
   },
   "login": {
-    "title": "Publa 管理后台",
+    "title": "{siteShortTitle} 管理后台",
     "subtitle": "请输入管理员账号登录",
     "fields": {
       "username": "用户名",
@@ -60,7 +60,9 @@
     "system": "系统",
     "users": "用户",
     "settings": "设置",
-    "importExport": "导入导出"
+    "importExport": "导入导出",
+    "editSiteShortTitle": "编辑站点简称",
+    "siteShortTitleLabel": "站点简称"
   },
   "dashboard": {
     "title": "仪表盘",

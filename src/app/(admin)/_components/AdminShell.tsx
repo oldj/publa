@@ -1,10 +1,22 @@
 'use client'
 
+import { notify } from '@/lib/notify'
 import { version } from '@/lib/version'
 import type { AuthUser } from '@/server/auth'
-import { AppShell, Burger, Code, Group, ScrollArea, Text } from '@mantine/core'
+import {
+  AppShell,
+  Burger,
+  Button,
+  Code,
+  Group,
+  Modal,
+  ScrollArea,
+  Text,
+  TextInput,
+} from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import {
+  IconEdit,
   IconGauge,
   IconMail,
   IconMessage,
@@ -13,10 +25,12 @@ import {
   IconWorld,
 } from '@tabler/icons-react'
 import { useTranslations } from 'next-intl'
+import { useState } from 'react'
 import { AdminCountsProvider, useAdminCounts } from './AdminCountsContext'
 import { useAdminUrl } from './AdminPathContext'
 import classes from './AdminShell.module.scss'
 import { NavLinksGroup, type NavLinksGroupProps } from './NavLinksGroup'
+import { useSiteShortTitle } from './SiteShortTitleContext'
 import { UserButton } from './UserButton'
 
 function NavLinks({ user }: { user: AuthUser | null }) {
@@ -123,6 +137,44 @@ export function AdminShell({
   user: AuthUser | null
 }) {
   const [opened, { toggle }] = useDisclosure()
+  const { siteShortTitle, setSiteShortTitle } = useSiteShortTitle()
+  const t = useTranslations('admin.shell')
+  const tCommon = useTranslations('common')
+  const canEdit = user?.role === 'owner' || user?.role === 'admin'
+
+  // 编辑站点简称
+  const [editOpened, { open: openEdit, close: closeEdit }] = useDisclosure(false)
+  const [editValue, setEditValue] = useState(siteShortTitle)
+  const [saving, setSaving] = useState(false)
+
+  const handleOpenEdit = () => {
+    setEditValue(siteShortTitle === 'Publa' ? '' : siteShortTitle)
+    openEdit()
+  }
+
+  const handleSave = async () => {
+    const trimmed = editValue.trim()
+    setSaving(true)
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ siteShortTitle: trimmed }),
+      })
+      const json = await res.json()
+      if (json.success) {
+        setSiteShortTitle(trimmed || 'Publa')
+        closeEdit()
+        notify({ color: 'green', message: tCommon('save.success') })
+      } else {
+        notify({ color: 'red', message: json.message || tCommon('save.failed') })
+      }
+    } catch {
+      notify({ color: 'red', message: tCommon('errors.network') })
+    } finally {
+      setSaving(false)
+    }
+  }
 
   return (
     <AdminCountsProvider user={user}>
@@ -136,10 +188,25 @@ export function AdminShell({
       >
         <AppShell.Navbar p="md" className={classes.navbar}>
           <div className={classes.header}>
-            <Group justify="space-between">
-              <Text fw={700} size="lg">
-                Publa
-              </Text>
+            <Group justify="space-between" gap="4">
+              {canEdit ? (
+                <Group
+                  gap={8}
+                  className={classes.titleGroup}
+                  wrap="nowrap"
+                  onClick={handleOpenEdit}
+                  data-role="admin-site-title"
+                >
+                  <Text fw={700} size="lg" className={classes.titleText}>
+                    {siteShortTitle}
+                  </Text>
+                  <IconEdit size={16} className={classes.editIcon} />
+                </Group>
+              ) : (
+                <Text fw={700} size="lg" data-role="admin-site-title">
+                  {siteShortTitle}
+                </Text>
+              )}
               <Code fw={700}>{version}</Code>
             </Group>
           </div>
@@ -158,7 +225,7 @@ export function AdminShell({
         <AppShell.Header hiddenFrom="sm">
           <Group h="100%" px="md">
             <Burger opened={opened} onClick={toggle} size="sm" />
-            <Text fw={700}>Publa</Text>
+            <Text fw={700}>{siteShortTitle}</Text>
           </Group>
         </AppShell.Header>
 
@@ -166,6 +233,32 @@ export function AdminShell({
           {children}
         </AppShell.Main>
       </AppShell>
+
+      <Modal
+        opened={editOpened}
+        onClose={closeEdit}
+        title={t('editSiteShortTitle')}
+        centered
+        size="sm"
+        data-role="admin-site-title-modal"
+      >
+        <TextInput
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value.slice(0, 30))}
+          maxLength={30}
+          placeholder="Publa"
+          label={t('siteShortTitleLabel')}
+          data-role="admin-site-title-input"
+        />
+        <Group justify="flex-end" mt="md">
+          <Button variant="default" onClick={closeEdit}>
+            {tCommon('actions.cancel')}
+          </Button>
+          <Button onClick={handleSave} loading={saving} data-role="admin-site-title-save">
+            {tCommon('actions.save')}
+          </Button>
+        </Group>
+      </Modal>
     </AdminCountsProvider>
   )
 }

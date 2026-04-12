@@ -12,6 +12,27 @@
   border-bottom: 1px solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4));
 }
 
+.titleGroup {
+  cursor: pointer;
+  overflow: hidden;
+
+  .titleText {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .editIcon {
+    flex-shrink: 0;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+
+  &:hover .editIcon {
+    opacity: 0.5;
+  }
+}
+
 .links {
   flex: 1;
   margin-left: calc(var(--mantine-spacing-md) * -1);

@@ -35,6 +35,7 @@ const DEFAULT_NOTIFY_SETTING_VALUE: NotifySettingValue = Object.freeze({
 
 export const ADMIN_SETTINGS_KEYS = [
   'siteTitle',
+  'siteShortTitle',
   'siteSlogan',
   'siteDescription',
   'siteUrl',
@@ -115,6 +116,7 @@ const NOTIFY_SETTING_KEYS = ['emailNotifyNewComment', 'emailNotifyNewGuestbook']
 
 const STRING_SETTING_KEYS = [
   'siteTitle',
+  'siteShortTitle',
   'siteSlogan',
   'siteDescription',
   'siteUrl',
@@ -163,6 +165,7 @@ function defineExplicitDefaultSettings<T extends Record<string, SettingValue>>(i
 
 const EXPLICIT_DEFAULT_SETTINGS = defineExplicitDefaultSettings({
   siteTitle: 'Publa',
+  siteShortTitle: '',
   siteSlogan: 'Yet Another Amazing Blog',
   siteDescription: '',
   siteUrl: '',

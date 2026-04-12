@@ -1,6 +1,7 @@
 'use client'
 
 import { useAdminUrl } from '@/app/(admin)/_components/AdminPathContext'
+import { useSiteShortTitle } from '@/app/(admin)/_components/SiteShortTitleContext'
 import { notify } from '@/lib/notify'
 import { normalizePassword, normalizeUsername } from '@/lib/user-input'
 import { version } from '@/lib/version'
@@ -12,6 +13,7 @@ import { useState } from 'react'
 export default function AdminLoginPage() {
   const t = useTranslations('admin.login')
   const tCommon = useTranslations('common')
+  const { siteShortTitle } = useSiteShortTitle()
   const router = useRouter()
   const adminUrl = useAdminUrl()
   const [loading, setLoading] = useState(false)
@@ -52,7 +54,7 @@ export default function AdminLoginPage() {
 
   return (
     <Container size={420} my={80}>
-      <Title ta="center">{t('title')}</Title>
+      <Title ta="center">{t('title', { siteShortTitle })}</Title>
       <Text c="dimmed" size="sm" ta="center" mt={5}>
         {t('subtitle')}
       </Text>
