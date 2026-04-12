@@ -207,7 +207,7 @@ async function initializeOwner(
   })
 
   const response = await bootstrapContext.post('/api/setup', {
-    data: credentials,
+    data: { ...credentials, language: 'zh' },
     failOnStatusCode: false,
   })
   const json = (await response.json()) as { success: boolean; message?: string }

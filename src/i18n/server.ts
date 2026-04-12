@@ -13,7 +13,8 @@ function getHeadersLike(source: Request | HeadersLike | undefined): HeadersLike 
   if ('headers' in source && source.headers && typeof source.headers.get === 'function') {
     return source.headers
   }
-  return source
+  if ('get' in source && typeof source.get === 'function') return source as HeadersLike
+  return undefined
 }
 
 async function resolveServerLocale(options: ServerTranslatorOptions = {}): Promise<Locale> {

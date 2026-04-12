@@ -43,6 +43,7 @@ import {
   IconTrash,
   IconUpload,
 } from '@tabler/icons-react'
+import { isBuiltinKey } from '@/shared/builtin-themes'
 import { useTranslations } from 'next-intl'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -126,7 +127,11 @@ function SortableThemeRow({
             styles={{ body: { alignItems: 'center' } }}
             label={
               <Group gap="xs">
-                <Text>{theme.name}</Text>
+                <Text>
+                  {isBuiltinKey(theme.builtinKey)
+                    ? t(`builtinNames.${theme.builtinKey}`)
+                    : theme.name}
+                </Text>
                 {isBuiltin && (
                   <Text size="xs" c="dimmed">
                     {t('builtin')}

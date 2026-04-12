@@ -120,6 +120,13 @@
       "network": "Network error, please try again later."
     }
   },
+  "seed": {
+    "aboutPage": {
+      "title": "About",
+      "contentRaw": "# About\n\nWelcome to my blog!",
+      "contentHtml": "<h1>About</h1>\n<p>Welcome to my blog!</p>"
+    }
+  },
   "api": {
     "comments": {
       "slugRequired": "Slug is required",

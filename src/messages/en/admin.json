@@ -467,6 +467,11 @@
     "emptyThemes": "No themes yet",
     "emptyCustomStyles": "No custom CSS yet",
     "builtin": "(Built in)",
+    "builtinNames": {
+      "light": "Light",
+      "dark": "Dark",
+      "blank": "Blank"
+    },
     "deleteThemeConfirm": "Are you sure you want to delete theme \"{name}\"?",
     "deleteCustomStyleConfirm": "Are you sure you want to delete custom CSS \"{name}\"?",
     "messages": {

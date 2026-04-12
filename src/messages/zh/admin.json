@@ -467,6 +467,11 @@
     "emptyThemes": "暂无主题",
     "emptyCustomStyles": "暂无自定义 CSS",
     "builtin": "（内置）",
+    "builtinNames": {
+      "light": "浅色",
+      "dark": "深色",
+      "blank": "空白"
+    },
     "deleteThemeConfirm": "确定要删除主题「{name}」吗？",
     "deleteCustomStyleConfirm": "确定要删除自定义 CSS「{name}」吗？",
     "messages": {

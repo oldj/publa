@@ -29,4 +29,34 @@ describe('seed', () => {
     expect(map.emailNotifyNewComment).toBe('{"enabled":false,"userIds":[]}')
     expect(map.activeThemeId).toBe(String(lightTheme?.id))
   })
+
+  it('英文初始化时菜单和关于页面为英文', async () => {
+    await seed(undefined, { language: 'en' })
+
+    const menuRows = await testDb.select().from(schema.menus)
+    const titles = menuRows.sort((a, b) => a.sortOrder - b.sortOrder).map((m) => m.title)
+    expect(titles).toEqual(['Home', 'Posts', 'Guestbook', 'About'])
+
+    const aboutPage = await testDb
+      .select()
+      .from(schema.contents)
+      .where(eq(schema.contents.path, 'about'))
+      .limit(1)
+    expect(aboutPage[0]?.title).toBe('About')
+  })
+
+  it('中文初始化时菜单和关于页面为中文', async () => {
+    await seed(undefined, { language: 'zh' })
+
+    const menuRows = await testDb.select().from(schema.menus)
+    const titles = menuRows.sort((a, b) => a.sortOrder - b.sortOrder).map((m) => m.title)
+    expect(titles).toEqual(['首页', '文章', '留言', '关于'])
+
+    const aboutPage = await testDb
+      .select()
+      .from(schema.contents)
+      .where(eq(schema.contents.path, 'about'))
+      .limit(1)
+    expect(aboutPage[0]?.title).toBe('关于')
+  })
 })

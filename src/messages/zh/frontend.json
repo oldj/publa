@@ -120,6 +120,13 @@
       "network": "网络错误，请稍后重试。"
     }
   },
+  "seed": {
+    "aboutPage": {
+      "title": "关于",
+      "contentRaw": "# 关于\n\n欢迎来到我的博客！",
+      "contentHtml": "<h1>关于</h1>\n<p>欢迎来到我的博客！</p>"
+    }
+  },
   "api": {
     "comments": {
       "slugRequired": "slug 不能为空",

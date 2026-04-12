@@ -2,16 +2,37 @@
  * 数据库初始数据脚本
  * 用于系统首次初始化时填充默认数据
  */
+import { getMessage } from '@/i18n/core'
+import enFrontend from '@/messages/en/frontend.json'
 import {
   getDefaultSettingsPayload,
   serializeSettingValue,
   type PartialSettingType,
 } from '@/server/services/settings'
-import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core'
 import { eq } from 'drizzle-orm'
+import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core'
 import { db, dbReady } from './index'
 import { contents, menus, settings, themes } from './schema'
 import { isoNow } from './schema/shared'
+
+type Messages = Record<string, unknown>
+
+/** 按 locale 动态加载 frontend 翻译，找不到时回退英文 */
+async function loadFrontendMessages(language: string): Promise<Messages> {
+  if (language === 'en') return enFrontend
+  try {
+    return (await import(`../../messages/${language}/frontend.json`)).default
+  } catch {
+    return enFrontend
+  }
+}
+
+/** 从已加载的 messages 取翻译，找不到时回退英文 */
+function seedMsg(messages: Messages, path: string): string {
+  const msg = getMessage(messages, path)
+  if (typeof msg === 'string') return msg
+  return getMessage(enFrontend, path) as string
+}
 
 function buildSeedSettings(language?: string) {
   const payload: PartialSettingType = getDefaultSettingsPayload()
@@ -30,30 +51,34 @@ function buildSeedSettings(language?: string) {
 
 /** 内置主题。三项均不可编辑、不可删除，仅可参与排序和被选中 */
 const BUILTIN_THEMES = [
-  { name: '浅色', builtinKey: 'light', sortOrder: 1 },
-  { name: '深色', builtinKey: 'dark', sortOrder: 2 },
-  { name: '空白', builtinKey: 'blank', sortOrder: 3 },
+  { name: 'Light', builtinKey: 'light', sortOrder: 1 },
+  { name: 'Dark', builtinKey: 'dark', sortOrder: 2 },
+  { name: 'Blank', builtinKey: 'blank', sortOrder: 3 },
 ] as const
 
-/** 默认菜单项 */
-const defaultMenus = [
-  { title: '首页', url: '/', sortOrder: 0, target: '_self' as const },
-  { title: '文章', url: '/posts', sortOrder: 1, target: '_self' as const },
-  { title: '留言', url: '/guestbook', sortOrder: 2, target: '_self' as const },
-  { title: '关于', url: '/about', sortOrder: 3, target: '_self' as const },
-]
+function buildDefaultMenus(msg: Messages) {
+  const m = (key: string) => seedMsg(msg, `nav.defaultMenus.${key}`)
+  return [
+    { title: m('home'), url: '/', sortOrder: 0, target: '_self' as const },
+    { title: m('posts'), url: '/posts', sortOrder: 1, target: '_self' as const },
+    { title: m('guestbook'), url: '/guestbook', sortOrder: 2, target: '_self' as const },
+    { title: m('about'), url: '/about', sortOrder: 3, target: '_self' as const },
+  ]
+}
 
-/** 默认关于页面 */
-const defaultAboutPage = {
-  type: 'page' as const,
-  title: '关于',
-  path: 'about',
-  contentType: 'markdown' as const,
-  contentRaw: '# 关于\n\n欢迎来到我的博客！',
-  contentHtml: '<h1>关于</h1>\n<p>欢迎来到我的博客！</p>',
-  template: 'default' as const,
-  status: 'published' as const,
-  publishedAt: new Date().toISOString(),
+function buildDefaultAboutPage(msg: Messages) {
+  const m = (key: string) => seedMsg(msg, `seed.aboutPage.${key}`)
+  return {
+    type: 'page' as const,
+    title: m('title'),
+    path: 'about',
+    contentType: 'markdown' as const,
+    contentRaw: m('contentRaw'),
+    contentHtml: m('contentHtml'),
+    template: 'default' as const,
+    status: 'published' as const,
+    publishedAt: new Date().toISOString(),
+  }
 }
 
 /** 默认 robots.txt 页面 */
@@ -83,7 +108,9 @@ export async function seed(tx?: BaseSQLiteDatabase<any, any, any>, options: Seed
 
   const conn = tx ?? db
 
-  const effectiveSettings = buildSeedSettings(options.language)
+  const language = options.language ?? 'zh'
+  const effectiveSettings = buildSeedSettings(language)
+  const frontendMsg = await loadFrontendMessages(language)
 
   // 插入默认设置（跳过已存在的）
   for (const item of effectiveSettings) {
@@ -93,13 +120,13 @@ export async function seed(tx?: BaseSQLiteDatabase<any, any, any>, options: Seed
   // 检查是否已有菜单
   const existingMenus = await conn.select().from(menus)
   if (existingMenus.length === 0) {
-    await conn.insert(menus).values(defaultMenus)
+    await conn.insert(menus).values(buildDefaultMenus(frontendMsg))
   }
 
   // 检查是否已有关于页面
   const existingPages = await conn.select().from(contents)
   if (existingPages.length === 0) {
-    await conn.insert(contents).values([defaultAboutPage, defaultRobotsTxt])
+    await conn.insert(contents).values([buildDefaultAboutPage(frontendMsg), defaultRobotsTxt])
   }
 
   // 幂等写入内置主题与默认 activeThemeId

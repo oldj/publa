@@ -140,20 +140,20 @@ async function buildAuthErrorResponse(
   fallbackKey: 'unauthorized' | 'forbidden',
   message?: TranslatedMessage,
 ) {
-  if (!message || typeof message !== 'string') {
-    return jsonError({
-      namespace: message?.namespace ?? 'common.api',
-      key: message?.key ?? fallbackKey,
-      values: message?.values,
-      code,
-      status: code === 'UNAUTHORIZED' ? 401 : 403,
-    })
+  if (typeof message === 'string') {
+    return NextResponse.json(
+      { success: false, code, message },
+      { status: code === 'UNAUTHORIZED' ? 401 : 403 },
+    )
   }
 
-  return NextResponse.json(
-    { success: false, code, message },
-    { status: code === 'UNAUTHORIZED' ? 401 : 403 },
-  )
+  return jsonError({
+    namespace: message?.namespace ?? 'common.api',
+    key: message?.key ?? fallbackKey,
+    values: message?.values,
+    code,
+    status: code === 'UNAUTHORIZED' ? 401 : 403,
+  })
 }
 
 export async function unauthorizedResponse(message?: TranslatedMessage) {
