@@ -539,8 +539,7 @@ export async function updatePost(
         .where(eq(contentTags.contentId, id))
       const oldSet = new Set(oldRows.map((r) => r.tagId))
       const newSet = new Set(input.tagIds)
-      shouldRecount =
-        oldSet.size !== newSet.size || [...newSet].some((tid) => !oldSet.has(tid))
+      shouldRecount = oldSet.size !== newSet.size || [...newSet].some((tid) => !oldSet.has(tid))
     }
   }
 
@@ -607,11 +606,15 @@ export async function publishScheduledPosts() {
   }
 }
 
+export type SlugValidationCode = 'REQUIRED' | 'STARTS_WITH_HYPHEN' | 'ENDS_WITH_HYPHEN'
+
 /** 校验 slug 格式 */
-export function validateSlug(slug: string): { valid: boolean; message?: string } {
-  if (!slug) return { valid: false, message: 'Slug 不能为空' }
-  if (slug.startsWith('-')) return { valid: false, message: 'Slug 不能以 - 开头' }
-  if (slug.endsWith('-')) return { valid: false, message: 'Slug 不能以 - 结尾' }
+export function validateSlug(
+  slug: string,
+): { valid: true } | { valid: false; code: SlugValidationCode } {
+  if (!slug) return { valid: false, code: 'REQUIRED' }
+  if (slug.startsWith('-')) return { valid: false, code: 'STARTS_WITH_HYPHEN' }
+  if (slug.endsWith('-')) return { valid: false, code: 'ENDS_WITH_HYPHEN' }
   return { valid: true }
 }
 

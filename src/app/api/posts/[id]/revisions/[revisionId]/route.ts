@@ -1,33 +1,31 @@
-import { getCurrentUser } from '@/server/auth'
+import { requireCurrentUser } from '@/server/auth'
+import { jsonError, jsonSuccess } from '@/server/lib/api-response'
 import { parseIdParam } from '@/server/lib/request'
 import { getRevisionById } from '@/server/services/revisions'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string; revisionId: string }> },
 ) {
-  const user = await getCurrentUser()
-  if (!user) {
-    return NextResponse.json(
-      { success: false, code: 'UNAUTHORIZED', message: 'Unauthorized' },
-      { status: 401 },
-    )
-  }
+  const guard = await requireCurrentUser()
+  if (!guard.ok) return guard.response
 
   const { id, revisionId } = await params
-  const { id: postId, error: idError } = parseIdParam(id)
+  const { id: postId, error: idError } = await parseIdParam(id)
   if (idError) return idError
-  const { id: revId, error: revError } = parseIdParam(revisionId)
+  const { id: revId, error: revError } = await parseIdParam(revisionId)
   if (revError) return revError
   const revision = await getRevisionById(revId)
 
   if (!revision || revision.targetType !== 'post' || revision.targetId !== postId) {
-    return NextResponse.json(
-      { success: false, code: 'NOT_FOUND', message: '版本不存在' },
-      { status: 404 },
-    )
+    return jsonError({
+      namespace: 'admin.api.revisions',
+      key: 'notFound',
+      code: 'NOT_FOUND',
+      status: 404,
+    })
   }
 
-  return NextResponse.json({ success: true, data: revision })
+  return jsonSuccess(revision)
 }

@@ -1,12 +1,13 @@
 import { DEFAULT_LOCALE, isLocale } from '@/i18n/locales'
 import { normalizeEmail, normalizePassword, normalizeUsername } from '@/lib/user-input'
 import { createToken, hashPassword, setAuthCookie } from '@/server/auth'
+import { jsonError, jsonSuccess } from '@/server/lib/api-response'
 import { db, dbReady } from '@/server/db'
 import { insertOne, maybeFirst } from '@/server/db/query'
 import { users } from '@/server/db/schema'
 import { seed } from '@/server/db/seed'
 import { eq } from 'drizzle-orm'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,10 +18,13 @@ export async function POST(request: NextRequest) {
       db.select().from(users).where(eq(users.role, 'owner')).limit(1),
     )
     if (existingOwner) {
-      return NextResponse.json(
-        { success: false, code: 'ALREADY_INITIALIZED', message: 'System already initialized' },
-        { status: 403 },
-      )
+      return jsonError({
+        source: request,
+        namespace: 'admin.setup.errors',
+        key: 'alreadyInitialized',
+        code: 'ALREADY_INITIALIZED',
+        status: 403,
+      })
     }
 
     const body = await request.json()
@@ -30,17 +34,23 @@ export async function POST(request: NextRequest) {
     const language = isLocale(body?.language) ? body.language : DEFAULT_LOCALE
 
     if (!username || !password) {
-      return NextResponse.json(
-        { success: false, code: 'VALIDATION_ERROR', message: 'Username and password are required' },
-        { status: 400 },
-      )
+      return jsonError({
+        source: request,
+        namespace: 'admin.setup.errors',
+        key: 'usernameOrPasswordEmpty',
+        code: 'VALIDATION_ERROR',
+        status: 400,
+      })
     }
 
     if (password.length < 6) {
-      return NextResponse.json(
-        { success: false, code: 'VALIDATION_ERROR', message: 'Password must be at least 6 characters' },
-        { status: 400 },
-      )
+      return jsonError({
+        source: request,
+        namespace: 'admin.setup.errors',
+        key: 'passwordTooShort',
+        code: 'VALIDATION_ERROR',
+        status: 400,
+      })
     }
 
     const passwordHash = await hashPassword(password)
@@ -72,19 +82,19 @@ export async function POST(request: NextRequest) {
     })
     await setAuthCookie(token)
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        id: owner.id,
-        username: owner.username,
-        role: owner.role,
-      },
+    return jsonSuccess({
+      id: owner.id,
+      username: owner.username,
+      role: owner.role,
     })
   } catch (error) {
     console.error('[POST /api/setup] Internal error:', error)
-    return NextResponse.json(
-      { success: false, code: 'INTERNAL_ERROR', message: 'Internal server error' },
-      { status: 500 },
-    )
+    return jsonError({
+      source: request,
+      namespace: 'common.api',
+      key: 'internalError',
+      code: 'INTERNAL_ERROR',
+      status: 500,
+    })
   }
 }

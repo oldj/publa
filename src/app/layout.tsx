@@ -1,3 +1,4 @@
+import ClientI18nBridge from '@/components/ClientI18nBridge'
 import HeadElements from '@/components/HeadElements'
 import NProgressBar from '@/components/NProgress'
 import { resolveLocale } from '@/i18n/resolve-locale'
@@ -74,6 +75,7 @@ export default async function RootLayout({ children }: { children: any }) {
       </head>
       <body data-role="body">
         <NextIntlClientProvider>
+          <ClientI18nBridge />
           <Suspense fallback={null}>
             <NProgressBar />
           </Suspense>

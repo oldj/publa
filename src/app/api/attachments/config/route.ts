@@ -1,5 +1,7 @@
 import { requireRole } from '@/server/auth'
+import { jsonError, jsonSuccess } from '@/server/lib/api-response'
 import { safeParseJson } from '@/server/lib/request'
+import { jsonSettingsValidationError } from '@/server/lib/settings-error'
 import {
   getAllSettings,
   isSettingsValidationError,
@@ -8,7 +10,7 @@ import {
   updateSettings,
 } from '@/server/services/settings'
 import { createStorageProvider } from '@/server/storage'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 
 /** 脱敏处理：只显示前 4 位和后 4 位，短密钥使用不可碰撞的占位符 */
 const MASKED_PLACEHOLDER = '\x00MASKED\x00'
@@ -20,7 +22,10 @@ function maskSecret(value: string | undefined): string {
 
 /** 获取存储配置（脱敏） */
 export async function GET() {
-  const guard = await requireRole(['owner', 'admin'], '权限不足')
+  const guard = await requireRole(['owner', 'admin'], {
+    namespace: 'common.api',
+    key: 'forbidden',
+  })
   if (!guard.ok) return guard.response
 
   const all = await getAllSettings()
@@ -35,12 +40,15 @@ export async function GET() {
   config.storageCosSecretKey = maskSecret(String(all.storageCosSecretKey ?? ''))
   config.storageR2SecretKey = maskSecret(String(all.storageR2SecretKey ?? ''))
 
-  return NextResponse.json({ success: true, data: config })
+  return jsonSuccess(config)
 }
 
 /** 更新存储配置 */
 export async function PUT(request: NextRequest) {
-  const guard = await requireRole(['owner', 'admin'], '权限不足')
+  const guard = await requireRole(['owner', 'admin'], {
+    namespace: 'common.api',
+    key: 'forbidden',
+  })
   if (!guard.ok) return guard.response
 
   const { data: body, error } = await safeParseJson(request)
@@ -70,24 +78,20 @@ export async function PUT(request: NextRequest) {
     await updateSettings(normalized)
   } catch (error) {
     if (isSettingsValidationError(error)) {
-      return NextResponse.json(
-        {
-          success: false,
-          code: 'VALIDATION_ERROR',
-          message: error.message,
-        },
-        { status: 400 },
-      )
+      return jsonSettingsValidationError(error, request)
     }
     throw error
   }
 
-  return NextResponse.json({ success: true })
+  return jsonSuccess()
 }
 
 /** 测试连接 */
 export async function POST(request: NextRequest) {
-  const guard = await requireRole(['owner', 'admin'], '权限不足')
+  const guard = await requireRole(['owner', 'admin'], {
+    namespace: 'common.api',
+    key: 'forbidden',
+  })
   if (!guard.ok) return guard.response
 
   const { data: body, error } = await safeParseJson(request)
@@ -117,18 +121,24 @@ export async function POST(request: NextRequest) {
 
   const storage = await createStorageProvider(provider, config)
   if (!storage) {
-    return NextResponse.json(
-      { success: false, code: 'VALIDATION_ERROR', message: '配置不完整' },
-      { status: 400 },
-    )
+    return jsonError({
+      source: request,
+      namespace: 'admin.api.attachments',
+      key: 'configIncomplete',
+      code: 'VALIDATION_ERROR',
+      status: 400,
+    })
   }
 
   const result = await storage.testConnection()
   if (!result.success) {
-    return NextResponse.json(
-      { success: false, code: 'CONNECTION_FAILED', message: result.message },
-      { status: 400 },
-    )
+    return jsonError({
+      source: request,
+      namespace: 'admin.api.attachments',
+      key: 'connectionFailed',
+      code: 'CONNECTION_FAILED',
+      status: 400,
+    })
   }
-  return NextResponse.json({ success: true })
+  return jsonSuccess()
 }

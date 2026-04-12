@@ -17,6 +17,7 @@ import {
 import { IconInfoCircle, IconTrash } from '@tabler/icons-react'
 import dayjs from 'dayjs'
 import { useAdminUrl } from '@/app/(admin)/_components/AdminPathContext'
+import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 import { useCurrentUser } from '../../_components/AdminCountsContext'
@@ -32,15 +33,11 @@ interface EmailLog {
   createdAt: string
 }
 
-const EVENT_LABELS: Record<string, string> = {
-  new_comment: '新评论',
-  new_guestbook: '新留言',
-  test: '测试',
-}
-
 const PAGE_SIZE = 50
 
 export default function EmailLogsPage() {
+  const t = useTranslations('admin.emailLogsPage')
+  const tCommon = useTranslations('common')
   const router = useRouter()
   const adminUrl = useAdminUrl()
   const currentUser = useCurrentUser()
@@ -75,23 +72,23 @@ export default function EmailLogsPage() {
   }
 
   const handleDelete = async (id: number) => {
-    if (!(await myModal.confirm({ title: '删除确认', message: '确定删除这条发送记录？' }))) {
+    if (!(await myModal.confirm({ title: t('deleteConfirmTitle'), message: t('deleteConfirm') }))) {
       return
     }
     try {
       const res = await fetch(`/api/email-logs/${id}`, { method: 'DELETE' })
       const json = await res.json()
       if (json.success) {
-        notify({ color: 'green', message: '已删除' })
+        notify({ color: 'green', message: tCommon('messages.deleteSuccess') })
         // 当前页只剩一条且不是第一页时，回退到上一页
         const targetPage = logs.length <= 1 && page > 1 ? page - 1 : page
         if (targetPage !== page) setPage(targetPage)
         else fetchLogs(page)
       } else {
-        notify({ color: 'red', message: json.message || '删除失败' })
+        notify({ color: 'red', message: json.message || tCommon('errors.deleteFailed') })
       }
     } catch {
-      notify({ color: 'red', message: '网络错误' })
+      notify({ color: 'red', message: tCommon('errors.network') })
     }
   }
 
@@ -100,16 +97,16 @@ export default function EmailLogsPage() {
   return (
     <Stack gap="lg" mt="md">
       <Group justify="space-between">
-        <Title order={3}>邮件日志</Title>
+        <Title order={3}>{t('title')}</Title>
       </Group>
 
       <Alert icon={<IconInfoCircle size={16} />} color="blue" variant="light">
-        邮件发送记录仅保留 30 天，超过 30 天的记录会被自动清理。
+        {t('description')}
       </Alert>
 
       {logs.length === 0 ? (
         <Text c="dimmed" ta="center" py="xl">
-          暂无发送记录
+          {t('empty')}
         </Text>
       ) : (
         <>
@@ -117,11 +114,11 @@ export default function EmailLogsPage() {
             <Table highlightOnHover>
               <Table.Thead>
                 <Table.Tr>
-                  <Table.Th>事件</Table.Th>
-                  <Table.Th>收件人</Table.Th>
-                  <Table.Th>主题</Table.Th>
-                  <Table.Th>状态</Table.Th>
-                  <Table.Th>时间</Table.Th>
+                  <Table.Th>{t('columns.event')}</Table.Th>
+                  <Table.Th>{t('columns.recipients')}</Table.Th>
+                  <Table.Th>{t('columns.subject')}</Table.Th>
+                  <Table.Th>{t('columns.status')}</Table.Th>
+                  <Table.Th>{t('columns.time')}</Table.Th>
                   <Table.Th w={60} />
                 </Table.Tr>
               </Table.Thead>
@@ -130,7 +127,9 @@ export default function EmailLogsPage() {
                   <Table.Tr key={log.id}>
                     <Table.Td>
                       <NowrapBadge variant="light" size="sm">
-                        {EVENT_LABELS[log.eventType] || log.eventType}
+                        {t.has(`events.${log.eventType}` as never)
+                          ? t(`events.${log.eventType}` as never)
+                          : log.eventType}
                       </NowrapBadge>
                     </Table.Td>
                     <Table.Td>
@@ -146,17 +145,21 @@ export default function EmailLogsPage() {
                     <Table.Td>
                       {log.status === 'success' ? (
                         <NowrapBadge color="green" variant="light" size="sm">
-                          成功
+                          {t('statuses.success')}
                         </NowrapBadge>
                       ) : (
-                        <Tooltip label={log.errorMessage || '发送失败'} multiline maw={300}>
+                        <Tooltip
+                          label={log.errorMessage || t('tooltips.failed')}
+                          multiline
+                          maw={300}
+                        >
                           <NowrapBadge
                             color="red"
                             variant="light"
                             size="sm"
                             style={{ cursor: 'help' }}
                           >
-                            失败
+                            {t('statuses.failed')}
                           </NowrapBadge>
                         </Tooltip>
                       )}

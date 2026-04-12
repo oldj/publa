@@ -11,14 +11,16 @@ describe('validatePagePath', () => {
   it('拒绝静态保留路径 admin', () => {
     expect(validatePagePath('admin')).toEqual({
       valid: false,
-      message: '"admin" 是保留路径，不能使用',
+      code: 'RESERVED',
+      values: { segment: 'admin' },
     })
   })
 
   it('拒绝静态保留路径 api', () => {
     expect(validatePagePath('api/foo')).toEqual({
       valid: false,
-      message: '"api" 是保留路径，不能使用',
+      code: 'RESERVED',
+      values: { segment: 'api' },
     })
   })
 
@@ -26,7 +28,8 @@ describe('validatePagePath', () => {
     vi.stubEnv('ADMIN_PATH', 'backstage')
     expect(validatePagePath('backstage')).toEqual({
       valid: false,
-      message: '"backstage" 是保留路径，不能使用',
+      code: 'RESERVED',
+      values: { segment: 'backstage' },
     })
   })
 

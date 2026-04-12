@@ -90,13 +90,14 @@ export async function updateUser(
 }
 
 /** 删除用户 */
-export async function deleteUser(
-  id: number,
-  operatorId: number,
-): Promise<{ success: boolean; message?: string }> {
-  if (id === operatorId) return { success: false, message: '不能删除自己' }
+export type DeleteUserResult =
+  | { success: true }
+  | { success: false; code: 'CANNOT_DELETE_SELF' | 'NOT_FOUND' }
+
+export async function deleteUser(id: number, operatorId: number): Promise<DeleteUserResult> {
+  if (id === operatorId) return { success: false, code: 'CANNOT_DELETE_SELF' }
   const user = await maybeFirst(db.select().from(users).where(eq(users.id, id)).limit(1))
-  if (!user) return { success: false, message: '用户不存在' }
+  if (!user) return { success: false, code: 'NOT_FOUND' }
 
   // 先清除活动日志，避免外键约束阻塞删除
   await db.delete(activityLogs).where(eq(activityLogs.userId, id))

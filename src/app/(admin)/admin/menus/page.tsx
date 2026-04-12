@@ -50,6 +50,7 @@ import {
   IconRefresh,
   IconTrash,
 } from '@tabler/icons-react'
+import { useTranslations } from 'next-intl'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { flushSync } from 'react-dom'
 
@@ -101,6 +102,7 @@ function SortableChildItem({
   onDelete: (id: number, title: string) => void
   onToggleHidden: (item: MenuItem) => void
 }) {
+  const t = useTranslations('admin.menusPage')
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.id,
     animateLayoutChanges: noDropAnimation,
@@ -128,7 +130,7 @@ function SortableChildItem({
             size="sm"
             {...attributes}
             {...listeners}
-            aria-label="拖拽排序"
+            aria-label={t('aria.drag')}
             style={{ cursor: 'grab' }}
           >
             <IconGripVertical size={14} />
@@ -145,34 +147,34 @@ function SortableChildItem({
             )}
             {item.target === '_blank' && (
               <Badge size="xs" variant="light">
-                新窗口
+                {t('badges.newWindow')}
               </Badge>
             )}
             {item.hidden === 1 && (
               <Badge size="xs" variant="light" color="gray">
-                已隐藏
+                {t('badges.hidden')}
               </Badge>
             )}
           </Group>
         </Group>
 
         <Group gap="xs" wrap="nowrap">
-          <Tooltip label={item.hidden ? '显示' : '隐藏'} withArrow>
+          <Tooltip label={item.hidden ? t('tooltips.show') : t('tooltips.hide')} withArrow>
             <ActionIcon
               variant="subtle"
               size="sm"
               onClick={() => onToggleHidden(item)}
-              aria-label={item.hidden ? '显示菜单' : '隐藏菜单'}
+              aria-label={item.hidden ? t('aria.showMenu') : t('aria.hideMenu')}
             >
               {item.hidden ? <IconEyeOff size={14} /> : <IconEye size={14} />}
             </ActionIcon>
           </Tooltip>
-          <Tooltip label="编辑" withArrow>
+          <Tooltip label={t('tooltips.edit')} withArrow>
             <ActionIcon variant="subtle" size="sm" onClick={() => onEdit(item)}>
               <IconPencil size={14} />
             </ActionIcon>
           </Tooltip>
-          <Tooltip label="删除" withArrow>
+          <Tooltip label={t('tooltips.delete')} withArrow>
             <ActionIcon
               variant="subtle"
               color="red"
@@ -210,6 +212,7 @@ function SortableParentItem({
   onToggleHidden: (item: MenuItem) => void
   sensors: ReturnType<typeof useSensors>
 }) {
+  const t = useTranslations('admin.menusPage')
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.id,
     animateLayoutChanges: noDropAnimation,
@@ -238,7 +241,7 @@ function SortableParentItem({
             color="gray"
             {...attributes}
             {...listeners}
-            aria-label="拖拽排序"
+            aria-label={t('aria.drag')}
             style={{ cursor: 'grab' }}
           >
             <IconGripVertical size={18} />
@@ -250,7 +253,7 @@ function SortableParentItem({
             color="gray"
             size="sm"
             onClick={() => onToggleExpand(item.id)}
-            aria-label={expanded ? '收起子菜单' : '展开子菜单'}
+            aria-label={expanded ? t('aria.collapseChildren') : t('aria.expandChildren')}
           >
             {expanded ? <IconChevronDown size={16} /> : <IconChevronRight size={16} />}
           </ActionIcon>
@@ -264,47 +267,47 @@ function SortableParentItem({
             )}
             {item.target === '_blank' && (
               <Badge size="xs" variant="light">
-                新窗口
+                {t('badges.newWindow')}
               </Badge>
             )}
             {item.hidden === 1 && (
               <Badge size="xs" variant="light" color="gray">
-                已隐藏
+                {t('badges.hidden')}
               </Badge>
             )}
             {hasChildren && (
               <Badge size="xs" variant="light" color="blue">
-                {item.children.length} 个子菜单
+                {t('badges.childCount', { count: item.children.length })}
               </Badge>
             )}
           </Group>
         </Group>
 
         <Group gap="xs" wrap="nowrap">
-          <Tooltip label={item.hidden ? '显示' : '隐藏'} withArrow>
+          <Tooltip label={item.hidden ? t('tooltips.show') : t('tooltips.hide')} withArrow>
             <ActionIcon
               variant="subtle"
               onClick={() => onToggleHidden(item)}
-              aria-label={item.hidden ? '显示菜单' : '隐藏菜单'}
+              aria-label={item.hidden ? t('aria.showMenu') : t('aria.hideMenu')}
             >
               {item.hidden ? <IconEyeOff size={16} /> : <IconEye size={16} />}
             </ActionIcon>
           </Tooltip>
-          <Tooltip label="添加子菜单" withArrow>
+          <Tooltip label={t('tooltips.addChild')} withArrow>
             <ActionIcon
               variant="subtle"
               onClick={() => onAddChild(item.id)}
-              aria-label="添加子菜单"
+              aria-label={t('aria.addChild')}
             >
               <IconPlus size={14} />
             </ActionIcon>
           </Tooltip>
-          <Tooltip label="编辑" withArrow>
+          <Tooltip label={t('tooltips.edit')} withArrow>
             <ActionIcon variant="subtle" onClick={() => onEdit(item)}>
               <IconPencil size={16} />
             </ActionIcon>
           </Tooltip>
-          <Tooltip label="删除" withArrow>
+          <Tooltip label={t('tooltips.delete')} withArrow>
             <ActionIcon
               variant="subtle"
               color="red"
@@ -344,7 +347,7 @@ function SortableParentItem({
             </DndContext>
           ) : (
             <Text size="sm" c="dimmed">
-              暂无子菜单
+              {t('emptyChildren')}
             </Text>
           )}
         </Box>
@@ -354,6 +357,8 @@ function SortableParentItem({
 }
 
 export default function MenusPage() {
+  const t = useTranslations('admin.menusPage')
+  const tCommon = useTranslations('common')
   const [menuList, setMenuList] = useState<MenuItem[]>([])
   const [opened, { open, close }] = useDisclosure(false)
   const [editingId, setEditingId] = useState<number | null>(null)
@@ -431,7 +436,7 @@ export default function MenusPage() {
 
   const handleSubmit = async () => {
     if (!form.title) {
-      notify({ color: 'red', message: '标题不能为空' })
+      notify({ color: 'red', message: t('validation.titleRequired') })
       return
     }
 
@@ -464,12 +469,17 @@ export default function MenusPage() {
       })
       const json = await res.json()
       if (json.success) {
-        notify({ color: 'green', message: editingId ? '更新成功' : '创建成功' })
+        notify({
+          color: 'green',
+          message: editingId ? t('messages.updated') : t('messages.created'),
+        })
         close()
         fetchMenus()
+      } else {
+        notify({ color: 'red', message: json.message || tCommon('errors.saveFailed') })
       }
     } catch {
-      notify({ color: 'red', message: '网络错误' })
+      notify({ color: 'red', message: tCommon('errors.network') })
     } finally {
       setLoading(false)
     }
@@ -478,19 +488,21 @@ export default function MenusPage() {
   const handleDelete = async (id: number, title: string, childCount: number) => {
     const message =
       childCount > 0
-        ? `确定要删除菜单「${title}」吗？其下 ${childCount} 个子菜单也将被删除。`
-        : `确定要删除菜单「${title}」吗？`
+        ? t('confirm.deleteWithChildren', { title, count: childCount })
+        : t('confirm.delete', { title })
     if (!(await myModal.confirm({ message }))) return
     const res = await fetch(`/api/menus/${id}`, { method: 'DELETE' })
     const json = await res.json()
     if (json.success) {
-      notify({ color: 'green', message: '删除成功' })
+      notify({ color: 'green', message: t('messages.deleted') })
       fetchMenus()
+    } else {
+      notify({ color: 'red', message: json.message || tCommon('errors.deleteFailed') })
     }
   }
 
   const handleReset = async () => {
-    if (!(await myModal.confirm({ message: '确定要恢复默认菜单吗？现有菜单将被覆盖。' }))) return
+    if (!(await myModal.confirm({ message: t('confirm.reset') }))) return
     const res = await fetch('/api/menus', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -498,8 +510,10 @@ export default function MenusPage() {
     })
     const json = await res.json()
     if (json.success) {
-      notify({ color: 'green', message: '已恢复默认菜单' })
+      notify({ color: 'green', message: t('messages.reset') })
       fetchMenus()
+    } else {
+      notify({ color: 'red', message: json.message || tCommon('errors.operationFailed') })
     }
   }
 
@@ -514,11 +528,11 @@ export default function MenusPage() {
     })
     const json = await res.json()
     if (json.success) {
-      notify({ color: 'green', message: newHidden ? '菜单已隐藏' : '菜单已显示' })
+      notify({ color: 'green', message: newHidden ? t('messages.hidden') : t('messages.shown') })
     } else {
       // 回滚
       setMenuList((prev) => prev.map((m) => (m.id === item.id ? { ...m, hidden: item.hidden } : m)))
-      notify({ color: 'red', message: '操作失败' })
+      notify({ color: 'red', message: json.message || tCommon('errors.operationFailed') })
     }
   }
 
@@ -565,10 +579,10 @@ export default function MenusPage() {
     try {
       const parentItems = reorderedParents.map((p, i) => ({ ...p, sortOrder: i }))
       await persistOrder(parentItems)
-      notify({ color: 'green', message: '排序已更新' })
+      notify({ color: 'green', message: t('messages.orderUpdated') })
     } catch {
       setMenuList(previousList)
-      notify({ color: 'red', message: '排序保存失败' })
+      notify({ color: 'red', message: t('messages.orderSaveFailed') })
       await fetchMenus()
     }
   }
@@ -604,10 +618,10 @@ export default function MenusPage() {
     try {
       const childItems = reorderedChildren.map((c, i) => ({ ...c, sortOrder: i }))
       await persistOrder(childItems)
-      notify({ color: 'green', message: '排序已更新' })
+      notify({ color: 'green', message: t('messages.orderUpdated') })
     } catch {
       setMenuList(previousList)
-      notify({ color: 'red', message: '排序保存失败' })
+      notify({ color: 'red', message: t('messages.orderSaveFailed') })
       await fetchMenus()
     }
   }
@@ -617,13 +631,13 @@ export default function MenusPage() {
   return (
     <Box mt="md">
       <Group justify="space-between" mb="lg">
-        <Title order={3}>菜单管理</Title>
+        <Title order={3}>{t('title')}</Title>
         <Group>
           <Button variant="light" leftSection={<IconRefresh size={16} />} onClick={handleReset}>
-            恢复默认
+            {t('buttons.resetDefault')}
           </Button>
           <Button leftSection={<IconPlus size={16} />} onClick={() => handleOpen()}>
-            新建菜单
+            {t('buttons.newMenu')}
           </Button>
         </Group>
       </Group>
@@ -631,7 +645,7 @@ export default function MenusPage() {
       {menuTree.length === 0 ? (
         <Paper withBorder p="xl" radius="md">
           <Text ta="center" c="dimmed">
-            暂无菜单
+            {t('empty')}
           </Text>
         </Paper>
       ) : (
@@ -664,23 +678,27 @@ export default function MenusPage() {
         </DndContext>
       )}
 
-      <Modal opened={opened} onClose={close} title={editingId ? '编辑菜单' : '新建菜单'}>
+      <Modal
+        opened={opened}
+        onClose={close}
+        title={editingId ? t('modal.editTitle') : t('modal.createTitle')}
+      >
         <TextInput
-          label="标题"
+          label={t('fields.title')}
           required
           value={form.title}
           onChange={(e) => setForm({ ...form, title: e.target.value })}
         />
         <TextInput
-          label="URL"
+          label={t('fields.url')}
           mt="sm"
-          placeholder="父菜单可留空，留空时点击仅展开子菜单"
+          placeholder={t('fields.urlPlaceholder')}
           value={form.url}
           onChange={(e) => setForm({ ...form, url: e.target.value })}
         />
         <Select
-          label="父菜单"
-          placeholder="无（顶级菜单）"
+          label={t('fields.parentMenu')}
+          placeholder={t('fields.parentMenuPlaceholder')}
           clearable
           mt="sm"
           data={topMenus
@@ -690,28 +708,28 @@ export default function MenusPage() {
           onChange={(v) => setForm({ ...form, parentId: v || '' })}
         />
         <Select
-          label="打开方式"
+          label={t('fields.target')}
           mt="sm"
           data={[
-            { value: '_self', label: '当前窗口' },
-            { value: '_blank', label: '新窗口' },
+            { value: '_self', label: t('targetOptions.self') },
+            { value: '_blank', label: t('targetOptions.blank') },
           ]}
           value={form.target}
           onChange={(v) => setForm({ ...form, target: v || '_self' })}
         />
         <Switch
-          label="隐藏"
-          description="隐藏后此菜单及其子菜单不会在前台显示"
+          label={t('fields.hidden')}
+          description={t('fields.hiddenDescription')}
           mt="sm"
           checked={form.hidden}
           onChange={(e) => setForm({ ...form, hidden: e.currentTarget.checked })}
         />
         <Group justify="flex-end" mt="lg">
           <Button variant="default" onClick={close}>
-            取消
+            {tCommon('actions.cancel')}
           </Button>
           <Button onClick={handleSubmit} loading={loading}>
-            {editingId ? '保存' : '创建'}
+            {editingId ? tCommon('actions.save') : tCommon('actions.create')}
           </Button>
         </Group>
       </Modal>

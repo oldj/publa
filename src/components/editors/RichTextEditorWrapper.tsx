@@ -15,6 +15,7 @@ import type { Editor } from '@tiptap/react'
 import { ReactNodeViewRenderer, useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import 'katex/dist/katex.min.css'
+import { useTranslations } from 'next-intl'
 import { useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react'
 
 import CodeBlockView, { lowlight } from './CodeBlockView'
@@ -43,7 +44,7 @@ interface RichTextEditorWrapperProps {
 
 export default function RichTextEditorWrapper({
   initialContent,
-  placeholder = '开始撰写内容...',
+  placeholder,
   onUpdate,
   onReady,
   onImageUpload,
@@ -51,6 +52,8 @@ export default function RichTextEditorWrapper({
   editorRef,
   hidden,
 }: RichTextEditorWrapperProps) {
+  const t = useTranslations('admin.editor.richTextEditor')
+  const effectivePlaceholder = placeholder || t('placeholder')
   // 浮动工具栏
   const [imageToolbar, setImageToolbar] = useState<{ top: number; left: number } | null>(null)
   const [tableToolbar, setTableToolbar] = useState<{ top: number } | null>(null)
@@ -132,7 +135,7 @@ export default function RichTextEditorWrapper({
           allowTableNodeSelection: true,
         },
       }),
-      Placeholder.configure({ placeholder }),
+      Placeholder.configure({ placeholder: effectivePlaceholder }),
     ],
     content: initialContent || '',
     editorProps: {
@@ -151,7 +154,7 @@ export default function RichTextEditorWrapper({
               view.dispatch(insertTr)
             })
             .catch((err) => {
-              myModal.alert({ message: `图片上传失败: ${err.message}` })
+              myModal.alert({ message: t('imageUploadFailed', { message: err.message }) })
             })
         }
         return true
@@ -319,7 +322,7 @@ export default function RichTextEditorWrapper({
         style={{ position: 'relative', display: hidden ? 'none' : undefined }}
       >
         <Text size="sm" fw={500} mb={4}>
-          内容
+          {t('label')}
         </Text>
         <RichTextEditor editor={editor}>
           <RichTextEditor.Toolbar sticky stickyOffset={0}>
@@ -355,7 +358,7 @@ export default function RichTextEditorWrapper({
                     .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
                     .run()
                 }}
-                title="插入表格"
+                title={t('insertTable')}
                 disabled={editor?.isActive('table')}
               >
                 <IconTable size={16} />
@@ -366,7 +369,7 @@ export default function RichTextEditorWrapper({
                   const configured = await checkStorageConfig()
                   if (!configured) {
                     await myModal.alert({
-                      message: '请先在附件管理中配置存储服务后再上传图片。',
+                      message: t('storageNotConfigured'),
                     })
                     return
                   }
@@ -380,12 +383,14 @@ export default function RichTextEditorWrapper({
                       const url = await onImageUpload(file)
                       editor?.chain().focus().setImage({ src: url }).run()
                     } catch (err: any) {
-                      await myModal.alert({ message: `图片上传失败: ${err.message}` })
+                      await myModal.alert({
+                        message: t('imageUploadFailed', { message: err.message }),
+                      })
                     }
                   }
                   input.click()
                 }}
-                title="插入图片"
+                title={t('insertImage')}
               >
                 <IconPhoto size={16} />
               </RichTextEditor.Control>
@@ -399,7 +404,7 @@ export default function RichTextEditorWrapper({
                   setMathLatex('')
                   setMathModalOpen(true)
                 }}
-                title="行内公式"
+                title={t('inlineMath')}
               >
                 <IconMath size={16} />
               </RichTextEditor.Control>
@@ -410,7 +415,7 @@ export default function RichTextEditorWrapper({
                   setMathLatex('')
                   setMathModalOpen(true)
                 }}
-                title="公式块"
+                title={t('blockMath')}
               >
                 <IconMathFunction size={16} />
               </RichTextEditor.Control>

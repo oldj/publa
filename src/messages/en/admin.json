@@ -17,7 +17,8 @@
       "usernameOrPasswordEmpty": "Username and password are required",
       "passwordTooShort": "Password must be at least 6 characters",
       "passwordMismatch": "Passwords do not match",
-      "setupFailed": "Setup failed"
+      "setupFailed": "Setup failed",
+      "alreadyInitialized": "System already initialized"
     },
     "success": "Setup succeeded, redirecting to the admin panel"
   },
@@ -33,7 +34,9 @@
     "submit": "Sign in",
     "errors": {
       "emptyCredentials": "Please enter username and password",
-      "loginFailed": "Sign in failed"
+      "loginFailed": "Sign in failed",
+      "accountLocked": "Too many failed attempts. Please try again in 5 minutes",
+      "invalidCredentials": "Invalid username or password"
     }
   },
   "shell": {
@@ -73,6 +76,1124 @@
     "languageField": {
       "label": "Interface language",
       "description": "This setting only affects UI language for the frontend and admin panel. It does not affect the language of posts, comments or guestbook messages."
+    }
+  },
+  "settingsPage": {
+    "title": "Settings",
+    "sections": {
+      "siteInfo": "Site info",
+      "favicon": "Site icon",
+      "comments": "Comment settings",
+      "guestbook": "Guestbook settings",
+      "rss": "RSS settings",
+      "search": "Search settings",
+      "footer": "Footer copyright",
+      "customHtml": "Custom HTML"
+    },
+    "messages": {
+      "unsupportedHeadTags": "Custom Head HTML contains unsupported tags: {names}. These tags will not be rendered",
+      "faviconUpdated": "Site icon updated",
+      "faviconUploaded": "Site icon uploaded",
+      "faviconReset": "Default icon restored"
+    },
+    "fields": {
+      "siteTitle": "Site title",
+      "siteSlogan": "Site slogan",
+      "siteDescription": "Site description",
+      "siteUrl": "Site URL",
+      "siteUrlDescription": "For example https://www.example.com, without a trailing slash. Used when generating RSS and Atom links.",
+      "currentPreview": "Current preview",
+      "currentMode": "Current mode: {mode}",
+      "siteIconPreviewAlt": "Site icon preview",
+      "faviconUrl": "Remote icon URL",
+      "faviconUrlDescription": "Only https:// URLs are supported. After applying, the site will serve it through /favicon.ico.",
+      "applyUrl": "Apply URL",
+      "uploadIcon": "Upload icon",
+      "resetDefault": "Reset to default",
+      "faviconHelp": "Supports ICO, PNG, SVG and WEBP up to 256KB. Changes take effect immediately.",
+      "showCommentsGlobally": "Show comment lists globally",
+      "showCommentsGloballyDescription": "When disabled, existing comment lists are hidden across all posts",
+      "enableComment": "Enable comments globally",
+      "enableCommentDescription": "When disabled, no new comments can be submitted across the site",
+      "defaultApprove": "Approve comments by default",
+      "enableGuestbook": "Enable guestbook",
+      "enableGuestbookDescription": "Guestbook path: /guestbook",
+      "guestbookWelcome": "Guestbook welcome text",
+      "guestbookWelcomePlaceholder": "Feel free to leave me a message!",
+      "rssContent": "RSS content",
+      "rssFull": "Full content",
+      "rssExcerpt": "Excerpt",
+      "rssLimit": "RSS item limit",
+      "enableSearch": "Enable search",
+      "enableSearchDescription": "When disabled, the footer search box will be hidden",
+      "footerCopyright": "Footer copyright",
+      "footerCopyrightDescription": "HTML is supported. Use {SITE_NAME} for the site name and {FULL_YEAR} for the current year",
+      "customAfterPostHtml": "Custom HTML after posts",
+      "customAfterPostHtmlDescription": "Displayed after each post. Useful for ads or embeds",
+      "customHeadHtml": "Custom Head HTML",
+      "customHeadHtmlDescription": "Injected before </head>. Only <script>, <meta>, <link> and <style> are supported",
+      "customBodyStartHtml": "Custom Body start HTML",
+      "customBodyStartHtmlDescription": "Injected right after <body>",
+      "customBodyEndHtml": "Custom Body end HTML",
+      "customBodyEndHtmlDescription": "Injected before </body>"
+    },
+    "modes": {
+      "default": "Default icon",
+      "url": "Remote URL",
+      "upload": "Uploaded file"
+    }
+  },
+  "postsPage": {
+    "title": "Post management",
+    "newPost": "New post"
+  },
+  "pagesPage": {
+    "title": "Page management",
+    "newPage": "New page",
+    "deleteConfirm": "Are you sure you want to delete the page \"{title}\"?",
+    "statusAll": "All ({count})",
+    "statusDraft": "Draft ({count})",
+    "statusScheduled": "Scheduled ({count})",
+    "statusPublished": "Published ({count})",
+    "searchPlaceholder": "Search title or path...",
+    "untitled": "(Untitled)",
+    "modified": "Modified",
+    "previewAria": "Preview page \"{title}\"",
+    "empty": "No pages yet",
+    "columns": {
+      "title": "Title",
+      "path": "Path",
+      "type": "Type",
+      "status": "Status",
+      "actions": "Actions"
+    }
+  },
+  "postList": {
+    "deleteConfirm": "Are you sure you want to delete the post \"{title}\"?",
+    "statusAll": "All ({count})",
+    "statusDraft": "Draft ({count})",
+    "statusScheduled": "Scheduled ({count})",
+    "statusPublished": "Published ({count})",
+    "categoryPlaceholder": "Category",
+    "tagPlaceholder": "Tag",
+    "searchPlaceholder": "Search title or slug...",
+    "clearSearch": "Clear search",
+    "search": "Search",
+    "columns": {
+      "title": "Title",
+      "category": "Category",
+      "status": "Status",
+      "views": "Views",
+      "comments": "Comments",
+      "publishedAt": "Published at",
+      "actions": "Actions"
+    },
+    "pinned": "Pinned",
+    "untitled": "(Untitled)",
+    "modified": "Modified",
+    "previewAria": "Preview post \"{title}\"",
+    "empty": "No posts yet"
+  },
+  "revisionHistory": {
+    "title": "Revision history",
+    "empty": "No revisions yet",
+    "count": "{count} revisions",
+    "selectAll": "Select all",
+    "invertSelection": "Invert selection",
+    "deleteSelected": "Delete selected ({count})",
+    "deleteSelectedConfirm": "Are you sure you want to delete the selected {count} revisions?",
+    "restoreConfirm": "Restore to this revision? This will create a new publication.",
+    "restoreSuccess": "Revision restored",
+    "restoreFailed": "Failed to restore revision",
+    "restore": "Restore",
+    "published": "Published",
+    "draftSnapshot": "Draft snapshot"
+  },
+  "categoriesPage": {
+    "title": "Category management",
+    "recount": "Recount",
+    "new": "New category",
+    "empty": "No categories yet",
+    "postCount": "{count, plural, one {# post} other {# posts}}",
+    "deleteConfirm": "Are you sure you want to delete the category \"{name}\"?",
+    "drawerTitle": "Posts in category \"{name}\"",
+    "drawerFallbackTitle": "Post list",
+    "modal": {
+      "editTitle": "Edit category",
+      "createTitle": "New category"
+    },
+    "fields": {
+      "name": "Name",
+      "namePlaceholder": "Category name",
+      "slug": "Slug",
+      "slugPlaceholder": "url-slug",
+      "description": "Description",
+      "descriptionPlaceholder": "Category description (optional)",
+      "seoTitle": "SEO title",
+      "seoDescription": "SEO description",
+      "optionalPlaceholder": "Optional"
+    },
+    "aria": {
+      "drag": "Drag to reorder",
+      "edit": "Edit category",
+      "delete": "Delete category"
+    },
+    "messages": {
+      "recountSuccess": "Recount completed",
+      "recountFailed": "Recount failed",
+      "reorderFailed": "Failed to save order"
+    },
+    "validation": {
+      "nameAndSlugRequired": "Name and slug are required"
+    }
+  },
+  "tagsPage": {
+    "title": "Tag management",
+    "recount": "Recount",
+    "new": "New tag",
+    "empty": "No tags yet",
+    "deleteConfirm": "Are you sure you want to delete the tag \"{name}\"?",
+    "drawerTitle": "Posts with tag \"{name}\"",
+    "drawerFallbackTitle": "Post list",
+    "modal": {
+      "editTitle": "Edit tag",
+      "createTitle": "New tag"
+    },
+    "fields": {
+      "name": "Name",
+      "namePlaceholder": "Tag name",
+      "slug": "Slug",
+      "slugPlaceholder": "url-slug",
+      "seoTitle": "SEO title",
+      "seoDescription": "SEO description",
+      "optionalPlaceholder": "Optional"
+    },
+    "columns": {
+      "name": "Name",
+      "slug": "Slug",
+      "postCount": "Posts",
+      "actions": "Actions"
+    },
+    "aria": {
+      "edit": "Edit tag",
+      "delete": "Delete tag"
+    },
+    "messages": {
+      "recountSuccess": "Recount completed",
+      "recountFailed": "Recount failed"
+    },
+    "validation": {
+      "nameAndSlugRequired": "Name and slug are required"
+    }
+  },
+  "guestbookPage": {
+    "title": "Guestbook management",
+    "markAllRead": "Mark all as read",
+    "statusPlaceholder": "All statuses",
+    "empty": "No messages yet",
+    "count": "{count, plural, one {# message} other {# messages}}",
+    "detailTitle": "Message details",
+    "deleteConfirm": "Are you sure you want to delete this message?",
+    "statuses": {
+      "unread": "Unread",
+      "read": "Read"
+    },
+    "columns": {
+      "author": "Author",
+      "content": "Content",
+      "status": "Status",
+      "time": "Time",
+      "actions": "Actions"
+    },
+    "fields": {
+      "email": "Email",
+      "website": "Website",
+      "time": "Time",
+      "ip": "IP",
+      "userAgent": "UA"
+    },
+    "actions": {
+      "markRead": "Mark as read",
+      "markUnread": "Mark as unread",
+      "delete": "Delete"
+    },
+    "messages": {
+      "markReadSuccess": "Marked as read",
+      "markUnreadSuccess": "Marked as unread",
+      "markAllReadSuccess": "All messages marked as read"
+    },
+    "aria": {
+      "toggleRead": "Toggle read state",
+      "delete": "Delete message"
+    }
+  },
+  "commentsPage": {
+    "title": "Comment management",
+    "statusPlaceholder": "All statuses",
+    "empty": "No comments yet",
+    "totalCount": "{count} comments",
+    "detailTitle": "Comment details",
+    "postLabel": "Post",
+    "parentCommentLabel": "Replied comment",
+    "childCommentsLabel": "Replies ({count})",
+    "replyCount": "{count} replies",
+    "deleteConfirm": "Are you sure you want to delete this comment?",
+    "deleteConfirmWithReplies": "Are you sure you want to delete this comment? Its {count} replies will also be deleted.",
+    "statuses": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "columns": {
+      "author": "Author",
+      "content": "Content",
+      "post": "Post",
+      "stats": "Stats",
+      "status": "Status",
+      "time": "Time",
+      "actions": "Actions"
+    },
+    "meta": {
+      "email": "Email: {value}",
+      "website": "Website: {value}",
+      "time": "Time: {value}",
+      "ip": "IP: {value}",
+      "userAgent": "UA: {value}"
+    },
+    "actions": {
+      "approve": "Approve",
+      "reject": "Reject",
+      "delete": "Delete"
+    },
+    "messages": {
+      "approved": "Approved",
+      "rejected": "Rejected"
+    }
+  },
+  "usersPage": {
+    "title": "User management",
+    "newUser": "New user",
+    "createTitle": "New user",
+    "editTitle": "Edit user",
+    "activityTitle": "Activity logs — {username}",
+    "emptyLogs": "No activity yet",
+    "deleteConfirm": "Are you sure you want to delete user \"{username}\"?",
+    "deleteUser": "Delete user",
+    "createdAt": "Created at {time}",
+    "passwordOptionalDescription": "Leave blank to keep unchanged",
+    "columns": {
+      "username": "Username",
+      "email": "Email",
+      "role": "Role",
+      "lastActive": "Last active",
+      "actions": "Actions"
+    },
+    "activityColumns": {
+      "action": "Action",
+      "ip": "IP",
+      "time": "Time"
+    },
+    "fields": {
+      "username": "Username",
+      "email": "Email",
+      "password": "Password",
+      "role": "Role"
+    },
+    "roleOptions": {
+      "owner": "Owner",
+      "admin": "Admin",
+      "editor": "Editor"
+    },
+    "messages": {
+      "createFailed": "Failed to create user",
+      "updateFailed": "Failed to update user",
+      "deleteFailed": "Failed to delete user"
+    },
+    "validation": {
+      "usernameAndPasswordRequired": "Username and password are required",
+      "usernameRequired": "Username is required",
+      "passwordRequired": "Password is required"
+    },
+    "activityLabels": {
+      "login": "Sign in",
+      "logout": "Sign out",
+      "create_post": "Create post",
+      "update_post": "Update post",
+      "delete_post": "Delete post",
+      "create_page": "Create page",
+      "update_page": "Update page",
+      "delete_page": "Delete page",
+      "create_user": "Create user",
+      "update_user": "Update user",
+      "delete_user": "Delete user",
+      "create_category": "Create category",
+      "update_category": "Update category",
+      "delete_category": "Delete category",
+      "create_tag": "Create tag",
+      "update_tag": "Update tag",
+      "delete_tag": "Delete tag",
+      "create_menu": "Create menu",
+      "update_menu": "Update menu",
+      "delete_menu": "Delete menu",
+      "moderate_comment": "Moderate comment",
+      "delete_comment": "Delete comment",
+      "moderate_guestbook": "Moderate guestbook",
+      "delete_guestbook": "Delete guestbook message",
+      "upload_attachment": "Upload attachment",
+      "delete_attachment": "Delete attachment",
+      "update_settings": "Update settings",
+      "create_redirect": "Create redirect",
+      "update_redirect": "Update redirect",
+      "delete_redirect": "Delete redirect",
+      "import_data": "Import data",
+      "export_data": "Export data",
+      "export_themes": "Export themes",
+      "import_themes": "Import themes",
+      "export_custom_styles": "Export custom CSS",
+      "import_custom_styles": "Import custom CSS"
+    }
+  },
+  "themesPage": {
+    "title": "Themes",
+    "dirtyMessage": "Selection changed. Save to apply on the frontend",
+    "preview": "Preview",
+    "themeTitle": "Themes",
+    "customStyleTitle": "Custom CSS",
+    "export": "Export",
+    "import": "Import",
+    "new": "New",
+    "themeDescription": "Single select. Provides the base frontend style",
+    "customStyleDescription": "Multi-select. Multiple style snippets can be layered together",
+    "emptyThemes": "No themes yet",
+    "emptyCustomStyles": "No custom CSS yet",
+    "builtin": "(Built in)",
+    "deleteThemeConfirm": "Are you sure you want to delete theme \"{name}\"?",
+    "deleteCustomStyleConfirm": "Are you sure you want to delete custom CSS \"{name}\"?",
+    "messages": {
+      "saved": "Saved and applied to the frontend",
+      "importSuccess": "Import completed. Added {imported} item(s)",
+      "importSuccessWithSkipped": "Import completed. Added {imported} item(s), skipped {skipped} item(s)",
+      "reorderFailed": "Failed to save order"
+    },
+    "aria": {
+      "drag": "Drag to reorder",
+      "editTheme": "Edit theme",
+      "deleteTheme": "Delete theme",
+      "edit": "Edit",
+      "delete": "Delete"
+    },
+    "styleDrawer": {
+      "createPrefix": "New ",
+      "editPrefix": "Edit ",
+      "themeTitle": "theme",
+      "customStyleTitle": "custom CSS",
+      "name": "Name",
+      "themeNamePlaceholder": "Theme name",
+      "customStyleNamePlaceholder": "Custom CSS name",
+      "cssPlaceholder": "/* Enter CSS content */"
+    },
+    "exportModal": {
+      "themeTitle": "Export themes",
+      "customStyleTitle": "Export custom CSS",
+      "themeFallback": "themes.zip",
+      "customStyleFallback": "custom-styles.zip",
+      "themeEmpty": "No custom themes available to export",
+      "customStyleEmpty": "No custom CSS available to export",
+      "exported": "Exported",
+      "description": "Select the items to export as a .zip file",
+      "selectAll": "Select all",
+      "unselectAll": "Clear all",
+      "exportWithCount": "Export ({count})"
+    }
+  },
+  "emailPage": {
+    "title": "Email notifications",
+    "sections": {
+      "sendingConfig": "Email delivery",
+      "testSend": "Send test email",
+      "events": "Notification events"
+    },
+    "fields": {
+      "sendMethod": "Delivery method",
+      "fromAddress": "From address",
+      "resendApiKey": "Resend API Key",
+      "smtpHost": "SMTP host",
+      "smtpPort": "SMTP port",
+      "username": "Username",
+      "password": "Password",
+      "encryption": "Encryption",
+      "recipientEmail": "Recipient email"
+    },
+    "providers": {
+      "disabled": "Disabled",
+      "resend": "Resend",
+      "smtp": "SMTP"
+    },
+    "descriptions": {
+      "fromAddress": "Your domain must be verified in the Resend console",
+      "resendApiKey": "Create an API key in the Resend console with email sending permission",
+      "configuredPlaceholder": "Configured. Leave blank to keep the current value"
+    },
+    "encryptionOptions": {
+      "tls": "TLS (recommended)",
+      "ssl": "SSL",
+      "none": "None"
+    },
+    "labels": {
+      "noEmail": "No email set"
+    },
+    "tooltips": {
+      "noEmail": "This user has no email address and cannot receive notifications"
+    },
+    "hints": {
+      "saveBeforeTest": "Save the configuration first. Test emails are sent with the last saved settings.",
+      "events": "Choose which events should trigger email notifications and who should receive them. Users without an email address will be skipped."
+    },
+    "events": {
+      "newComment": "New comments",
+      "newGuestbook": "New guestbook messages"
+    },
+    "buttons": {
+      "sendTest": "Send test email"
+    },
+    "messages": {
+      "testSent": "Test email sent"
+    }
+  },
+  "emailLogsPage": {
+    "title": "Email logs",
+    "description": "Email delivery records are kept for 30 days. Older entries are removed automatically.",
+    "empty": "No delivery records yet",
+    "deleteConfirmTitle": "Delete record",
+    "deleteConfirm": "Delete this email delivery record?",
+    "columns": {
+      "event": "Event",
+      "recipients": "Recipients",
+      "subject": "Subject",
+      "status": "Status",
+      "time": "Time"
+    },
+    "events": {
+      "new_comment": "New comment",
+      "new_guestbook": "New guestbook message",
+      "test": "Test"
+    },
+    "statuses": {
+      "success": "Success",
+      "failed": "Failed"
+    },
+    "tooltips": {
+      "failed": "Delivery failed"
+    }
+  },
+  "menusPage": {
+    "title": "Menu management",
+    "empty": "No menus yet",
+    "emptyChildren": "No child menus yet",
+    "badges": {
+      "newWindow": "New tab",
+      "hidden": "Hidden",
+      "childCount": "{count, plural, one {# child menu} other {# child menus}}"
+    },
+    "buttons": {
+      "resetDefault": "Restore defaults",
+      "newMenu": "New menu",
+      "deleteSelected": "Delete selected"
+    },
+    "tooltips": {
+      "show": "Show",
+      "hide": "Hide",
+      "addChild": "Add child menu",
+      "edit": "Edit",
+      "delete": "Delete"
+    },
+    "aria": {
+      "drag": "Drag to reorder",
+      "collapseChildren": "Collapse child menus",
+      "expandChildren": "Expand child menus",
+      "showMenu": "Show menu",
+      "hideMenu": "Hide menu",
+      "addChild": "Add child menu"
+    },
+    "validation": {
+      "titleRequired": "Title is required"
+    },
+    "messages": {
+      "created": "Created successfully",
+      "updated": "Updated successfully",
+      "deleted": "Deleted successfully",
+      "reset": "Default menus restored",
+      "hidden": "Menu hidden",
+      "shown": "Menu shown",
+      "orderUpdated": "Order updated",
+      "orderSaveFailed": "Failed to save order"
+    },
+    "confirm": {
+      "delete": "Delete menu \"{title}\"?",
+      "deleteWithChildren": "Delete menu \"{title}\"? Its {count} child menus will also be removed.",
+      "reset": "Restore the default menus? Existing menus will be overwritten."
+    },
+    "modal": {
+      "editTitle": "Edit menu",
+      "createTitle": "New menu"
+    },
+    "fields": {
+      "title": "Title",
+      "url": "URL",
+      "urlPlaceholder": "Parent menus can be left blank. When blank, clicking only expands child menus",
+      "parentMenu": "Parent menu",
+      "parentMenuPlaceholder": "None (top-level)",
+      "target": "Open in",
+      "hidden": "Hide",
+      "hiddenDescription": "Hidden menus and their child menus will not appear on the frontend"
+    },
+    "targetOptions": {
+      "self": "Current tab",
+      "blank": "New tab"
+    }
+  },
+  "redirectsPage": {
+    "title": "Redirect rules",
+    "description": "When a frontend path would otherwise end in a 404, the first matching rule below is applied from top to bottom.",
+    "newRule": "New rule",
+    "ruleGuideTitle": "How rules work",
+    "ruleGuidePathRegex": "Only the request pathname is matched, without query strings or hash fragments. It is recommended to use ^ and $ explicitly in your regex.",
+    "ruleGuideRedirectTo": "Redirect targets can be internal paths or full http/https URLs, and support capture group references from $1 to $9.",
+    "savingOrder": "Saving the new order...",
+    "empty": "No redirect rules yet",
+    "labels": {
+      "pathRegex": "Path regex",
+      "redirectTo": "Redirect target",
+      "memo": "Note",
+      "none": "None"
+    },
+    "aria": {
+      "drag": "Drag to reorder",
+      "edit": "Edit rule",
+      "delete": "Delete rule"
+    },
+    "validation": {
+      "pathRegexAndRedirectToRequired": "Path regex and redirect target are required"
+    },
+    "messages": {
+      "created": "Rule created",
+      "updated": "Rule updated",
+      "deleted": "Rule deleted",
+      "orderUpdated": "Order updated",
+      "orderSaveFailed": "Failed to save order"
+    },
+    "confirm": {
+      "delete": "Delete redirect rule #{order}?"
+    },
+    "modal": {
+      "editTitle": "Edit redirect rule",
+      "createTitle": "New redirect rule"
+    },
+    "fields": {
+      "pathRegex": "Path regex",
+      "pathRegexDescription": "The matched value is the pathname, for example /old/path/123.",
+      "redirectTo": "Redirect target",
+      "redirectToPlaceholder": "/posts/$1 or https://example.com/posts/$1",
+      "redirectType": "Redirect type",
+      "memo": "Note"
+    },
+    "redirectTypeOptions": {
+      "301": "301 Permanent redirect",
+      "302": "302 Temporary redirect",
+      "307": "307 Temporary redirect",
+      "308": "308 Permanent redirect"
+    }
+  },
+  "attachmentsPage": {
+    "title": "Attachments",
+    "badges": {
+      "configured": "Configured",
+      "unconfigured": "Not configured"
+    },
+    "buttons": {
+      "config": "Configure",
+      "deleteSelected": "Delete selected ({count})",
+      "testConnection": "Test connection",
+      "deleteAttachment": "Delete attachment"
+    },
+    "upload": {
+      "ready": "Drop files here or click to choose files",
+      "needConfig": "Configure storage first",
+      "hint": "Multiple file uploads are supported"
+    },
+    "messages": {
+      "connectionSuccess": "Connection successful",
+      "uploadComplete": "Upload complete",
+      "uploadItemFailed": "Failed to upload {name}",
+      "uploadItemFailedWithMessage": "Failed to upload {name}: {message}",
+      "renameSuccess": "Renamed successfully",
+      "copySuccess": "Link copied"
+    },
+    "confirm": {
+      "deleteOne": "Delete \"{name}\"?",
+      "deleteMany": "Delete the selected {count} attachments?"
+    },
+    "notifications": {
+      "deleting": "Deleting...",
+      "deletingMany": "Deleting {count} attachments...",
+      "deleted": "Deleted successfully",
+      "batchDeletedPartial": "Deleted {successCount}; {failCount} failed",
+      "batchDeletedSuccess": "Deleted {count} attachments"
+    },
+    "empty": "No attachments yet",
+    "totalCount": "{count, plural, one {# item} other {# items}}",
+    "columns": {
+      "file": "File"
+    },
+    "tooltips": {
+      "copyLink": "Copy link",
+      "edit": "Edit",
+      "delete": "Delete",
+      "rename": "Rename",
+      "randomName": "Generate random name"
+    },
+    "previewAlt": "Attachment preview",
+    "detail": {
+      "title": "Attachment details",
+      "fields": {
+        "filename": "Filename",
+        "originalFilename": "Original filename",
+        "storageKey": "Storage path",
+        "type": "Type",
+        "storage": "Storage",
+        "size": "Size",
+        "dimensions": "Dimensions",
+        "url": "URL",
+        "uploadedAt": "Uploaded at"
+      }
+    },
+    "renameModal": {
+      "title": "Update storage path",
+      "storageKey": "Storage path"
+    },
+    "config": {
+      "title": "Storage configuration",
+      "sections": {
+        "s3": "S3 settings",
+        "oss": "OSS settings",
+        "cos": "COS settings",
+        "r2": "R2 settings",
+        "general": "General settings"
+      },
+      "fields": {
+        "provider": "Storage provider",
+        "providerPlaceholder": "Please select",
+        "endpoint": "Endpoint",
+        "region": "Region",
+        "bucket": "Bucket",
+        "accessKey": "Access Key",
+        "secretKey": "Secret Key",
+        "accessKeyId": "AccessKey ID",
+        "accessKeySecret": "AccessKey Secret",
+        "secretId": "SecretId",
+        "accountId": "Account ID",
+        "accountIdDescription": "Cloudflare account ID, available in the dashboard sidebar",
+        "attachmentBaseUrl": "Attachment base URL",
+        "attachmentBaseUrlDescription": "Optional. For example https://cdn.xxx.com. Used to build the full public attachment URL"
+      },
+      "providers": {
+        "s3": "S3 (AWS / MinIO / S3-compatible)",
+        "r2": "R2 (Cloudflare object storage)",
+        "oss": "OSS (Alibaba Cloud object storage)",
+        "cos": "COS (Tencent Cloud object storage)"
+      }
+    }
+  },
+  "importExportPage": {
+    "title": "Import / Export",
+    "buttons": {
+      "viewFormat": "View data format",
+      "downloadDoc": "Download docs",
+      "overwriteImport": "Overwrite import",
+      "mergeImport": "Merge import"
+    },
+    "mergeImportComingSoon": "Merge import is coming soon",
+    "containsPrefix": "Contains: ",
+    "notePrefix": "Note: ",
+    "selectedFile": "Selected: {name}",
+    "resultTitle": "Import results:",
+    "typeLabels": {
+      "content": "Content data",
+      "settings": "Settings data"
+    },
+    "blocks": {
+      "content": {
+        "title": "Content data",
+        "description": "Posts, pages, categories, tags, comments, guestbook messages, attachments, revisions"
+      },
+      "settings": {
+        "title": "Settings data",
+        "description": "Users, menus, system settings, redirect rules, themes, custom styles",
+        "extraNote": "Sensitive data such as passwords and storage secrets will not be exported"
+      }
+    },
+    "confirm": {
+      "exportContent": "This exports posts, pages, categories, tags, comments, guestbook messages, attachments and revision data. Continue?",
+      "exportSettings": "This exports users, menus, system settings, redirect rules, themes and custom styles.\nNote: sensitive data such as passwords and storage secrets will not be exported.",
+      "overwriteImport": "Overwrite import will clear existing {type} and then import the selected file. Continue?"
+    },
+    "messages": {
+      "invalidFileFormat": "Unrecognized file format",
+      "wrongFileType": "This file contains {type}. Please import it in the matching section.",
+      "parseFailed": "Failed to parse the file. Please verify the JSON format.",
+      "importComplete": "Import complete"
+    },
+    "drawerTitle": "Data format reference",
+    "results": {
+      "contentCategories": "Categories: {count}",
+      "contentTags": "Tags: {count}",
+      "contentAttachments": "Attachments: {count}",
+      "contentItems": "Content items: {count}",
+      "contentTagRelations": "Content-tag relations: {count}",
+      "contentSlugHistories": "Slug histories: {count}",
+      "contentRevisions": "Revisions: {count}",
+      "contentComments": "Comments: {count}",
+      "contentGuestbook": "Guestbook messages: {count}",
+      "settingsThemes": "Themes: {count}",
+      "settingsCustomStyles": "Custom CSS: {count}",
+      "settingsItems": "Settings: {count}{defaultedCount, plural, =0 {} other { (defaulted {defaultedCount})}}",
+      "settingsMenus": "Menus: {count}",
+      "settingsRedirectRules": "Redirect rules: {count}",
+      "settingsUsers": "Users: created {createdCount}, updated {updatedCount}"
+    }
+  },
+  "api": {
+    "categories": {
+      "invalidReorder": "Invalid reorder payload",
+      "nameAndSlugRequired": "Name and slug are required",
+      "duplicateSlug": "Slug already exists",
+      "notFound": "Category not found",
+      "referencedPosts": "This category is still used by {count} posts and cannot be deleted"
+    },
+    "tags": {
+      "nameAndSlugRequired": "Name and slug are required",
+      "duplicateSlug": "Slug already exists",
+      "notFound": "Tag not found"
+    },
+    "guestbook": {
+      "idRequired": "ID is required",
+      "notFound": "Message not found"
+    },
+    "posts": {
+      "titleAndSlugRequired": "Title and slug are required",
+      "publishTitleRequired": "Title is required before publishing",
+      "publishSlugRequired": "Slug is required before publishing",
+      "publishedAtRequired": "A publish time is required for scheduled publishing",
+      "slugRequired": "Slug is required",
+      "slugStartsWithHyphen": "Slug cannot start with -",
+      "slugEndsWithHyphen": "Slug cannot end with -",
+      "duplicateSlug": "Slug already exists",
+      "notFound": "Post not found"
+    },
+    "pages": {
+      "titleAndPathRequired": "Title and path are required",
+      "publishTitleRequired": "Title is required before publishing",
+      "publishPathRequired": "Path is required before publishing",
+      "publishedAtRequired": "A publish time is required for scheduled publishing",
+      "pathRequired": "Path is required",
+      "pathEndsWithSlash": "Path cannot end with /",
+      "pathStartsWithSlash": "Path cannot start with /",
+      "pathStartsWithHyphen": "Path cannot start with -",
+      "pathEndsWithHyphen": "Path cannot end with -",
+      "pathReserved": "\"{segment}\" is reserved and cannot be used",
+      "duplicatePath": "This path is already in use",
+      "notFound": "Page not found"
+    },
+    "revisions": {
+      "selectionRequired": "Please select revisions to delete",
+      "notFound": "Revision not found"
+    },
+    "users": {
+      "notFound": "User not found",
+      "forbidden": "Permission denied",
+      "usernameRequired": "Username is required",
+      "passwordRequired": "Password is required",
+      "invalidRole": "Invalid role value",
+      "usernameAndPasswordRequired": "Username and password are required",
+      "adminCanOnlyCreateEditor": "Administrators can only create editor accounts",
+      "ownerRoleCreationForbidden": "Creating owner accounts is not allowed",
+      "cannotDeleteSelf": "You cannot delete yourself"
+    },
+    "comments": {
+      "invalidAction": "Invalid action"
+    },
+    "menus": {
+      "titleRequired": "Title is required"
+    },
+    "settings": {
+      "invalidObject": "Settings payload must be an object",
+      "invalidPayload": "Invalid settings payload",
+      "unsupportedKeys": "Unsupported settings keys: {invalidKeys}",
+      "invalidValueKeys": "Invalid value types for settings: {invalidValueKeys}",
+      "unsupportedAndInvalidValues": "Unsupported settings keys: {invalidKeys}; invalid value types for settings: {invalidValueKeys}"
+    },
+    "themes": {
+      "invalidReorder": "Invalid reorder payload",
+      "nameRequired": "Name is required",
+      "cssTooLarge": "CSS content is too large",
+      "notFound": "Theme not found",
+      "builtinTheme": "Builtin themes cannot be modified or deleted",
+      "activeTheme": "Cannot delete the active theme. Please switch to another theme first",
+      "exportSelectionRequired": "No themes selected for export",
+      "exportEmpty": "No themes available to export",
+      "importFileTooLarge": "File is too large",
+      "importParseFailed": "Failed to parse uploaded file",
+      "importFileRequired": "Please choose a file to import",
+      "importFilenameInvalid": "Invalid file name",
+      "importZipEmpty": "The zip archive does not contain any importable .css files",
+      "importUnsupportedFileType": "Only .css or .zip files are supported",
+      "importZipTooLarge": "Zip archive content is too large",
+      "importZipInvalid": "The zip archive is corrupted or invalid",
+      "importFailed": "Import failed"
+    },
+    "customStyles": {
+      "invalidReorder": "Invalid reorder payload",
+      "nameRequired": "Name is required",
+      "cssTooLarge": "CSS content is too large",
+      "notFound": "Custom CSS not found",
+      "exportSelectionRequired": "No custom CSS selected for export",
+      "exportEmpty": "No custom CSS available to export",
+      "importFileTooLarge": "File is too large",
+      "importParseFailed": "Failed to parse uploaded file",
+      "importFileRequired": "Please choose a file to import",
+      "importFilenameInvalid": "Invalid file name",
+      "importZipEmpty": "The zip archive does not contain any importable .css files",
+      "importUnsupportedFileType": "Only .css or .zip files are supported",
+      "importZipTooLarge": "Zip archive content is too large",
+      "importZipInvalid": "The zip archive is corrupted or invalid",
+      "importFailed": "Import failed"
+    },
+    "attachments": {
+      "fileRequired": "Please choose a file",
+      "idRequired": "ID is required",
+      "newStorageKeyRequired": "newStorageKey is required",
+      "notFound": "Attachment not found",
+      "deleteFailed": "Failed to delete attachment",
+      "uploadFailed": "Upload failed",
+      "renameFailed": "Rename failed",
+      "configIncomplete": "Configuration is incomplete",
+      "connectionFailed": "Connection failed"
+    },
+    "redirectRules": {
+      "invalidPathRegex": "The path regex is invalid",
+      "invalidRedirectTo": "Redirect destination must be an internal path or an http/https URL",
+      "invalidRedirectType": "Invalid redirect type",
+      "invalidReorder": "Invalid reorder payload",
+      "invalidPayload": "Invalid request payload",
+      "notFound": "Redirect rule not found"
+    },
+    "importExport": {
+      "invalidJson": "Failed to parse JSON",
+      "metaRequired": "Missing meta information",
+      "unsupportedVersion": "Unsupported version: {version}",
+      "missingField": "Missing required field: {field}",
+      "invalidFieldFormat": "Invalid field format: {field}",
+      "unknownType": "Unknown data type: {type}",
+      "importFailed": "Import failed: {message}",
+      "importFailedFallback": "Import failed. Please check data integrity and relations"
+    },
+    "email": {
+      "recipientRequired": "Please enter a recipient email",
+      "invalidRecipient": "Invalid email format",
+      "testSubject": "Test Email - Publa",
+      "testHeading": "Email configuration test",
+      "testBody": "If you received this email, your email sending configuration works correctly.",
+      "sendFailed": "Failed to send email"
+    },
+    "favicon": {
+      "saveFailed": "Failed to save site icon",
+      "fileRequired": "Please choose an icon file",
+      "fileTooLarge": "Icon file must be smaller than 256KB",
+      "invalidFileType": "Only ICO, PNG, SVG and WEBP are supported",
+      "invalidUrl": "Icon URL must use https://"
+    }
+  },
+  "userButton": {
+    "logoutConfirm": "Are you sure you want to sign out?",
+    "logoutTitle": "Sign out"
+  },
+  "editor": {
+    "contentTypeSelector": {
+      "label": "Content type",
+      "richtext": "Rich text"
+    },
+    "header": {
+      "preview": "Preview",
+      "publish": "Publish",
+      "back": "Back",
+      "edit": "Edit",
+      "new": "New",
+      "modified": "Modified",
+      "autosaveAt": "Auto-saved: {time}",
+      "publishConfirm": "Are you sure you want to publish this {entityLabel}?",
+      "discardDraftConfirm": "Discard all unpublished changes?"
+    },
+    "imageToolbar": {
+      "width": "W",
+      "height": "H",
+      "confirm": "Apply",
+      "autoSize": "Auto size",
+      "originalSize": "Original size",
+      "halfSize": "Half size",
+      "customSize": "Custom size",
+      "alignLeft": "Align left",
+      "alignCenter": "Align center",
+      "alignRight": "Align right",
+      "copyLink": "Copy image link",
+      "copied": "Link copied"
+    },
+    "tableToolbar": {
+      "addColumnBefore": "Insert column before",
+      "addColumnAfter": "Insert column after",
+      "deleteColumn": "Delete column",
+      "addRowBefore": "Insert row above",
+      "addRowAfter": "Insert row below",
+      "deleteRow": "Delete row",
+      "deleteTable": "Delete table"
+    },
+    "linkPopover": {
+      "insertLink": "Insert link",
+      "placeholder": "Enter link URL...",
+      "apply": "Apply link",
+      "openInNewTab": "Open in a new tab",
+      "remove": "Remove link"
+    },
+    "richTextEditor": {
+      "placeholder": "Start writing...",
+      "label": "Content",
+      "insertTable": "Insert table",
+      "storageNotConfigured": "Please configure storage in Attachments before uploading images.",
+      "imageUploadFailed": "Image upload failed: {message}",
+      "insertImage": "Insert image",
+      "inlineMath": "Inline math",
+      "blockMath": "Math block"
+    },
+    "mathModal": {
+      "editInline": "Edit inline math",
+      "editBlock": "Edit math block",
+      "placeholderBlock": "Enter a LaTeX formula, e.g. \\int_0^\\infty x^2 dx",
+      "placeholderInline": "Enter a LaTeX formula, e.g. E=mc^2"
+    },
+    "publishSettings": {
+      "title": "Publishing",
+      "currentDraft": "Currently in draft status",
+      "convertToDraftConfirm": "Move this {entityLabel} back to draft? It will no longer be publicly visible.",
+      "convertToDraft": "Move to draft",
+      "alreadyPublishedHint": "This {entityLabel} is already published. Scheduling is unnecessary.",
+      "publishAt": "Publish at",
+      "pickDateTime": "Choose date and time",
+      "todayAt1030": "Today 10:30",
+      "todayAt1630": "Today 16:30",
+      "todayAt2230": "Today 22:30",
+      "tomorrowAt1030": "Tomorrow 10:30",
+      "tomorrowAt1630": "Tomorrow 16:30",
+      "tomorrowAt2230": "Tomorrow 22:30",
+      "schedulePastConfirm": "The selected time has passed, so this {entityLabel} will be published immediately.\nPublish time: {time}",
+      "scheduleConfirm": "Schedule this {entityLabel} for publishing?\nPublish time: {time}",
+      "updateScheduled": "Update schedule",
+      "setScheduled": "Schedule publish",
+      "notPublished": "Not published yet",
+      "publishedAt": "Published at: {time}",
+      "dirtyPublishedHint": "There are unpublished changes. Click Publish at the top to publish again."
+    },
+    "post": {
+      "entityLabel": "post",
+      "autoSaveFailed": "Auto-save failed repeatedly. Please check your network connection",
+      "notFound": "Post not found",
+      "loadFailed": "Failed to load post",
+      "createDraftFailed": "Failed to create draft",
+      "draftSaved": "Draft saved",
+      "titleRequired": "Title is required",
+      "slugRequired": "Slug is required",
+      "publishSuccess": "Published successfully",
+      "convertedToDraft": "Moved to draft",
+      "scheduledSet": "Scheduled publish has been set",
+      "operationFailed": "Operation failed",
+      "contentSwitchWarning": "Switching content type may cause format or data loss. Continue?",
+      "fields": {
+        "title": "Title",
+        "titlePlaceholder": "Post title",
+        "slug": "Slug",
+        "slugPlaceholder": "post-url-slug",
+        "slugStartsWithHyphen": "Slug cannot start with -",
+        "slugEndsWithHyphen": "Slug cannot end with -",
+        "markdownContent": "Markdown content",
+        "htmlContent": "HTML content",
+        "markdownPlaceholder": "Write Markdown here...",
+        "htmlPlaceholder": "Write HTML here...",
+        "contentPlaceholder": "Start writing the post...",
+        "excerpt": "Excerpt",
+        "excerptPlaceholder": "Optional post excerpt. Leave blank to auto-generate",
+        "coverImage": "Cover image",
+        "coverImagePlaceholder": "Enter image URL",
+        "pinned": "Pinned",
+        "category": "Category",
+        "categoryPlaceholder": "Choose a category",
+        "tags": "Tags",
+        "tagsPlaceholder": "Enter tag names and press Enter",
+        "seoTitle": "SEO title",
+        "seoDescription": "SEO description",
+        "optionalPlaceholder": "Optional"
+      },
+      "sections": {
+        "settings": "Post settings",
+        "taxonomy": "Category and tags",
+        "comments": "Comments",
+        "seo": "SEO"
+      },
+      "comments": {
+        "showComments": "Show comments",
+        "allowComments": "Allow comments",
+        "globalDisabledBoth": "Comments and comment list display are globally disabled in system settings. These options will not take effect here.",
+        "globalDisabledComment": "Comments are globally disabled in system settings. The \"Allow comments\" option will not take effect.",
+        "globalDisabledList": "Comment list display is globally disabled in system settings. The \"Show comments\" option will not take effect."
+      },
+      "historyButton": "View revision history"
+    },
+    "page": {
+      "entityLabel": "page",
+      "pathRequired": "Path is required",
+      "pathStartsWithSlash": "Path cannot start with /",
+      "pathEndsWithSlash": "Path cannot end with /",
+      "autoSaveFailed": "Auto-save failed repeatedly. Please check your network connection",
+      "uploadFailed": "Upload failed",
+      "loadFailed": "Failed to load page",
+      "createDraftFailed": "Failed to create draft",
+      "draftSaved": "Draft saved",
+      "titleRequired": "Title is required",
+      "createSuccess": "Created successfully",
+      "publishSuccess": "Published successfully",
+      "convertedToDraft": "Moved to draft",
+      "scheduledSet": "Scheduled publish has been set",
+      "operationFailed": "Operation failed",
+      "contentSwitchWarning": "Switching content type may cause format or data loss. Continue?",
+      "historyButton": "View revision history",
+      "sections": {
+        "settings": "Page settings",
+        "seo": "SEO"
+      },
+      "fields": {
+        "title": "Title",
+        "path": "Path",
+        "pathPlaceholder": "about",
+        "contentPlaceholder": "Start writing the page...",
+        "markdownContent": "Markdown content",
+        "htmlContent": "HTML content",
+        "markdownPlaceholder": "Write Markdown here...",
+        "htmlPlaceholder": "Write HTML here...",
+        "template": "Template",
+        "templateDefault": "Default (with header and footer)",
+        "templateBlank": "Blank",
+        "mimeType": "MIME type",
+        "seoTitle": "SEO title",
+        "seoDescription": "SEO description",
+        "optionalPlaceholder": "Optional"
+      }
     }
   }
 }

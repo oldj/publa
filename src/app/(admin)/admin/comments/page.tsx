@@ -21,6 +21,7 @@ import {
 } from '@mantine/core'
 import { IconCheck, IconTrash, IconX } from '@tabler/icons-react'
 import dayjs from 'dayjs'
+import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 
@@ -77,13 +78,9 @@ interface CommentDetail {
   }[]
 }
 
-const statusMap: Record<string, { label: string; color: string }> = {
-  pending: { label: '待审核', color: 'orange' },
-  approved: { label: '已通过', color: 'green' },
-  rejected: { label: '已拒绝', color: 'red' },
-}
-
 export default function CommentsPage() {
+  const t = useTranslations('admin.commentsPage')
+  const tCommon = useTranslations('common')
   const { refreshCounts } = useAdminCounts()
   const [data, setData] = useState<{
     items: CommentItem[]
@@ -94,6 +91,12 @@ export default function CommentsPage() {
   const [status, setStatus] = useState<string | null>(null)
   const [detail, setDetail] = useState<CommentDetail | null>(null)
   const [drawerOpened, setDrawerOpened] = useState(false)
+
+  const statusMap: Record<string, { label: string; color: string }> = {
+    pending: { label: t('statuses.pending'), color: 'orange' },
+    approved: { label: t('statuses.approved'), color: 'green' },
+    rejected: { label: t('statuses.rejected'), color: 'red' },
+  }
 
   const fetchComments = useCallback(async () => {
     const params = new URLSearchParams({ page: String(page), pageSize: '50' })
@@ -124,7 +127,10 @@ export default function CommentsPage() {
     })
     const json = await res.json()
     if (json.success) {
-      notify({ color: 'green', message: action === 'approved' ? '已通过' : '已拒绝' })
+      notify({
+        color: 'green',
+        message: action === 'approved' ? t('messages.approved') : t('messages.rejected'),
+      })
       fetchComments()
       refreshCounts()
       // 更新 drawer 中的状态
@@ -132,19 +138,19 @@ export default function CommentsPage() {
         setDetail({ ...detail, status: action })
       }
     } else {
-      notify({ color: 'red', message: json.message || '操作失败' })
+      notify({ color: 'red', message: json.message || tCommon('errors.operationFailed') })
     }
   }
 
   const handleDelete = async (id: number, childCount?: number) => {
     const message = childCount
-      ? `确定要删除此评论吗？其下的 ${childCount} 条回复也会一并删除。`
-      : '确定要删除此评论吗？'
+      ? t('deleteConfirmWithReplies', { count: childCount })
+      : t('deleteConfirm')
     if (!(await myModal.confirm({ message }))) return
     const res = await fetch(`/api/comments/${id}`, { method: 'DELETE' })
     const json = await res.json()
     if (json.success) {
-      notify({ color: 'green', message: '删除成功' })
+      notify({ color: 'green', message: tCommon('messages.deleteSuccess') })
       if (data && data.items.length <= 1 && page > 1) {
         setPage(page - 1)
       } else {
@@ -153,21 +159,21 @@ export default function CommentsPage() {
       refreshCounts()
       if (detail?.id === id) setDrawerOpened(false)
     } else {
-      notify({ color: 'red', message: json.message || '删除失败' })
+      notify({ color: 'red', message: json.message || tCommon('errors.deleteFailed') })
     }
   }
 
   return (
     <Box mt="md">
       <Group justify="space-between" mb="lg">
-        <Title order={3}>评论管理</Title>
+        <Title order={3}>{t('title')}</Title>
         <Select
-          placeholder="全部状态"
+          placeholder={t('statusPlaceholder')}
           clearable
           data={[
-            { value: 'pending', label: '待审核' },
-            { value: 'approved', label: '已通过' },
-            { value: 'rejected', label: '已拒绝' },
+            { value: 'pending', label: t('statuses.pending') },
+            { value: 'approved', label: t('statuses.approved') },
+            { value: 'rejected', label: t('statuses.rejected') },
           ]}
           value={status}
           onChange={(v) => {
@@ -182,13 +188,13 @@ export default function CommentsPage() {
         <Table highlightOnHover>
           <Table.Thead>
             <Table.Tr>
-              <Table.Th>作者</Table.Th>
-              <Table.Th>内容</Table.Th>
-              <Table.Th>文章</Table.Th>
-              <Table.Th>统计</Table.Th>
-              <Table.Th>状态</Table.Th>
-              <Table.Th>时间</Table.Th>
-              <Table.Th>操作</Table.Th>
+              <Table.Th>{t('columns.author')}</Table.Th>
+              <Table.Th>{t('columns.content')}</Table.Th>
+              <Table.Th>{t('columns.post')}</Table.Th>
+              <Table.Th>{t('columns.stats')}</Table.Th>
+              <Table.Th>{t('columns.status')}</Table.Th>
+              <Table.Th>{t('columns.time')}</Table.Th>
+              <Table.Th>{t('columns.actions')}</Table.Th>
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
@@ -216,7 +222,7 @@ export default function CommentsPage() {
                           size="sm"
                           style={{ flexShrink: 0 }}
                         >
-                          {c.childCount} 回复
+                          {t('replyCount', { count: c.childCount })}
                         </NowrapBadge>
                       )}
                     </Group>
@@ -295,7 +301,7 @@ export default function CommentsPage() {
               <Table.Tr>
                 <Table.Td colSpan={7}>
                   <Text ta="center" c="dimmed" py="md">
-                    暂无评论
+                    {t('empty')}
                   </Text>
                 </Table.Td>
               </Table.Tr>
@@ -308,7 +314,7 @@ export default function CommentsPage() {
         <Group justify="center" mt="md" gap="md">
           {data.itemCount > 0 && (
             <Text size="sm" c="dimmed">
-              共 {data.itemCount} 条
+              {t('totalCount', { count: data.itemCount })}
             </Text>
           )}
           {data.pageCount > 1 && (
@@ -321,7 +327,7 @@ export default function CommentsPage() {
       <Drawer
         opened={drawerOpened}
         onClose={() => setDrawerOpened(false)}
-        title="评论详情"
+        title={t('detailTitle')}
         position="right"
         size="lg"
       >
@@ -330,7 +336,7 @@ export default function CommentsPage() {
             {/* 文章信息 */}
             <div>
               <Text size="sm" c="dimmed">
-                文章
+                {t('postLabel')}
               </Text>
               {detail.contentSlug ? (
                 <Text
@@ -356,7 +362,7 @@ export default function CommentsPage() {
               <>
                 <div>
                   <Text size="sm" c="dimmed" mb={4}>
-                    回复的评论
+                    {t('parentCommentLabel')}
                   </Text>
                   <div
                     style={{
@@ -402,7 +408,7 @@ export default function CommentsPage() {
                 <Divider />
                 <div>
                   <Text size="sm" c="dimmed" mb={4}>
-                    回复（{detail.childComments.length}）
+                    {t('childCommentsLabel', { count: detail.childComments.length })}
                   </Text>
                   <Stack gap="xs">
                     {detail.childComments.map((child) => {
@@ -448,25 +454,25 @@ export default function CommentsPage() {
             <Stack gap={4}>
               {detail.authorEmail && (
                 <Text size="xs" c="dimmed">
-                  邮箱：{detail.authorEmail}
+                  {t('meta.email', { value: detail.authorEmail })}
                 </Text>
               )}
               {detail.authorWebsite && (
                 <Text size="xs" c="dimmed">
-                  网站：{detail.authorWebsite}
+                  {t('meta.website', { value: detail.authorWebsite })}
                 </Text>
               )}
               <Text size="xs" c="dimmed">
-                时间：{dayjs(detail.createdAt).format('YYYY-MM-DD HH:mm:ss')}
+                {t('meta.time', { value: dayjs(detail.createdAt).format('YYYY-MM-DD HH:mm:ss') })}
               </Text>
               {detail.ipAddress && (
                 <Text size="xs" c="dimmed">
-                  IP：{detail.ipAddress}
+                  {t('meta.ip', { value: detail.ipAddress })}
                 </Text>
               )}
               {detail.userAgent && (
                 <Text size="xs" c="dimmed" lineClamp={2}>
-                  UA：{detail.userAgent}
+                  {t('meta.userAgent', { value: detail.userAgent })}
                 </Text>
               )}
             </Stack>
@@ -483,7 +489,7 @@ export default function CommentsPage() {
                   leftSection={<IconCheck size={16} />}
                   onClick={() => handleModerate(detail.id, 'approved')}
                 >
-                  通过
+                  {t('actions.approve')}
                 </Button>
               )}
               {detail.status !== 'rejected' && (
@@ -494,7 +500,7 @@ export default function CommentsPage() {
                   leftSection={<IconX size={16} />}
                   onClick={() => handleModerate(detail.id, 'rejected')}
                 >
-                  拒绝
+                  {t('actions.reject')}
                 </Button>
               )}
               <Button
@@ -504,7 +510,7 @@ export default function CommentsPage() {
                 leftSection={<IconTrash size={16} />}
                 onClick={() => handleDelete(detail.id, detail.childComments.length)}
               >
-                删除
+                {t('actions.delete')}
               </Button>
             </Group>
           </Stack>

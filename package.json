@@ -22,6 +22,9 @@
     "db:check-migrations": "node scripts/check-migration-chain.mjs",
     "db:seed": "tsx src/server/db/seed.ts",
     "db:studio": "drizzle-kit studio --config=drizzle.sqlite.config.ts",
+    "check:i18n-runtime": "node scripts/check-i18n-runtime.mjs",
+    "check:error-leaks": "node scripts/check-api-message-leaks.mjs",
+    "check:ci-guard": "npm run check:i18n-runtime && npm run check:error-leaks",
     "up-version": "node scripts/up-version.mjs"
   },
   "dependencies": {

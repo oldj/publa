@@ -1,4 +1,5 @@
-import { getCurrentUser } from '@/server/auth'
+import { requireCurrentUser } from '@/server/auth'
+import { jsonError, jsonSuccess } from '@/server/lib/api-response'
 import { parseIntParam, parseIdParam, safeParseJson } from '@/server/lib/request'
 import { logActivity } from '@/server/services/activity-logs'
 import {
@@ -9,32 +10,30 @@ import {
   markGuestbookMessageUnread,
   markAllGuestbookMessagesRead,
 } from '@/server/services/guestbook'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 
 export async function GET(request: NextRequest) {
-  const user = await getCurrentUser()
-  if (!user) {
-    return NextResponse.json(
-      { success: false, code: 'UNAUTHORIZED', message: 'Unauthorized' },
-      { status: 401 },
-    )
-  }
+  const guard = await requireCurrentUser()
+  if (!guard.ok) return guard.response
 
   const { searchParams } = new URL(request.url)
 
   // 单条详情
   const idStr = searchParams.get('id')
   if (idStr) {
-    const { id: msgId, error: idError } = parseIdParam(idStr)
+    const { id: msgId, error: idError } = await parseIdParam(idStr)
     if (idError) return idError
     const msg = await getGuestbookMessageById(msgId)
     if (!msg) {
-      return NextResponse.json(
-        { success: false, code: 'NOT_FOUND', message: 'Message not found' },
-        { status: 404 },
-      )
+      return jsonError({
+        source: request,
+        namespace: 'admin.api.guestbook',
+        key: 'notFound',
+        code: 'NOT_FOUND',
+        status: 404,
+      })
     }
-    return NextResponse.json({ success: true, data: msg })
+    return jsonSuccess(msg)
   }
 
   // 列表
@@ -43,17 +42,12 @@ export async function GET(request: NextRequest) {
   const status = searchParams.get('status') || undefined
 
   const result = await listGuestbookMessages({ page, pageSize, status })
-  return NextResponse.json({ success: true, data: result })
+  return jsonSuccess(result)
 }
 
 export async function PUT(request: NextRequest) {
-  const user = await getCurrentUser()
-  if (!user) {
-    return NextResponse.json(
-      { success: false, code: 'UNAUTHORIZED', message: 'Unauthorized' },
-      { status: 401 },
-    )
-  }
+  const guard = await requireCurrentUser()
+  if (!guard.ok) return guard.response
 
   const { data: body, error } = await safeParseJson(request)
   if (error) return error
@@ -61,17 +55,20 @@ export async function PUT(request: NextRequest) {
   // 全部标记为已读
   if (body.action === 'readAll') {
     await markAllGuestbookMessagesRead()
-    await logActivity(request, user.id, 'moderate_guestbook')
-    return NextResponse.json({ success: true })
+    await logActivity(request, guard.user.id, 'moderate_guestbook')
+    return jsonSuccess()
   }
 
   // 单条标记为已读/未读
   const { id, action } = body
   if (!id) {
-    return NextResponse.json(
-      { success: false, code: 'VALIDATION_ERROR', message: '缺少 ID' },
-      { status: 400 },
-    )
+    return jsonError({
+      source: request,
+      namespace: 'admin.api.guestbook',
+      key: 'idRequired',
+      code: 'VALIDATION_ERROR',
+      status: 400,
+    })
   }
 
   if (action === 'unread') {
@@ -79,31 +76,29 @@ export async function PUT(request: NextRequest) {
   } else {
     await markGuestbookMessageRead(id)
   }
-  await logActivity(request, user.id, 'moderate_guestbook')
-  return NextResponse.json({ success: true })
+  await logActivity(request, guard.user.id, 'moderate_guestbook')
+  return jsonSuccess()
 }
 
 export async function DELETE(request: NextRequest) {
-  const user = await getCurrentUser()
-  if (!user) {
-    return NextResponse.json(
-      { success: false, code: 'UNAUTHORIZED', message: 'Unauthorized' },
-      { status: 401 },
-    )
-  }
+  const guard = await requireCurrentUser()
+  if (!guard.ok) return guard.response
 
   const { searchParams } = new URL(request.url)
   const idStr = searchParams.get('id')
   if (!idStr) {
-    return NextResponse.json(
-      { success: false, code: 'VALIDATION_ERROR', message: '缺少 ID' },
-      { status: 400 },
-    )
+    return jsonError({
+      source: request,
+      namespace: 'admin.api.guestbook',
+      key: 'idRequired',
+      code: 'VALIDATION_ERROR',
+      status: 400,
+    })
   }
-  const { id: msgId, error: idError } = parseIdParam(idStr)
+  const { id: msgId, error: idError } = await parseIdParam(idStr)
   if (idError) return idError
 
   await deleteGuestbookMessage(msgId)
-  await logActivity(request, user.id, 'delete_guestbook')
-  return NextResponse.json({ success: true })
+  await logActivity(request, guard.user.id, 'delete_guestbook')
+  return jsonSuccess()
 }

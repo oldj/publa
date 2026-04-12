@@ -2,6 +2,7 @@
 
 import { Button, Group, Text, Title } from '@mantine/core'
 import { IconDeviceFloppy } from '@tabler/icons-react'
+import { useTranslations } from 'next-intl'
 import type { ReactNode } from 'react'
 
 interface PageHeaderProps {
@@ -24,9 +25,10 @@ export function PageHeader({
   dirty,
   loading,
   onSave,
-  dirtyMessage = '设置已修改，需保存后方可生效',
+  dirtyMessage,
   extra,
 }: PageHeaderProps) {
+  const tCommon = useTranslations('common')
   return (
     <Group
       justify="space-between"
@@ -43,13 +45,13 @@ export function PageHeader({
       <Group gap="sm">
         {dirty && (
           <Text size="sm" c="orange">
-            {dirtyMessage}
+            {dirtyMessage || tCommon('pageHeader.dirty')}
           </Text>
         )}
         {extra}
         {onSave && (
           <Button leftSection={<IconDeviceFloppy size={16} />} onClick={onSave} loading={loading}>
-            保存
+            {tCommon('actions.save')}
           </Button>
         )}
       </Group>

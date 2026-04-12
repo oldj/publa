@@ -145,19 +145,56 @@ export async function exportSettingsData() {
   }
 }
 
+export type ImportValidationResult =
+  | { valid: true; type: 'content' | 'settings' }
+  | {
+      valid: false
+      code:
+        | 'META_REQUIRED'
+        | 'UNSUPPORTED_VERSION'
+        | 'MISSING_FIELD'
+        | 'INVALID_FIELD_FORMAT'
+        | 'UNKNOWN_TYPE'
+      values?: Record<string, string>
+    }
+
+export interface ImportResultItem {
+  key:
+    | 'contentCategories'
+    | 'contentTags'
+    | 'contentAttachments'
+    | 'contentItems'
+    | 'contentTagRelations'
+    | 'contentSlugHistories'
+    | 'contentRevisions'
+    | 'contentComments'
+    | 'contentGuestbook'
+    | 'settingsThemes'
+    | 'settingsCustomStyles'
+    | 'settingsItems'
+    | 'settingsMenus'
+    | 'settingsRedirectRules'
+    | 'settingsUsers'
+  values: Record<string, number>
+}
+
 /** 校验导入数据基础格式 */
-export function validateImportData(data: any): { valid: boolean; type?: string; message?: string } {
+export function validateImportData(data: any): ImportValidationResult {
   if (!data?.meta?.type || !data?.meta?.version) {
-    return { valid: false, message: '缺少 meta 信息' }
+    return { valid: false, code: 'META_REQUIRED' }
   }
   if (data.meta.version !== META_VERSION) {
-    return { valid: false, message: `不支持的版本: ${data.meta.version}` }
+    return {
+      valid: false,
+      code: 'UNSUPPORTED_VERSION',
+      values: { version: String(data.meta.version) },
+    }
   }
 
   if (data.meta.type === 'content') {
     for (const key of ['categories', 'tags', 'contents']) {
       if (!Array.isArray(data[key])) {
-        return { valid: false, message: `缺少必要字段: ${key}` }
+        return { valid: false, code: 'MISSING_FIELD', values: { field: key } }
       }
     }
     return { valid: true, type: 'content' }
@@ -166,19 +203,23 @@ export function validateImportData(data: any): { valid: boolean; type?: string; 
   if (data.meta.type === 'settings') {
     for (const key of ['settings']) {
       if (!Array.isArray(data[key])) {
-        return { valid: false, message: `缺少必要字段: ${key}` }
+        return { valid: false, code: 'MISSING_FIELD', values: { field: key } }
       }
     }
     // themes / customStyles 是后补的字段，兼容旧导出文件允许缺失，但出现时必须是数组
     for (const key of ['themes', 'customStyles']) {
       if (data[key] !== undefined && !Array.isArray(data[key])) {
-        return { valid: false, message: `字段格式错误: ${key}` }
+        return { valid: false, code: 'INVALID_FIELD_FORMAT', values: { field: key } }
       }
     }
     return { valid: true, type: 'settings' }
   }
 
-  return { valid: false, message: `未知的数据类型: ${data.meta.type}` }
+  return {
+    valid: false,
+    code: 'UNKNOWN_TYPE',
+    values: { type: String(data.meta.type) },
+  }
 }
 
 /** 解析内容纯文本：优先使用已有值，其次从 HTML 或 Raw 推导 */
@@ -305,7 +346,7 @@ export async function importContentData(data: any, currentUserId: number) {
     ? normalizeImportedAttachments(data.attachments, validUserIds)
     : []
 
-  const results: string[] = []
+  const results: ImportResultItem[] = []
 
   await db.transaction(async (tx) => {
     // 按外键依赖顺序删除
@@ -325,7 +366,7 @@ export async function importContentData(data: any, currentUserId: number) {
         const { postCount: _postCount, ...rest } = item ?? {}
         await tx.insert(categories).values(rest)
       }
-      results.push(`分类: ${data.categories.length} 条`)
+      results.push({ key: 'contentCategories', values: { count: data.categories.length } })
     }
 
     if (Array.isArray(data.tags) && data.tags.length > 0) {
@@ -333,56 +374,56 @@ export async function importContentData(data: any, currentUserId: number) {
         const { postCount: _postCount, ...rest } = item ?? {}
         await tx.insert(tags).values(rest)
       }
-      results.push(`标签: ${data.tags.length} 条`)
+      results.push({ key: 'contentTags', values: { count: data.tags.length } })
     }
 
     if (normalizedAttachments.length > 0) {
       for (const item of normalizedAttachments) {
         await tx.insert(attachments).values(item)
       }
-      results.push(`附件: ${normalizedAttachments.length} 条`)
+      results.push({ key: 'contentAttachments', values: { count: normalizedAttachments.length } })
     }
 
     if (normalizedContents.length > 0) {
       for (const item of normalizedContents) {
         await tx.insert(contents).values(item)
       }
-      results.push(`内容: ${data.contents.length} 条`)
+      results.push({ key: 'contentItems', values: { count: data.contents.length } })
     }
 
     if (Array.isArray(data.contentTags) && data.contentTags.length > 0) {
       for (const item of data.contentTags) {
         await tx.insert(contentTags).values(item)
       }
-      results.push(`内容标签: ${data.contentTags.length} 条`)
+      results.push({ key: 'contentTagRelations', values: { count: data.contentTags.length } })
     }
 
     if (Array.isArray(data.slugHistories) && data.slugHistories.length > 0) {
       for (const item of data.slugHistories) {
         await tx.insert(slugHistories).values(item)
       }
-      results.push(`Slug 历史: ${data.slugHistories.length} 条`)
+      results.push({ key: 'contentSlugHistories', values: { count: data.slugHistories.length } })
     }
 
     if (normalizedRevisions.length > 0) {
       for (const item of normalizedRevisions) {
         await tx.insert(contentRevisions).values(item)
       }
-      results.push(`历史记录: ${normalizedRevisions.length} 条`)
+      results.push({ key: 'contentRevisions', values: { count: normalizedRevisions.length } })
     }
 
     if (normalizedComments.length > 0) {
       for (const item of normalizedComments) {
         await tx.insert(comments).values(item)
       }
-      results.push(`评论: ${normalizedComments.length} 条`)
+      results.push({ key: 'contentComments', values: { count: normalizedComments.length } })
     }
 
     if (Array.isArray(data.guestbookMessages) && data.guestbookMessages.length > 0) {
       for (const item of data.guestbookMessages) {
         await tx.insert(guestbookMessages).values(item)
       }
-      results.push(`留言: ${data.guestbookMessages.length} 条`)
+      results.push({ key: 'contentGuestbook', values: { count: data.guestbookMessages.length } })
     }
 
     await syncPrimaryKeySequences(tx)
@@ -396,7 +437,7 @@ export async function importContentData(data: any, currentUserId: number) {
 
 /** 导入设置数据（覆盖模式） */
 export async function importSettingsData(data: any, currentUserId: number) {
-  const results: string[] = []
+  const results: ImportResultItem[] = []
 
   // 先在事务外读取需要保留的敏感设置
   let existingSecrets: Record<string, string> = {}
@@ -444,7 +485,7 @@ export async function importSettingsData(data: any, currentUserId: number) {
           updatedAt: item.updatedAt ?? isoNow(),
         })
       }
-      results.push(`主题: ${data.themes.length} 条`)
+      results.push({ key: 'settingsThemes', values: { count: data.themes.length } })
     }
 
     if (Array.isArray(data.customStyles)) {
@@ -459,7 +500,7 @@ export async function importSettingsData(data: any, currentUserId: number) {
           updatedAt: item.updatedAt ?? isoNow(),
         })
       }
-      results.push(`自定义 CSS: ${data.customStyles.length} 条`)
+      results.push({ key: 'settingsCustomStyles', values: { count: data.customStyles.length } })
     }
 
     // 若导入数据缺失内置主题（旧版本导出或空库恢复），补齐三项内置主题保证前台可用
@@ -518,11 +559,13 @@ export async function importSettingsData(data: any, currentUserId: number) {
         await tx.insert(settings).values({ key, value })
       }
 
-      results.push(
-        defaultedSettingCount > 0
-          ? `设置: ${Object.keys(normalizedInputSettings).length} 条（默认补齐 ${defaultedSettingCount} 条）`
-          : `设置: ${Object.keys(normalizedInputSettings).length} 条`,
-      )
+      results.push({
+        key: 'settingsItems',
+        values: {
+          count: Object.keys(normalizedInputSettings).length,
+          defaultedCount: defaultedSettingCount,
+        },
+      })
     }
 
     // 清空并重新导入菜单
@@ -531,7 +574,7 @@ export async function importSettingsData(data: any, currentUserId: number) {
       for (const item of normalizedMenus) {
         await tx.insert(menus).values(item)
       }
-      results.push(`菜单: ${data.menus.length} 条`)
+      results.push({ key: 'settingsMenus', values: { count: data.menus.length } })
     }
 
     if (normalizedRedirectRules) {
@@ -548,7 +591,10 @@ export async function importSettingsData(data: any, currentUserId: number) {
         })
       }
 
-      results.push(`跳转规则: ${normalizedRedirectRules.length} 条`)
+      results.push({
+        key: 'settingsRedirectRules',
+        values: { count: normalizedRedirectRules.length },
+      })
     }
 
     await syncPrimaryKeySequences(tx)
@@ -589,7 +635,10 @@ export async function importSettingsData(data: any, currentUserId: number) {
         created++
       }
     }
-    results.push(`用户: 新建 ${created} 个, 更新 ${updated} 个`)
+    results.push({
+      key: 'settingsUsers',
+      values: { createdCount: created, updatedCount: updated },
+    })
   }
 
   return results

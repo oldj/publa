@@ -1,4 +1,5 @@
 import PostListPage from '@/components/post-list-page'
+import { getServerTranslator } from '@/i18n/server'
 import BasicLayout from '@/layouts/basic'
 import contentSummary from '@/lib/contentSummary'
 import { redirectOrNotFound } from '@/server/lib/frontend-404'
@@ -14,10 +15,13 @@ export async function generateMetadata({
 }: {
   params: Promise<{ slug: string }>
 }): Promise<Metadata> {
+  const { t } = await getServerTranslator('frontend')
   const { slug } = await params
   const category = await getCategoryBySlug(slug)
   return {
-    title: category ? `分类：${category.seoTitle || category.name}` : '分类不存在',
+    title: category
+      ? `${t('posts.categoryPrefix')}${category.seoTitle || category.name}`
+      : t('taxonomy.categoryNotFound'),
     description: category?.seoDescription || undefined,
   }
 }
@@ -29,6 +33,7 @@ export default async function CategoryPage({
   params: Promise<{ slug: string }>
   searchParams: Promise<{ page?: string }>
 }) {
+  const { t } = await getServerTranslator('frontend')
   const { slug } = await params
   const { page } = await searchParams
   const category = await getCategoryBySlug(slug)
@@ -51,13 +56,13 @@ export default async function CategoryPage({
     <BasicLayout>
       <div style={{ maxWidth: 720, margin: '0 auto', padding: '20px 0' }}>
         <h1 style={{ fontSize: 24, marginBottom: 8 }}>
-          <span style={{ color: '#888' }}>分类：</span>
+          <span style={{ color: '#888' }}>{t('posts.categoryPrefix')}</span>
           {category.name}
         </h1>
         <div style={{ marginBottom: 20 }}>
           <Link href="/posts/list" style={{ fontSize: 14, color: '#666' }}>
             <IconChevronLeft size={14} style={{ verticalAlign: 'middle' }} />
-            返回所有文章列表
+            {t('taxonomy.backToAllPosts')}
           </Link>
         </div>
         <PostListPage data={posts} />

@@ -1,14 +1,22 @@
 import { requireCurrentUser } from '@/server/auth'
 import { normalizeEmail, normalizePassword, normalizeUsername } from '@/lib/user-input'
+import { jsonError, jsonSuccess } from '@/server/lib/api-response'
 import { parseIdParam, safeParseJson } from '@/server/lib/request'
 import { deleteUser, getUserById, updateUser } from '@/server/services/users'
 import { logActivity } from '@/server/services/activity-logs'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
+
+type PermissionResult =
+  | { allowed: true; target: NonNullable<Awaited<ReturnType<typeof getUserById>>> }
+  | { allowed: false; status: 403 | 404; code: 'FORBIDDEN' | 'NOT_FOUND' }
 
 /** 检查当前用户是否有权操作目标用户 */
-async function checkPermission(currentUser: { id: number; role: string }, targetId: number) {
+async function checkPermission(
+  currentUser: { id: number; role: string },
+  targetId: number,
+): Promise<PermissionResult> {
   const target = await getUserById(targetId)
-  if (!target) return { allowed: false, status: 404, message: '用户不存在' }
+  if (!target) return { allowed: false, status: 404, code: 'NOT_FOUND' }
 
   // 站长可操作所有用户
   if (currentUser.role === 'owner') {
@@ -18,7 +26,7 @@ async function checkPermission(currentUser: { id: number; role: string }, target
   // 管理员只能操作编辑
   if (currentUser.role === 'admin') {
     if (target.role !== 'editor') {
-      return { allowed: false, status: 403, message: '权限不足' }
+      return { allowed: false, status: 403, code: 'FORBIDDEN' }
     }
     return { allowed: true, target }
   }
@@ -28,7 +36,7 @@ async function checkPermission(currentUser: { id: number; role: string }, target
     return { allowed: true, target }
   }
 
-  return { allowed: false, status: 403, message: '权限不足' }
+  return { allowed: false, status: 403, code: 'FORBIDDEN' }
 }
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -36,26 +44,30 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   if (!guard.ok) return guard.response
 
   const { id: idStr } = await params
-  const { id: targetId, error: idError } = parseIdParam(idStr)
+  const { id: targetId, error: idError } = await parseIdParam(idStr)
   if (idError) return idError
 
   // 编辑只能查看自己
   if (guard.user.role === 'editor' && targetId !== guard.user.id) {
-    return NextResponse.json(
-      { success: false, code: 'FORBIDDEN', message: '权限不足' },
-      { status: 403 },
-    )
+    return jsonError({
+      namespace: 'admin.api.users',
+      key: 'forbidden',
+      code: 'FORBIDDEN',
+      status: 403,
+    })
   }
 
   const target = await getUserById(targetId)
   if (!target) {
-    return NextResponse.json(
-      { success: false, code: 'NOT_FOUND', message: '用户不存在' },
-      { status: 404 },
-    )
+    return jsonError({
+      namespace: 'admin.api.users',
+      key: 'notFound',
+      code: 'NOT_FOUND',
+      status: 404,
+    })
   }
 
-  return NextResponse.json({ success: true, data: target })
+  return jsonSuccess(target)
 }
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -63,14 +75,17 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   if (!guard.ok) return guard.response
 
   const { id: idStr } = await params
-  const { id: targetId, error: idError } = parseIdParam(idStr)
+  const { id: targetId, error: idError } = await parseIdParam(idStr)
   if (idError) return idError
   const check = await checkPermission(guard.user, targetId)
   if (!check.allowed) {
-    return NextResponse.json(
-      { success: false, code: 'FORBIDDEN', message: check.message },
-      { status: check.status },
-    )
+    return jsonError({
+      source: request,
+      namespace: 'admin.api.users',
+      key: check.code === 'NOT_FOUND' ? 'notFound' : 'forbidden',
+      code: check.code,
+      status: check.status,
+    })
   }
 
   const { data: body, error } = await safeParseJson(request)
@@ -80,10 +95,13 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   if (body?.username !== undefined) {
     const username = normalizeUsername(body.username)
     if (!username) {
-      return NextResponse.json(
-        { success: false, code: 'VALIDATION_ERROR', message: '用户名不能为空' },
-        { status: 400 },
-      )
+      return jsonError({
+        source: request,
+        namespace: 'admin.api.users',
+        key: 'usernameRequired',
+        code: 'VALIDATION_ERROR',
+        status: 400,
+      })
     }
     updateData.username = username
   }
@@ -95,10 +113,13 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   if (body?.password !== undefined) {
     const password = normalizePassword(body.password)
     if (!password) {
-      return NextResponse.json(
-        { success: false, code: 'VALIDATION_ERROR', message: '密码不能为空' },
-        { status: 400 },
-      )
+      return jsonError({
+        source: request,
+        namespace: 'admin.api.users',
+        key: 'passwordRequired',
+        code: 'VALIDATION_ERROR',
+        status: 400,
+      })
     }
     updateData.password = password
   }
@@ -107,16 +128,19 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   if (body.role && guard.user.role === 'owner' && targetId !== guard.user.id) {
     const validRoles = ['owner', 'admin', 'editor']
     if (!validRoles.includes(body.role)) {
-      return NextResponse.json(
-        { success: false, code: 'VALIDATION_ERROR', message: '无效的角色值' },
-        { status: 400 },
-      )
+      return jsonError({
+        source: request,
+        namespace: 'admin.api.users',
+        key: 'invalidRole',
+        code: 'VALIDATION_ERROR',
+        status: 400,
+      })
     }
     updateData.role = body.role
   }
   const updated = await updateUser(targetId, updateData)
   await logActivity(request, guard.user.id, 'update_user')
-  return NextResponse.json({ success: true, data: updated })
+  return jsonSuccess(updated)
 }
 
 export async function DELETE(
@@ -127,23 +151,29 @@ export async function DELETE(
   if (!guard.ok) return guard.response
 
   const { id: idStr } = await params
-  const { id: targetId, error: idError } = parseIdParam(idStr)
+  const { id: targetId, error: idError } = await parseIdParam(idStr)
   if (idError) return idError
   const check = await checkPermission(guard.user, targetId)
   if (!check.allowed) {
-    return NextResponse.json(
-      { success: false, code: 'FORBIDDEN', message: check.message },
-      { status: check.status },
-    )
+    return jsonError({
+      source: request,
+      namespace: 'admin.api.users',
+      key: check.code === 'NOT_FOUND' ? 'notFound' : 'forbidden',
+      code: check.code,
+      status: check.status,
+    })
   }
 
   const result = await deleteUser(targetId, guard.user.id)
   if (!result.success) {
-    return NextResponse.json(
-      { success: false, code: 'OPERATION_FAILED', message: result.message },
-      { status: 400 },
-    )
+    return jsonError({
+      source: request,
+      namespace: 'admin.api.users',
+      key: result.code === 'CANNOT_DELETE_SELF' ? 'cannotDeleteSelf' : 'notFound',
+      code: result.code === 'CANNOT_DELETE_SELF' ? 'OPERATION_FAILED' : 'NOT_FOUND',
+      status: result.code === 'CANNOT_DELETE_SELF' ? 400 : 404,
+    })
   }
   await logActivity(request, guard.user.id, 'delete_user')
-  return NextResponse.json({ success: true })
+  return jsonSuccess()
 }

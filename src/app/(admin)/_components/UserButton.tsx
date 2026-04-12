@@ -3,6 +3,7 @@
 import type { AuthUser } from '@/server/auth'
 import { ActionIcon, Avatar, Group, Text } from '@mantine/core'
 import { IconLogout } from '@tabler/icons-react'
+import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { useAdminUrl } from './AdminPathContext'
 import myModal from './myModals'
@@ -10,11 +11,12 @@ import { RoleLabel } from './RoleLabel'
 import classes from './UserButton.module.scss'
 
 export function UserButton({ user }: { user: AuthUser | null }) {
+  const t = useTranslations('admin.userButton')
   const router = useRouter()
   const adminUrl = useAdminUrl()
 
   const handleLogout = async () => {
-    if (!(await myModal.confirm({ message: '确定要退出登录吗？' }))) return
+    if (!(await myModal.confirm({ message: t('logoutConfirm') }))) return
     await fetch('/api/auth/logout', { method: 'POST' })
     router.push(adminUrl('/login'))
   }
@@ -34,7 +36,7 @@ export function UserButton({ user }: { user: AuthUser | null }) {
             </Text>
             <RoleLabel role={user.role} />
           </Group>
-          <ActionIcon variant="subtle" onClick={handleLogout} title="退出登录">
+          <ActionIcon variant="subtle" onClick={handleLogout} title={t('logoutTitle')}>
             <IconLogout size={16} stroke={1.5} />
           </ActionIcon>
         </Group>

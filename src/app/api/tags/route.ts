@@ -1,16 +1,17 @@
 import { requireCurrentUser } from '@/server/auth'
+import { jsonError, jsonSuccess } from '@/server/lib/api-response'
 import { isUniqueConstraintError, safeParseJson } from '@/server/lib/request'
 import { recountCategoriesAndTags } from '@/server/services/post-count'
 import { createTag, getTagBySlug, listTags } from '@/server/services/tags'
 import { logActivity } from '@/server/services/activity-logs'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 
 export async function GET() {
   const guard = await requireCurrentUser()
   if (!guard.ok) return guard.response
 
   const rows = await listTags()
-  return NextResponse.json({ success: true, data: rows })
+  return jsonSuccess(rows)
 }
 
 export async function POST(request: NextRequest) {
@@ -24,36 +25,45 @@ export async function POST(request: NextRequest) {
   if (body.action === 'recount') {
     await recountCategoriesAndTags()
     await logActivity(request, guard.user.id, 'recount_tags')
-    return NextResponse.json({ success: true })
+    return jsonSuccess()
   }
 
   const { name, slug } = body
 
   if (!name || !slug) {
-    return NextResponse.json(
-      { success: false, code: 'VALIDATION_ERROR', message: '名称和 slug 不能为空' },
-      { status: 400 },
-    )
+    return jsonError({
+      source: request,
+      namespace: 'admin.api.tags',
+      key: 'nameAndSlugRequired',
+      code: 'VALIDATION_ERROR',
+      status: 400,
+    })
   }
 
   const existing = await getTagBySlug(slug)
   if (existing) {
-    return NextResponse.json(
-      { success: false, code: 'DUPLICATE_SLUG', message: 'slug 已存在' },
-      { status: 400 },
-    )
+    return jsonError({
+      source: request,
+      namespace: 'admin.api.tags',
+      key: 'duplicateSlug',
+      code: 'DUPLICATE_SLUG',
+      status: 400,
+    })
   }
 
   try {
     const tag = await createTag(body)
     await logActivity(request, guard.user.id, 'create_tag')
-    return NextResponse.json({ success: true, data: tag })
+    return jsonSuccess(tag)
   } catch (err) {
     if (isUniqueConstraintError(err)) {
-      return NextResponse.json(
-        { success: false, code: 'DUPLICATE_SLUG', message: 'slug 已存在' },
-        { status: 400 },
-      )
+      return jsonError({
+        source: request,
+        namespace: 'admin.api.tags',
+        key: 'duplicateSlug',
+        code: 'DUPLICATE_SLUG',
+        status: 400,
+      })
     }
     throw err
   }

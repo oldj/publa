@@ -1,5 +1,7 @@
 import { requireRole } from '@/server/auth'
+import { jsonSuccess } from '@/server/lib/api-response'
 import { safeParseJson } from '@/server/lib/request'
+import { jsonSettingsValidationError } from '@/server/lib/settings-error'
 import {
   EMAIL_SETTINGS_KEYS,
   type EmailSettingType,
@@ -9,7 +11,7 @@ import {
   pickSettings,
   updateSettings,
 } from '@/server/services/settings'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 
 const SENSITIVE_KEYS = [
   'emailResendApiKey',
@@ -26,7 +28,7 @@ export async function GET() {
   for (const key of SENSITIVE_KEYS) {
     if (data[key]) data[key] = MASK
   }
-  return NextResponse.json({ success: true, data })
+  return jsonSuccess(data)
 }
 
 export async function PUT(request: NextRequest) {
@@ -47,17 +49,10 @@ export async function PUT(request: NextRequest) {
     await updateSettings(normalized)
   } catch (error) {
     if (isSettingsValidationError(error)) {
-      return NextResponse.json(
-        {
-          success: false,
-          code: 'VALIDATION_ERROR',
-          message: error.message,
-        },
-        { status: 400 },
-      )
+      return jsonSettingsValidationError(error, request)
     }
     throw error
   }
 
-  return NextResponse.json({ success: true })
+  return jsonSuccess()
 }

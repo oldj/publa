@@ -4,6 +4,7 @@ import { Badge, Button, Group, Text, Title } from '@mantine/core'
 import { IconArrowLeft, IconDeviceFloppy, IconEye, IconSend, IconX } from '@tabler/icons-react'
 import dayjs from 'dayjs'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import myModal from './myModals'
 
 interface EditorHeaderProps {
@@ -36,6 +37,8 @@ export function EditorHeader({
   onPublish,
   onDiscardDraft,
 }: EditorHeaderProps) {
+  const tCommon = useTranslations('common')
+  const t = useTranslations('admin.editor.header')
   return (
     <>
       {/* 固定在右上角的保存/发布按钮 */}
@@ -59,7 +62,7 @@ export function EditorHeader({
             onClick={onPreview}
             loading={loading}
           >
-            预览
+            {t('preview')}
           </Button>
         )}
         <Button
@@ -68,19 +71,20 @@ export function EditorHeader({
           onClick={onSaveDraft}
           loading={loading}
         >
-          保存
+          {tCommon('actions.save')}
         </Button>
         <Button
           leftSection={<IconSend size={16} />}
           onClick={async () => {
             if (status !== 'published') {
-              if (!(await myModal.confirm({ message: `确定要发布此${entityLabel}吗？` }))) return
+              if (!(await myModal.confirm({ message: t('publishConfirm', { entityLabel }) })))
+                return
             }
             await onPublish()
           }}
           loading={loading}
         >
-          发布
+          {t('publish')}
         </Button>
       </Group>
 
@@ -92,10 +96,10 @@ export function EditorHeader({
           leftSection={<IconArrowLeft size={16} />}
           data-role={`${entityKey}-editor-back-button`}
         >
-          返回
+          {t('back')}
         </Button>
         <Title order={3} data-role={`${entityKey}-editor-page-title`}>
-          {entityId ? '编辑' : '新建'}
+          {entityId ? t('edit') : t('new')}
           {entityLabel}
         </Title>
         {entityId && (
@@ -104,13 +108,17 @@ export function EditorHeader({
             variant="light"
             size="lg"
           >
-            {status === 'published' ? '已发布' : status === 'scheduled' ? '定时发布' : '草稿'}
+            {status === 'published'
+              ? tCommon('status.published')
+              : status === 'scheduled'
+                ? tCommon('status.scheduled')
+                : tCommon('status.draft')}
           </Badge>
         )}
         {dirty && (
           <Group gap={4}>
             <Badge color="orange" variant="light" size="lg">
-              已修改
+              {t('modified')}
             </Badge>
             {entityId && status === 'published' && (
               <IconX
@@ -118,7 +126,7 @@ export function EditorHeader({
                 color="var(--mantine-color-orange-6)"
                 style={{ cursor: 'pointer' }}
                 onClick={async () => {
-                  if (!(await myModal.confirm({ message: '是否要放弃所有未发布的修改？' }))) return
+                  if (!(await myModal.confirm({ message: t('discardDraftConfirm') }))) return
                   await onDiscardDraft()
                 }}
               />
@@ -127,7 +135,7 @@ export function EditorHeader({
         )}
         {autoSaveTime && (
           <Text size="sm" c="dimmed" data-role="editor-autosave-time">
-            自动保存：{dayjs(autoSaveTime).format('YYYY-MM-DD HH:mm:ss')}
+            {t('autosaveAt', { time: dayjs(autoSaveTime).format('YYYY-MM-DD HH:mm:ss') })}
           </Text>
         )}
       </Group>

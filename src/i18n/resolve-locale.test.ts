@@ -63,18 +63,14 @@ describe('resolveLocale', () => {
   })
 
   it('setup 页面的 ?lang= 合法值可以覆盖 DB 中的 language', async () => {
-    mockHeaders.mockResolvedValue(
-      makeHeaders({ 'x-pathname': '/setup', 'x-search': '?lang=en' }),
-    )
+    mockHeaders.mockResolvedValue(makeHeaders({ 'x-pathname': '/setup', 'x-search': '?lang=en' }))
     mockGetAllSettings.mockResolvedValue({ language: 'zh' })
 
     await expect(resolveLocale()).resolves.toBe('en')
   })
 
   it('setup 页面的 ?lang= 非法值不生效，继续读 DB', async () => {
-    mockHeaders.mockResolvedValue(
-      makeHeaders({ 'x-pathname': '/setup', 'x-search': '?lang=fr' }),
-    )
+    mockHeaders.mockResolvedValue(makeHeaders({ 'x-pathname': '/setup', 'x-search': '?lang=fr' }))
     mockGetAllSettings.mockResolvedValue({ language: 'zh' })
 
     await expect(resolveLocale()).resolves.toBe('zh')
@@ -98,5 +94,12 @@ describe('resolveLocale', () => {
     mockGetAllSettings.mockResolvedValue({ language: 'en' })
 
     await expect(resolveLocale()).resolves.toBe('en')
+  })
+
+  it('无请求上下文时回退到默认解析流程', async () => {
+    mockHeaders.mockRejectedValue(new Error('outside request scope'))
+    mockGetAllSettings.mockResolvedValue({ language: 'zh' })
+
+    await expect(resolveLocale()).resolves.toBe('zh')
   })
 })

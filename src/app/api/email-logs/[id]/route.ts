@@ -11,7 +11,7 @@ export async function DELETE(
   if (!guard.ok) return guard.response
 
   const { id: idStr } = await params
-  const { id, error } = parseIdParam(idStr)
+  const { id, error } = await parseIdParam(idStr)
   if (error) return error
 
   await deleteEmailLog(id)

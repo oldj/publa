@@ -3,6 +3,7 @@
 import checkOutLinks from '@/app/posts/[...slug]/libs/checkOutLinks'
 import CommentForm from '@/components/comment-form'
 import dayjs from 'dayjs'
+import { useTranslations } from 'next-intl'
 import React, { useEffect, useRef, useState } from 'react'
 import { IComment } from 'typings'
 
@@ -13,6 +14,7 @@ interface ICommentProps {
 
 export default function Comment(props: ICommentProps) {
   let { data, refreshComments } = props
+  const t = useTranslations('frontend.commentItem')
   const [showReply, setShowReply] = useState(false)
   const refContent = useRef<HTMLDivElement>(null)
 
@@ -46,7 +48,7 @@ export default function Comment(props: ICommentProps) {
         )}
       </div>
       <div className="post-comment-detail-info">
-        在 {dayjs(data.addTime).format('YYYY-MM-DD HH:mm')} 写道：
+        {t('wroteAt', { time: dayjs(data.addTime).format('YYYY-MM-DD HH:mm') })}
       </div>
       <div
         className="post-comment-content"
@@ -55,7 +57,7 @@ export default function Comment(props: ICommentProps) {
       />
       <div className="post-comment-detail-info">
         <a href="" onClick={toggleReply}>
-          {showReply ? '收起' : '回复'}
+          {showReply ? t('collapse') : t('reply')}
         </a>
       </div>
 

@@ -1,4 +1,5 @@
 import { requireRole } from '@/server/auth'
+import { jsonError, jsonSuccess } from '@/server/lib/api-response'
 import { safeParseJson } from '@/server/lib/request'
 import { logActivity } from '@/server/services/activity-logs'
 import {
@@ -7,7 +8,7 @@ import {
   RedirectRuleValidationError,
   reorderRedirectRules,
 } from '@/server/services/redirect-rules'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { validationErrorResponse } from './shared'
 
 export async function GET() {
@@ -15,7 +16,7 @@ export async function GET() {
   if (!guard.ok) return guard.response
 
   const data = await listRedirectRules()
-  return NextResponse.json({ success: true, data })
+  return jsonSuccess(data)
 }
 
 export async function POST(request: NextRequest) {
@@ -28,18 +29,17 @@ export async function POST(request: NextRequest) {
   try {
     if (body.action === 'reorder') {
       if (!Array.isArray(body.ids)) {
-        return NextResponse.json(
-          {
-            success: false,
-            code: 'VALIDATION_ERROR',
-            message: '排序数据无效',
-          },
-          { status: 400 },
-        )
+        return jsonError({
+          source: request,
+          namespace: 'admin.api.redirectRules',
+          key: 'invalidReorder',
+          code: 'VALIDATION_ERROR',
+          status: 400,
+        })
       }
 
       await reorderRedirectRules(body.ids)
-      return NextResponse.json({ success: true })
+      return jsonSuccess()
     }
 
     const item = await createRedirectRule({
@@ -49,10 +49,10 @@ export async function POST(request: NextRequest) {
       memo: body.memo,
     })
     await logActivity(request, guard.user.id, 'create_redirect')
-    return NextResponse.json({ success: true, data: item })
+    return jsonSuccess(item)
   } catch (caughtError) {
     if (caughtError instanceof RedirectRuleValidationError) {
-      return validationErrorResponse(caughtError)
+      return validationErrorResponse(caughtError, request)
     }
     throw caughtError
   }

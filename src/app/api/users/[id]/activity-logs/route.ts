@@ -1,31 +1,41 @@
 import { requireRole } from '@/server/auth'
+import { jsonError, jsonSuccess } from '@/server/lib/api-response'
 import { parseIdParam, parseIntParam } from '@/server/lib/request'
 import { listUserActivityLogs } from '@/server/services/activity-logs'
 import { getUserById } from '@/server/services/users'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requireRole(['owner', 'admin'])
+  const guard = await requireRole(['owner', 'admin'], {
+    namespace: 'admin.api.users',
+    key: 'forbidden',
+  })
   if (!guard.ok) return guard.response
 
   const { id: idStr } = await params
-  const { id: userId, error } = parseIdParam(idStr)
+  const { id: userId, error } = await parseIdParam(idStr)
   if (error) return error
 
   // admin 不能查看 owner 的活动日志
   if (guard.user.role === 'admin') {
     const target = await getUserById(userId)
     if (!target) {
-      return NextResponse.json(
-        { success: false, code: 'NOT_FOUND', message: '用户不存在' },
-        { status: 404 },
-      )
+      return jsonError({
+        source: request,
+        namespace: 'admin.api.users',
+        key: 'notFound',
+        code: 'NOT_FOUND',
+        status: 404,
+      })
     }
     if (target.role === 'owner') {
-      return NextResponse.json(
-        { success: false, code: 'FORBIDDEN', message: '权限不足' },
-        { status: 403 },
-      )
+      return jsonError({
+        source: request,
+        namespace: 'admin.api.users',
+        key: 'forbidden',
+        code: 'FORBIDDEN',
+        status: 403,
+      })
     }
   }
 
@@ -34,5 +44,5 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const pageSize = parseIntParam(searchParams.get('pageSize'), 30, 1, 100)
 
   const data = await listUserActivityLogs({ userId, page, pageSize })
-  return NextResponse.json({ success: true, data })
+  return jsonSuccess(data)
 }

@@ -4,6 +4,7 @@
  */
 
 import lodash from 'lodash'
+import { useTranslations } from 'next-intl'
 import React, { useEffect, useState } from 'react'
 
 interface IProps {
@@ -13,6 +14,7 @@ interface IProps {
 }
 
 const CaptchaInput = React.forwardRef<HTMLInputElement, IProps>((props, ref) => {
+  const t = useTranslations('frontend.captcha')
   const [src, setSrc] = useState<string>('')
 
   const refresh = () => {
@@ -32,7 +34,7 @@ const CaptchaInput = React.forwardRef<HTMLInputElement, IProps>((props, ref) => 
   return (
     <div className="captcha-input">
       <div className="captcha-input-image" onClick={() => refresh()}>
-        {src ? <img src={src} alt="点击刷新" /> : null}
+        {src ? <img src={src} alt={t('refreshAlt')} /> : null}
       </div>
       <div className="captcha-input-field">
         <input

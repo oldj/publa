@@ -43,6 +43,7 @@ import {
   IconTrash,
 } from '@tabler/icons-react'
 import { useAdminUrl } from '@/app/(admin)/_components/AdminPathContext'
+import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 import { useCurrentUser } from '../../_components/AdminCountsContext'
@@ -85,6 +86,7 @@ function SortableRuleRow({
   onEdit: (item: RedirectRule) => void
   onDelete: (item: RedirectRule) => void
 }) {
+  const t = useTranslations('admin.redirectsPage')
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.id,
   })
@@ -111,7 +113,7 @@ function SortableRuleRow({
             color="gray"
             {...attributes}
             {...listeners}
-            aria-label="拖拽排序"
+            aria-label={t('aria.drag')}
             style={{ cursor: 'grab', marginTop: 2 }}
           >
             <IconGripVertical size={18} />
@@ -132,24 +134,24 @@ function SortableRuleRow({
 
             <div>
               <Text size="sm" fw={600} mb={4}>
-                匹配路径正则
+                {t('labels.pathRegex')}
               </Text>
               <Code block>{item.pathRegex}</Code>
             </div>
 
             <div>
               <Text size="sm" fw={600} mb={4}>
-                跳转目标
+                {t('labels.redirectTo')}
               </Text>
               <Code block>{item.redirectTo}</Code>
             </div>
 
             <div>
               <Text size="sm" fw={600} mb={4}>
-                备注
+                {t('labels.memo')}
               </Text>
               <Text size="sm" c={item.memo ? undefined : 'dimmed'}>
-                {item.memo || '无'}
+                {item.memo || t('labels.none')}
               </Text>
             </div>
           </Stack>
@@ -160,7 +162,7 @@ function SortableRuleRow({
             variant="subtle"
             color="blue"
             onClick={() => onEdit(item)}
-            aria-label="编辑规则"
+            aria-label={t('aria.edit')}
           >
             <IconEdit size={16} />
           </ActionIcon>
@@ -168,7 +170,7 @@ function SortableRuleRow({
             variant="subtle"
             color="red"
             onClick={() => onDelete(item)}
-            aria-label="删除规则"
+            aria-label={t('aria.delete')}
           >
             <IconTrash size={16} />
           </ActionIcon>
@@ -179,6 +181,8 @@ function SortableRuleRow({
 }
 
 export default function RedirectRulesPage() {
+  const t = useTranslations('admin.redirectsPage')
+  const tCommon = useTranslations('common')
   const router = useRouter()
   const adminUrl = useAdminUrl()
   const currentUser = useCurrentUser()
@@ -240,7 +244,7 @@ export default function RedirectRulesPage() {
 
   const handleSubmit = async () => {
     if (!form.pathRegex.trim() || !form.redirectTo.trim()) {
-      notify({ color: 'red', message: '匹配正则和跳转目标不能为空' })
+      notify({ color: 'red', message: t('validation.pathRegexAndRedirectToRequired') })
       return
     }
 
@@ -257,23 +261,26 @@ export default function RedirectRulesPage() {
       const json = await response.json()
 
       if (!json.success) {
-        notify({ color: 'red', message: json.message || '保存失败' })
+        notify({ color: 'red', message: json.message || tCommon('errors.saveFailed') })
         return
       }
 
-      notify({ color: 'green', message: editingRuleId ? '规则已更新' : '规则已创建' })
+      notify({
+        color: 'green',
+        message: editingRuleId ? t('messages.updated') : t('messages.created'),
+      })
       setOpened(false)
       resetForm()
       await fetchRules()
     } catch {
-      notify({ color: 'red', message: '网络错误' })
+      notify({ color: 'red', message: tCommon('errors.network') })
     } finally {
       setLoading(false)
     }
   }
 
   const handleDelete = async (item: RedirectRule) => {
-    if (!(await myModal.confirm({ message: `确定要删除第 ${item.order} 条跳转规则吗？` }))) return
+    if (!(await myModal.confirm({ message: t('confirm.delete', { order: item.order }) }))) return
 
     try {
       const response = await fetch(`/api/redirect-rules/${item.id}`, {
@@ -282,14 +289,14 @@ export default function RedirectRulesPage() {
       const json = await response.json()
 
       if (!json.success) {
-        notify({ color: 'red', message: json.message || '删除失败' })
+        notify({ color: 'red', message: json.message || tCommon('errors.deleteFailed') })
         return
       }
 
-      notify({ color: 'green', message: '规则已删除' })
+      notify({ color: 'green', message: t('messages.deleted') })
       await fetchRules()
     } catch {
-      notify({ color: 'red', message: '网络错误' })
+      notify({ color: 'red', message: tCommon('errors.network') })
     }
   }
 
@@ -327,10 +334,10 @@ export default function RedirectRulesPage() {
     setSavingOrder(true)
     try {
       await persistOrder(nextItems)
-      notify({ color: 'green', message: '排序已更新' })
+      notify({ color: 'green', message: t('messages.orderUpdated') })
     } catch {
       setRules(previousItems)
-      notify({ color: 'red', message: '排序保存失败' })
+      notify({ color: 'red', message: t('messages.orderSaveFailed') })
       await fetchRules()
     } finally {
       setSavingOrder(false)
@@ -345,13 +352,13 @@ export default function RedirectRulesPage() {
     <Box mt="md">
       <Group justify="space-between" mb="lg">
         <div>
-          <Title order={3}>跳转规则</Title>
+          <Title order={3}>{t('title')}</Title>
           <Text size="sm" c="dimmed" mt={4}>
-            当前台路径最终会进入 404 时，将按以下顺序从上到下匹配第一条命中的规则。
+            {t('description')}
           </Text>
         </div>
         <Button leftSection={<IconPlus size={16} />} onClick={handleCreate}>
-          新建规则
+          {t('newRule')}
         </Button>
       </Group>
 
@@ -359,19 +366,17 @@ export default function RedirectRulesPage() {
         <Stack gap={6}>
           <Group gap="xs">
             <IconRouteAltLeft size={18} />
-            <Text fw={600}>规则说明</Text>
+            <Text fw={600}>{t('ruleGuideTitle')}</Text>
           </Group>
           <Text size="sm" c="dimmed">
-            仅匹配请求的 pathname，不包含 query 和 hash。建议在正则中显式使用 <Code>^</Code> 和{' '}
-            <Code>$</Code>。
+            {t('ruleGuidePathRegex')}
           </Text>
           <Text size="sm" c="dimmed">
-            跳转目标支持站内路径或完整的 http/https URL，并支持使用 <Code>$1</Code> 到{' '}
-            <Code>$9</Code> 引用捕获组。
+            {t('ruleGuideRedirectTo')}
           </Text>
           {savingOrder ? (
             <Text size="sm" c="blue">
-              正在保存新的排序顺序...
+              {t('savingOrder')}
             </Text>
           ) : null}
         </Stack>
@@ -380,7 +385,7 @@ export default function RedirectRulesPage() {
       {rules.length === 0 ? (
         <Paper withBorder p="xl" radius="md">
           <Text ta="center" c="dimmed">
-            暂无跳转规则
+            {t('empty')}
           </Text>
         </Paper>
       ) : (
@@ -409,30 +414,30 @@ export default function RedirectRulesPage() {
           setOpened(false)
           resetForm()
         }}
-        title={editingRuleId ? '编辑跳转规则' : '新建跳转规则'}
+        title={editingRuleId ? t('modal.editTitle') : t('modal.createTitle')}
         centered
       >
         <Stack>
           <TextInput
-            label="匹配路径正则"
+            label={t('fields.pathRegex')}
             placeholder="^/old/path/(\\d+)$"
             value={form.pathRegex}
             onChange={(event) => setForm((prev) => ({ ...prev, pathRegex: event.target.value }))}
-            description="匹配对象是 pathname，例如 /old/path/123。"
+            description={t('fields.pathRegexDescription')}
           />
           <TextInput
-            label="跳转目标"
-            placeholder="/posts/$1 或 https://example.com/posts/$1"
+            label={t('fields.redirectTo')}
+            placeholder={t('fields.redirectToPlaceholder')}
             value={form.redirectTo}
             onChange={(event) => setForm((prev) => ({ ...prev, redirectTo: event.target.value }))}
           />
           <Select
-            label="跳转类型"
+            label={t('fields.redirectType')}
             data={[
-              { value: '301', label: '301 永久跳转' },
-              { value: '302', label: '302 临时跳转' },
-              { value: '307', label: '307 临时跳转' },
-              { value: '308', label: '308 永久跳转' },
+              { value: '301', label: t('redirectTypeOptions.301') },
+              { value: '302', label: t('redirectTypeOptions.302') },
+              { value: '307', label: t('redirectTypeOptions.307') },
+              { value: '308', label: t('redirectTypeOptions.308') },
             ]}
             value={form.redirectType}
             onChange={(value) =>
@@ -443,7 +448,7 @@ export default function RedirectRulesPage() {
             }
           />
           <Textarea
-            label="备注"
+            label={t('fields.memo')}
             autosize
             minRows={3}
             value={form.memo}
@@ -457,10 +462,10 @@ export default function RedirectRulesPage() {
                 resetForm()
               }}
             >
-              取消
+              {tCommon('actions.cancel')}
             </Button>
             <Button onClick={handleSubmit} loading={loading}>
-              {editingRuleId ? '保存' : '创建'}
+              {editingRuleId ? tCommon('actions.save') : tCommon('actions.create')}
             </Button>
           </Group>
         </Stack>

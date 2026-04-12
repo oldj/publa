@@ -1,5 +1,6 @@
 import { createToken, setAuthCookie, verifyPassword } from '@/server/auth'
 import { getRequestInfo } from '@/server/lib/request-info'
+import { jsonError, jsonSuccess } from '@/server/lib/api-response'
 import { logActivity } from '@/server/services/activity-logs'
 import { normalizePassword, normalizeUsername } from '@/lib/user-input'
 import { db, dbReady } from '@/server/db'
@@ -7,7 +8,7 @@ import { maybeFirst } from '@/server/db/query'
 import { users } from '@/server/db/schema'
 import { isLoginLocked, recordRateEvent } from '@/server/lib/rate-limit'
 import { eq } from 'drizzle-orm'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,18 +19,24 @@ export async function POST(request: NextRequest) {
     const password = normalizePassword(body?.password)
 
     if (!username || !password) {
-      return NextResponse.json(
-        { success: false, code: 'VALIDATION_ERROR', message: '用户名和密码不能为空' },
-        { status: 400 },
-      )
+      return jsonError({
+        source: request,
+        namespace: 'admin.login.errors',
+        key: 'emptyCredentials',
+        code: 'VALIDATION_ERROR',
+        status: 400,
+      })
     }
 
     // 检查账号是否被锁定
     if (await isLoginLocked(username)) {
-      return NextResponse.json(
-        { success: false, code: 'ACCOUNT_LOCKED', message: '登录失败次数过多，请 5 分钟后再试' },
-        { status: 429 },
-      )
+      return jsonError({
+        source: request,
+        namespace: 'admin.login.errors',
+        key: 'accountLocked',
+        code: 'ACCOUNT_LOCKED',
+        status: 429,
+      })
     }
 
     const { ip } = getRequestInfo(request)
@@ -39,19 +46,25 @@ export async function POST(request: NextRequest) {
     )
     if (!user) {
       await recordRateEvent('login_fail', username, ip)
-      return NextResponse.json(
-        { success: false, code: 'INVALID_CREDENTIALS', message: '用户名或密码错误' },
-        { status: 401 },
-      )
+      return jsonError({
+        source: request,
+        namespace: 'admin.login.errors',
+        key: 'invalidCredentials',
+        code: 'INVALID_CREDENTIALS',
+        status: 401,
+      })
     }
 
     const valid = await verifyPassword(password, user.passwordHash)
     if (!valid) {
       await recordRateEvent('login_fail', username, ip)
-      return NextResponse.json(
-        { success: false, code: 'INVALID_CREDENTIALS', message: '用户名或密码错误' },
-        { status: 401 },
-      )
+      return jsonError({
+        source: request,
+        namespace: 'admin.login.errors',
+        key: 'invalidCredentials',
+        code: 'INVALID_CREDENTIALS',
+        status: 401,
+      })
     }
 
     const token = await createToken({
@@ -64,19 +77,19 @@ export async function POST(request: NextRequest) {
 
     await logActivity(request, user.id, 'login')
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        id: user.id,
-        username: user.username,
-        role: user.role,
-      },
+    return jsonSuccess({
+      id: user.id,
+      username: user.username,
+      role: user.role,
     })
   } catch (error) {
     console.error('[POST /api/auth/login] Internal error:', error)
-    return NextResponse.json(
-      { success: false, code: 'INTERNAL_ERROR', message: 'Internal server error' },
-      { status: 500 },
-    )
+    return jsonError({
+      source: request,
+      namespace: 'common.api',
+      key: 'internalError',
+      code: 'INTERNAL_ERROR',
+      status: 500,
+    })
   }
 }

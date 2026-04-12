@@ -9,6 +9,7 @@ import { IconChevronRight } from '@tabler/icons-react'
 import dayjs from 'dayjs'
 import lodash from 'lodash'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import qs from 'qs'
 import { Suspense } from 'react'
@@ -28,6 +29,7 @@ interface PageProps {
 
 const PostCard = (props: { post: IPost }) => {
   const { post } = props
+  const t = useTranslations('frontend.posts.list')
   const router = useRouter()
   const pubTime = post.pubTime ? dayjs(post.pubTime).format('YYYY-MM-DD') : ''
 
@@ -50,7 +52,7 @@ const PostCard = (props: { post: IPost }) => {
         <div className="post-list-time post-list-info">{pubTime}</div>
         <div className="post-list-summary">{post.html}</div>
         <Link href={post.url} className="post-list-read-more">
-          <span>阅读全文</span>
+          <span>{t('readMore')}</span>
           <span className="post-list-read-more-icon">
             <IconChevronRight size={16} />
           </span>
@@ -89,13 +91,14 @@ const Pager = (props: PageProps) => {
 
 const PostListPage = (props: Props) => {
   const { data } = props
+  const t = useTranslations('frontend.posts.list')
 
   if (!data) {
     return <PageLoading />
   }
 
   if (data.itemCount === 0) {
-    return <div className="post-list-empty">没有记录</div>
+    return <div className="post-list-empty">{t('empty')}</div>
   }
 
   return (

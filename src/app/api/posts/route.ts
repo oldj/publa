@@ -1,5 +1,6 @@
-import { getCurrentUser } from '@/server/auth'
+import { requireCurrentUser } from '@/server/auth'
 import { db } from '@/server/db'
+import { jsonError, jsonSuccess } from '@/server/lib/api-response'
 import { htmlToText, renderMarkdown } from '@/server/lib/markdown'
 import { isUniqueConstraintError, parseIntParam, safeParseJson } from '@/server/lib/request'
 import {
@@ -12,16 +13,17 @@ import {
 import { publishDraft, saveDraft } from '@/server/services/revisions'
 import { parsePostDraftMetadata } from '@/shared/revision-metadata'
 import { logActivity } from '@/server/services/activity-logs'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
+
+function getSlugValidationKey(code: 'REQUIRED' | 'STARTS_WITH_HYPHEN' | 'ENDS_WITH_HYPHEN') {
+  if (code === 'REQUIRED') return 'slugRequired'
+  if (code === 'STARTS_WITH_HYPHEN') return 'slugStartsWithHyphen'
+  return 'slugEndsWithHyphen'
+}
 
 export async function GET(request: NextRequest) {
-  const user = await getCurrentUser()
-  if (!user) {
-    return NextResponse.json(
-      { success: false, code: 'UNAUTHORIZED', message: 'Unauthorized' },
-      { status: 401 },
-    )
-  }
+  const guard = await requireCurrentUser()
+  if (!guard.ok) return guard.response
 
   const { searchParams } = new URL(request.url)
   const page = parseIntParam(searchParams.get('page'), 1, 1)
@@ -36,56 +38,63 @@ export async function GET(request: NextRequest) {
   const search = searchParams.get('search') || undefined
 
   const result = await listPostsAdmin({ page, pageSize, status, categoryId, tagId, search })
-  return NextResponse.json({ success: true, data: result })
+  return jsonSuccess(result)
 }
 
 export async function POST(request: NextRequest) {
-  const user = await getCurrentUser()
-  if (!user) {
-    return NextResponse.json(
-      { success: false, code: 'UNAUTHORIZED', message: 'Unauthorized' },
-      { status: 401 },
-    )
-  }
+  const guard = await requireCurrentUser()
+  if (!guard.ok) return guard.response
 
   const { data: body, error } = await safeParseJson(request)
   if (error) return error
 
   // 创建空草稿（首次自动保存时调用）
   if (body.createEmpty) {
-    const post = await createEmptyPost(user.id)
-    return NextResponse.json({ success: true, data: post })
+    const post = await createEmptyPost(guard.user.id)
+    return jsonSuccess(post)
   }
 
   if (!body.title || !body.slug) {
-    return NextResponse.json(
-      { success: false, code: 'VALIDATION_ERROR', message: '标题和 slug 不能为空' },
-      { status: 400 },
-    )
+    return jsonError({
+      source: request,
+      namespace: 'admin.api.posts',
+      key: 'titleAndSlugRequired',
+      code: 'VALIDATION_ERROR',
+      status: 400,
+    })
   }
 
   // 定时发布必须提供发布时间
   if (body.status === 'scheduled' && !body.publishedAt) {
-    return NextResponse.json(
-      { success: false, code: 'VALIDATION_ERROR', message: '定时发布必须指定发布时间' },
-      { status: 400 },
-    )
+    return jsonError({
+      source: request,
+      namespace: 'admin.api.posts',
+      key: 'publishedAtRequired',
+      code: 'VALIDATION_ERROR',
+      status: 400,
+    })
   }
 
   const slugCheck = validateSlug(body.slug)
   if (!slugCheck.valid) {
-    return NextResponse.json(
-      { success: false, code: 'VALIDATION_ERROR', message: slugCheck.message },
-      { status: 400 },
-    )
+    return jsonError({
+      source: request,
+      namespace: 'admin.api.posts',
+      key: getSlugValidationKey(slugCheck.code),
+      code: 'VALIDATION_ERROR',
+      status: 400,
+    })
   }
 
   const slugOk = await isSlugAvailable(body.slug)
   if (!slugOk) {
-    return NextResponse.json(
-      { success: false, code: 'DUPLICATE_SLUG', message: 'slug 已存在' },
-      { status: 400 },
-    )
+    return jsonError({
+      source: request,
+      namespace: 'admin.api.posts',
+      key: 'duplicateSlug',
+      code: 'DUPLICATE_SLUG',
+      status: 400,
+    })
   }
 
   // 推导并持久化 contentType
@@ -103,7 +112,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const post = await createPost({ ...body, authorId: user.id })
+    const post = await createPost({ ...body, authorId: guard.user.id })
 
     // 首次发布时冻结一份历史版本，与 PUT 链路对齐
     if (body.status === 'published' || body.status === 'scheduled') {
@@ -128,22 +137,25 @@ export async function POST(request: NextRequest) {
               publishedAt: post.publishedAt,
             }),
           },
-          user.id,
+          guard.user.id,
           tx,
         )
-        await publishDraft('post', post.id, user.id, tx)
+        await publishDraft('post', post.id, guard.user.id, tx)
       })
     }
 
-    await logActivity(request, user.id, 'create_post')
+    await logActivity(request, guard.user.id, 'create_post')
 
-    return NextResponse.json({ success: true, data: post })
+    return jsonSuccess(post)
   } catch (err) {
     if (isUniqueConstraintError(err)) {
-      return NextResponse.json(
-        { success: false, code: 'DUPLICATE_SLUG', message: 'slug 已存在' },
-        { status: 400 },
-      )
+      return jsonError({
+        source: request,
+        namespace: 'admin.api.posts',
+        key: 'duplicateSlug',
+        code: 'DUPLICATE_SLUG',
+        status: 400,
+      })
     }
     throw err
   }

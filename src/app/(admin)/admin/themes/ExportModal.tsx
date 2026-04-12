@@ -2,6 +2,7 @@
 
 import { notify } from '@/lib/notify'
 import { Button, Checkbox, Group, Modal, Stack, Text } from '@mantine/core'
+import { useTranslations } from 'next-intl'
 import { useEffect, useMemo, useState } from 'react'
 
 export type ExportKind = 'theme' | 'custom-style'
@@ -18,20 +19,21 @@ interface ExportModalProps {
   items: ExportItem[]
 }
 
-const LABELS: Record<ExportKind, { title: string; api: string; fallback: string; empty: string }> = {
-  theme: {
-    title: '导出主题',
-    api: '/api/themes/export',
-    fallback: 'themes.zip',
-    empty: '暂无可导出的自定义主题',
-  },
-  'custom-style': {
-    title: '导出自定义 CSS',
-    api: '/api/custom-styles/export',
-    fallback: 'custom-styles.zip',
-    empty: '暂无可导出的自定义 CSS',
-  },
-}
+const LABELS: Record<ExportKind, { title: string; api: string; fallback: string; empty: string }> =
+  {
+    theme: {
+      title: 'themeTitle',
+      api: '/api/themes/export',
+      fallback: 'themeFallback',
+      empty: 'themeEmpty',
+    },
+    'custom-style': {
+      title: 'customStyleTitle',
+      api: '/api/custom-styles/export',
+      fallback: 'customStyleFallback',
+      empty: 'customStyleEmpty',
+    },
+  }
 
 /** 从 Content-Disposition 读出 filename* 或 filename，用于 <a download> */
 function parseFilename(header: string | null): string | null {
@@ -56,6 +58,8 @@ function parseFilename(header: string | null): string | null {
 }
 
 export function ExportModal({ opened, onClose, kind, items }: ExportModalProps) {
+  const t = useTranslations('admin.themesPage.exportModal')
+  const tCommon = useTranslations('common')
   const labels = LABELS[kind]
   const [selected, setSelected] = useState<string[]>([])
   const [submitting, setSubmitting] = useState(false)
@@ -82,7 +86,7 @@ export function ExportModal({ opened, onClose, kind, items }: ExportModalProps) 
         body: JSON.stringify({ ids: selected.map((v) => Number(v)) }),
       })
       if (!res.ok) {
-        let message = '导出失败'
+        let message = tCommon('errors.exportFailed')
         try {
           const json = await res.json()
           if (json?.message) message = json.message
@@ -92,7 +96,7 @@ export function ExportModal({ opened, onClose, kind, items }: ExportModalProps) 
         notify({ color: 'red', message })
         return
       }
-      const filename = parseFilename(res.headers.get('Content-Disposition')) || labels.fallback
+      const filename = parseFilename(res.headers.get('Content-Disposition')) || t(labels.fallback)
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
@@ -102,25 +106,25 @@ export function ExportModal({ opened, onClose, kind, items }: ExportModalProps) 
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
-      notify({ color: 'green', message: '已导出' })
+      notify({ color: 'green', message: t('exported') })
       onClose()
     } catch {
-      notify({ color: 'red', message: '网络错误' })
+      notify({ color: 'red', message: tCommon('errors.network') })
     } finally {
       setSubmitting(false)
     }
   }
 
   return (
-    <Modal opened={opened} onClose={onClose} title={labels.title} size="md">
+    <Modal opened={opened} onClose={onClose} title={t(labels.title)} size="md">
       {items.length === 0 ? (
         <Stack>
           <Text c="dimmed" ta="center" py="md">
-            {labels.empty}
+            {t(labels.empty)}
           </Text>
           <Group justify="flex-end">
             <Button variant="default" onClick={onClose}>
-              关闭
+              {tCommon('actions.close')}
             </Button>
           </Group>
         </Stack>
@@ -128,10 +132,10 @@ export function ExportModal({ opened, onClose, kind, items }: ExportModalProps) 
         <Stack>
           <Group justify="space-between">
             <Text size="sm" c="dimmed">
-              勾选要导出的项，生成 .zip 文件
+              {t('description')}
             </Text>
             <Button size="xs" variant="subtle" onClick={toggleAll}>
-              {allSelected ? '取消全选' : '全选'}
+              {allSelected ? t('unselectAll') : t('selectAll')}
             </Button>
           </Group>
           <Checkbox.Group value={selected} onChange={setSelected}>
@@ -143,14 +147,12 @@ export function ExportModal({ opened, onClose, kind, items }: ExportModalProps) 
           </Checkbox.Group>
           <Group justify="flex-end" mt="md">
             <Button variant="default" onClick={onClose} disabled={submitting}>
-              取消
+              {tCommon('actions.cancel')}
             </Button>
-            <Button
-              onClick={handleExport}
-              disabled={selected.length === 0}
-              loading={submitting}
-            >
-              导出{selected.length > 0 ? ` (${selected.length})` : ''}
+            <Button onClick={handleExport} disabled={selected.length === 0} loading={submitting}>
+              {selected.length > 0
+                ? t('exportWithCount', { count: selected.length })
+                : tCommon('actions.export')}
             </Button>
           </Group>
         </Stack>

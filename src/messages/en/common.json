@@ -4,15 +4,76 @@
     "save": "Save",
     "cancel": "Cancel",
     "confirm": "Confirm",
-    "delete": "Delete"
+    "delete": "Delete",
+    "create": "Create",
+    "edit": "Edit",
+    "update": "Update",
+    "reset": "Reset",
+    "upload": "Upload",
+    "export": "Export",
+    "import": "Import",
+    "preview": "Preview",
+    "search": "Search",
+    "close": "Close",
+    "back": "Back",
+    "restore": "Restore",
+    "send": "Send",
+    "apply": "Apply",
+    "new": "New"
   },
   "errors": {
     "network": "Network error",
     "validation": "Validation failed",
-    "unauthorized": "Unauthorized"
+    "unauthorized": "Unauthorized",
+    "forbidden": "Forbidden",
+    "notFound": "Not found",
+    "loadFailed": "Failed to load",
+    "saveFailed": "Save failed",
+    "createFailed": "Create failed",
+    "updateFailed": "Update failed",
+    "deleteFailed": "Delete failed",
+    "operationFailed": "Operation failed",
+    "uploadFailed": "Upload failed",
+    "importFailed": "Import failed",
+    "exportFailed": "Export failed",
+    "sendFailed": "Send failed"
   },
   "save": {
     "success": "Saved",
     "failed": "Save failed"
+  },
+  "modal": {
+    "title": "Notice"
+  },
+  "labels": {
+    "optional": "(optional)",
+    "caseInsensitive": "(case-insensitive)",
+    "none": "None"
+  },
+  "roles": {
+    "owner": "Owner",
+    "admin": "Admin",
+    "editor": "Editor"
+  },
+  "status": {
+    "draft": "Draft",
+    "scheduled": "Scheduled",
+    "published": "Published"
+  },
+  "pageHeader": {
+    "dirty": "Settings have changed and will take effect after saving"
+  },
+  "messages": {
+    "deleteSuccess": "Deleted",
+    "createSuccess": "Created",
+    "updateSuccess": "Updated"
+  },
+  "api": {
+    "invalidJsonBody": "Invalid JSON body",
+    "invalidId": "Invalid ID",
+    "unauthorized": "You are not signed in or your session has expired",
+    "forbidden": "Permission denied",
+    "authenticationUnavailable": "Authentication is temporarily unavailable",
+    "internalError": "Internal server error"
   }
 }

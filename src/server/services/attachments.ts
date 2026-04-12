@@ -6,6 +6,13 @@ import { and, count, desc, eq, isNull, like, ne } from 'drizzle-orm'
 import path from 'path'
 import { getSetting } from './settings'
 
+export type AttachmentDeleteResult =
+  | { success: true }
+  | {
+      success: false
+      code: 'NOT_FOUND' | 'DELETE_REMOTE_FAILED'
+    }
+
 /** 生成上传路径：/uploads/YYYY/MM/DD/filename */
 function buildStorageKey(filename: string): string {
   // 防止路径遍历：只保留文件名部分
@@ -140,8 +147,8 @@ export async function renameAttachment(id: number, newStorageKey: string) {
   const attachment = await maybeFirst(
     db.select().from(attachments).where(eq(attachments.id, id)).limit(1),
   )
-  if (!attachment) throw new Error('附件不存在')
-  if (attachment.deletedAt) throw new Error('附件已删除')
+  if (!attachment) throw new Error('Attachment not found')
+  if (attachment.deletedAt) throw new Error('Attachment has been deleted')
   if (attachment.storageKey === newStorageKey) return attachment
 
   // 检查 DB 中是否存在同 storageKey 的其他未删除记录
@@ -158,20 +165,20 @@ export async function renameAttachment(id: number, newStorageKey: string) {
       )
       .limit(1),
   )
-  if (dbConflict) throw new Error('目标文件名已存在（数据库记录冲突）')
+  if (dbConflict) throw new Error('Target storage key already exists in database')
 
   // 检查远程存储是否已有同名文件
   const storage = await getStorageProvider()
   if (!storage) throw new Error('Storage not configured')
   const remoteExists = await storage.exists(newStorageKey)
-  if (remoteExists) throw new Error('目标文件名在存储服务器上已存在')
+  if (remoteExists) throw new Error('Target storage key already exists in storage')
 
   // 移动远程文件
   try {
     await storage.move(attachment.storageKey, newStorageKey)
   } catch (err: any) {
     const detail = err.Code || err.name || err.message || 'Unknown error'
-    throw new Error(`远程文件移动失败: ${detail}`)
+    throw new Error(`Remote file move failed: ${detail}`)
   }
 
   // 更新数据库
@@ -188,11 +195,11 @@ export async function renameAttachment(id: number, newStorageKey: string) {
 }
 
 /** 删除附件：先删云端文件，成功后硬删本地记录 */
-export async function deleteAttachment(id: number) {
+export async function deleteAttachment(id: number): Promise<AttachmentDeleteResult> {
   const attachment = await maybeFirst(
     db.select().from(attachments).where(eq(attachments.id, id)).limit(1),
   )
-  if (!attachment) return { success: false, message: '附件不存在' }
+  if (!attachment) return { success: false, code: 'NOT_FOUND' }
 
   // 先删除云端文件
   const storage = await getStorageProvider()
@@ -204,8 +211,7 @@ export async function deleteAttachment(id: number) {
       const status = err.$metadata?.httpStatusCode || err.status || err.statusCode
       const isNotFound = status === 404 || err.name === 'NotFound' || err.name === 'NoSuchKey'
       if (!isNotFound) {
-        const detail = err.Code || err.name || err.message || 'Unknown error'
-        return { success: false, message: `云端文件删除失败: ${detail}` }
+        return { success: false, code: 'DELETE_REMOTE_FAILED' }
       }
     }
   }

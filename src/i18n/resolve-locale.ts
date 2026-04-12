@@ -2,6 +2,10 @@ import { getAllSettings } from '@/server/services/settings'
 import { headers } from 'next/headers'
 import { guessLocaleFromAcceptLanguage, isLocale, type Locale } from './locales'
 
+export interface HeadersLike {
+  get(name: string): string | null
+}
+
 /**
  * 服务端 locale 解析的唯一真理源。
  * 解析顺序：
@@ -11,7 +15,18 @@ import { guessLocaleFromAcceptLanguage, isLocale, type Locale } from './locales'
  *   4) 默认 en
  */
 export async function resolveLocale(): Promise<Locale> {
-  const h = await headers()
+  try {
+    return resolveLocaleFromHeaders(await headers())
+  } catch {
+    return resolveLocaleFromHeaders({
+      get() {
+        return null
+      },
+    })
+  }
+}
+
+export async function resolveLocaleFromHeaders(h: HeadersLike): Promise<Locale> {
   const pathname = h.get('x-pathname') ?? ''
   const search = h.get('x-search') ?? ''
 

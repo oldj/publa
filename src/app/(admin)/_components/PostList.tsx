@@ -16,6 +16,7 @@ import { IconCheck, IconEye, IconPencil, IconSearch, IconTrash } from '@tabler/i
 import clsx from 'clsx'
 import dayjs from 'dayjs'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import { useCallback, useEffect, useState } from 'react'
 import { useAdminUrl } from './AdminPathContext'
 import adminStyles from './AdminShell.module.scss'
@@ -45,10 +46,10 @@ interface PostListResult {
   statusCounts: Record<string, number>
 }
 
-const statusMap: Record<string, { label: string; color: string }> = {
-  draft: { label: '草稿', color: 'gray' },
-  scheduled: { label: '定时', color: 'blue' },
-  published: { label: '已发布', color: 'green' },
+const statusColorMap: Record<string, string> = {
+  draft: 'gray',
+  scheduled: 'blue',
+  published: 'green',
 }
 
 export interface PostListProps {
@@ -65,6 +66,8 @@ export function PostList({
   initialTagId = '',
   initialStatus = '',
 }: PostListProps) {
+  const tCommon = useTranslations('common')
+  const t = useTranslations('admin.postList')
   const adminUrl = useAdminUrl()
   const [data, setData] = useState<PostListResult | null>(null)
   const [page, setPage] = useState(1)
@@ -146,20 +149,20 @@ export function PostList({
   }, [fetchPosts])
 
   const handleDelete = async (id: number, title: string) => {
-    if (!(await myModal.confirm({ message: `确定要删除文章「${title}」吗？` }))) return
+    if (!(await myModal.confirm({ message: t('deleteConfirm', { title }) }))) return
 
     const res = await fetch(`/api/posts/${id}`, { method: 'DELETE' })
     const json = await res.json()
 
     if (json.success) {
-      notify({ color: 'green', message: '删除成功' })
+      notify({ color: 'green', message: tCommon('messages.deleteSuccess') })
       if (data && data.items.length <= 1 && page > 1) {
         setPage(page - 1)
       } else {
         fetchPosts()
       }
     } else {
-      notify({ color: 'red', message: json.message || '删除失败' })
+      notify({ color: 'red', message: json.message || tCommon('errors.deleteFailed') })
     }
   }
 
@@ -185,17 +188,17 @@ export function PostList({
               const c = data?.statusCounts ?? { draft: 0, scheduled: 0, published: 0 }
               const total = Object.values(c).reduce((a, b) => a + b, 0)
               return [
-                { value: '', label: `全部 (${total})` },
-                { value: 'draft', label: `草稿 (${c.draft})` },
-                { value: 'scheduled', label: `定时 (${c.scheduled})` },
-                { value: 'published', label: `已发布 (${c.published})` },
+                { value: '', label: t('statusAll', { count: total }) },
+                { value: 'draft', label: t('statusDraft', { count: c.draft }) },
+                { value: 'scheduled', label: t('statusScheduled', { count: c.scheduled }) },
+                { value: 'published', label: t('statusPublished', { count: c.published }) },
               ]
             })()}
           />
         </Group>
         <Group gap="sm">
           <Select
-            placeholder="分类"
+            placeholder={t('categoryPlaceholder')}
             clearable
             data={categoryOptions}
             value={categoryId || null}
@@ -207,7 +210,7 @@ export function PostList({
             style={{ width: 140 }}
           />
           <Select
-            placeholder="标签"
+            placeholder={t('tagPlaceholder')}
             clearable
             data={tagOptions}
             value={tagId || null}
@@ -219,7 +222,7 @@ export function PostList({
             style={{ width: 140 }}
           />
           <TextInput
-            placeholder="搜索标题或 slug..."
+            placeholder={t('searchPlaceholder')}
             rightSectionWidth={56}
             rightSection={
               <Group gap={0} wrap="nowrap">
@@ -228,10 +231,10 @@ export function PostList({
                   variant="transparent"
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={clearSearch}
-                  aria-label="清除搜索"
+                  aria-label={t('clearSearch')}
                   style={{ visibility: searchInput ? 'visible' : 'hidden' }}
                 />
-                <ActionIcon variant="subtle" onClick={commitSearch} aria-label="搜索">
+                <ActionIcon variant="subtle" onClick={commitSearch} aria-label={t('search')}>
                   <IconSearch size={16} />
                 </ActionIcon>
               </Group>
@@ -250,37 +253,43 @@ export function PostList({
         <Table highlightOnHover>
           <Table.Thead>
             <Table.Tr>
-              <Table.Th className={adminStyles.cellFill}>标题</Table.Th>
+              <Table.Th className={adminStyles.cellFill}>{t('columns.title')}</Table.Th>
               <Table.Th className={clsx(adminStyles.cellFit, adminStyles.cellCenter)}>
-                分类
+                {t('columns.category')}
               </Table.Th>
               <Table.Th className={clsx(adminStyles.cellFit, adminStyles.cellCenter)}>
-                状态
+                {t('columns.status')}
               </Table.Th>
               <Table.Th className={clsx(adminStyles.cellFit, adminStyles.cellCenter)}>
-                浏览
+                {t('columns.views')}
               </Table.Th>
               <Table.Th className={clsx(adminStyles.cellFit, adminStyles.cellCenter)}>
-                评论
+                {t('columns.comments')}
               </Table.Th>
               <Table.Th className={clsx(adminStyles.cellFit, adminStyles.cellCenter)}>
-                发布时间
+                {t('columns.publishedAt')}
               </Table.Th>
               <Table.Th className={clsx(adminStyles.cellFit, adminStyles.cellCenter)}>
-                操作
+                {t('columns.actions')}
               </Table.Th>
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
             {data?.items.map((post) => {
-              const st = statusMap[post.status] || { label: post.status, color: 'gray' }
+              const stLabel =
+                post.status === 'draft' ||
+                post.status === 'scheduled' ||
+                post.status === 'published'
+                  ? tCommon(`status.${post.status}`)
+                  : post.status
+              const stColor = statusColorMap[post.status] || 'gray'
               return (
                 <Table.Tr key={post.id}>
                   <Table.Td>
                     <Group gap="xs">
                       {post.pinned && (
                         <NowrapBadge size="xs" color="red">
-                          置顶
+                          {t('pinned')}
                         </NowrapBadge>
                       )}
                       <Link
@@ -294,13 +303,13 @@ export function PostList({
                       >
                         {post.title || (
                           <Text span c="dimmed" inherit>
-                            (无标题)
+                            {t('untitled')}
                           </Text>
                         )}
                       </Link>
                       {post.status === 'published' && post.hasDraft && (
                         <NowrapBadge color="orange" variant="light" size="xs">
-                          已修改
+                          {t('modified')}
                         </NowrapBadge>
                       )}
                     </Group>
@@ -311,8 +320,8 @@ export function PostList({
                     </Text>
                   </Table.Td>
                   <Table.Td className={clsx(adminStyles.cellFit, adminStyles.cellCenter)}>
-                    <NowrapBadge color={st.color} variant="light">
-                      {st.label}
+                    <NowrapBadge color={stColor} variant="light">
+                      {stLabel}
                     </NowrapBadge>
                   </Table.Td>
                   <Table.Td className={clsx(adminStyles.cellFit, adminStyles.cellCenter)}>
@@ -334,7 +343,7 @@ export function PostList({
                         href={getPreviewUrl(post)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        aria-label={`查看文章《${post.title}》`}
+                        aria-label={t('previewAria', { title: post.title })}
                       >
                         <IconEye size={16} />
                       </ActionIcon>
@@ -361,7 +370,7 @@ export function PostList({
               <Table.Tr>
                 <Table.Td colSpan={7}>
                   <Text ta="center" c="dimmed" py="md">
-                    暂无文章
+                    {t('empty')}
                   </Text>
                 </Table.Td>
               </Table.Tr>

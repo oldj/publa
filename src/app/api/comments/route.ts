@@ -1,5 +1,6 @@
 import { COMMENT_MAX_LENGTH } from '@/lib/constants'
 import { getCurrentUser } from '@/server/auth'
+import { jsonError, jsonSuccess } from '@/server/lib/api-response'
 import { verifyCaptcha } from '@/server/lib/captcha'
 import { acquireSubmissionSlot } from '@/server/lib/rate-limit'
 import { safeParseJson } from '@/server/lib/request'
@@ -8,7 +9,7 @@ import { createComment, getCommentContentAccess } from '@/server/services/commen
 import { notifyNewComment } from '@/server/services/notifications'
 import { getFrontendComments } from '@/server/services/posts-frontend'
 import { cookies } from 'next/headers'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 
 /** 获取文章评论 */
 export async function GET(request: NextRequest) {
@@ -16,32 +17,41 @@ export async function GET(request: NextRequest) {
   const slug = searchParams.get('slug')
 
   if (!slug) {
-    return NextResponse.json(
-      { success: false, code: 'VALIDATION_ERROR', message: 'slug is required' },
-      { status: 400 },
-    )
+    return jsonError({
+      source: request,
+      namespace: 'frontend.api.comments',
+      key: 'slugRequired',
+      code: 'VALIDATION_ERROR',
+      status: 400,
+    })
   }
 
   const access = await getCommentContentAccess({ slug })
   if (!access) {
-    return NextResponse.json(
-      { success: false, code: 'NOT_FOUND', message: '文章不存在' },
-      { status: 404 },
-    )
+    return jsonError({
+      source: request,
+      namespace: 'frontend.api.posts',
+      key: 'notFound',
+      code: 'NOT_FOUND',
+      status: 404,
+    })
   }
 
   if (!access.isPublic) {
     const user = await getCurrentUser()
     if (!user) {
-      return NextResponse.json(
-        { success: false, code: 'NOT_FOUND', message: '文章不存在' },
-        { status: 404 },
-      )
+      return jsonError({
+        source: request,
+        namespace: 'frontend.api.posts',
+        key: 'notFound',
+        code: 'NOT_FOUND',
+        status: 404,
+      })
     }
   }
 
   const commentList = await getFrontendComments(access.content.slug!)
-  return NextResponse.json({ success: true, data: commentList })
+  return jsonSuccess(commentList)
 }
 
 /** 提交评论 */
@@ -51,39 +61,48 @@ export async function POST(request: NextRequest) {
   const { contentId, parentId, username, email, url, content, captchaCode } = body
 
   if (!content || !username) {
-    return NextResponse.json(
-      { success: false, code: 'VALIDATION_ERROR', message: '用户名和内容不能为空' },
-      { status: 400 },
-    )
+    return jsonError({
+      source: request,
+      namespace: 'frontend.api.comments',
+      key: 'contentAndUsernameRequired',
+      code: 'VALIDATION_ERROR',
+      status: 400,
+    })
   }
 
   if (content.length > COMMENT_MAX_LENGTH) {
-    return NextResponse.json(
-      {
-        success: false,
-        code: 'CONTENT_TOO_LONG',
-        message: `评论内容不能超过 ${COMMENT_MAX_LENGTH} 字符`,
-      },
-      { status: 400 },
-    )
+    return jsonError({
+      source: request,
+      namespace: 'frontend.commentForm.errors',
+      key: 'contentTooLong',
+      values: { max: COMMENT_MAX_LENGTH },
+      code: 'CONTENT_TOO_LONG',
+      status: 400,
+    })
   }
 
   const access = await getCommentContentAccess({ contentId, slug: body.slug })
   if (!access) {
-    return NextResponse.json(
-      { success: false, code: 'NOT_FOUND', message: '文章不存在' },
-      { status: 404 },
-    )
+    return jsonError({
+      source: request,
+      namespace: 'frontend.api.posts',
+      key: 'notFound',
+      code: 'NOT_FOUND',
+      status: 404,
+    })
   }
 
   let user = null
   if (!access.isPublic) {
     user = await getCurrentUser()
     if (!user) {
-      return NextResponse.json(
-        { success: false, code: 'NOT_FOUND', message: '文章不存在' },
-        { status: 404 },
-      )
+      return jsonError({
+        source: request,
+        namespace: 'frontend.api.posts',
+        key: 'notFound',
+        code: 'NOT_FOUND',
+        status: 404,
+      })
     }
   }
 
@@ -91,20 +110,26 @@ export async function POST(request: NextRequest) {
   const cookieStore = await cookies()
   const sessionId = cookieStore.get('captcha_session')?.value
   if (!sessionId || !captchaCode || !(await verifyCaptcha(sessionId, captchaCode))) {
-    return NextResponse.json(
-      { success: false, code: 'INVALID_CAPTCHA', message: '验证码错误' },
-      { status: 400 },
-    )
+    return jsonError({
+      source: request,
+      namespace: 'frontend.commentForm.errors',
+      key: 'invalidCaptcha',
+      code: 'INVALID_CAPTCHA',
+      status: 400,
+    })
   }
 
   const { ip, ua } = getRequestInfo(request)
 
   // 原子地检查并占位，防止并发穿透
   if (!(await acquireSubmissionSlot('comment', sessionId, ip))) {
-    return NextResponse.json(
-      { success: false, code: 'RATE_LIMITED', message: '提交过于频繁，请 30 秒后再试' },
-      { status: 429 },
-    )
+    return jsonError({
+      source: request,
+      namespace: 'frontend.commentForm.errors',
+      key: 'rateLimited',
+      code: 'RATE_LIMITED',
+      status: 429,
+    })
   }
 
   const result = await createComment({
@@ -120,10 +145,20 @@ export async function POST(request: NextRequest) {
   })
 
   if (!result.success) {
-    return NextResponse.json(
-      { success: false, code: 'OPERATION_FAILED', message: result.message },
-      { status: 400 },
-    )
+    const key =
+      result.code === 'COMMENT_DISABLED'
+        ? 'commentDisabled'
+        : result.code === 'INVALID_PARENT'
+          ? 'invalidParent'
+          : 'nestedReplyNotAllowed'
+
+    return jsonError({
+      source: request,
+      namespace: 'frontend.commentForm.errors',
+      key,
+      code: result.code,
+      status: 400,
+    })
   }
 
   void notifyNewComment({
@@ -132,5 +167,5 @@ export async function POST(request: NextRequest) {
     contentId: access.content.id,
   }).catch(() => {})
 
-  return NextResponse.json({ success: true, data: result.data })
+  return jsonSuccess(result.data)
 }

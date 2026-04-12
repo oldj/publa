@@ -1,4 +1,5 @@
 import { requireCurrentUser } from '@/server/auth'
+import { jsonError, jsonSuccess } from '@/server/lib/api-response'
 import { isUniqueConstraintError, safeParseJson } from '@/server/lib/request'
 import {
   createCategory,
@@ -8,14 +9,14 @@ import {
 } from '@/server/services/categories'
 import { recountCategoriesAndTags } from '@/server/services/post-count'
 import { logActivity } from '@/server/services/activity-logs'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 
 export async function GET() {
   const guard = await requireCurrentUser()
   if (!guard.ok) return guard.response
 
   const rows = await listCategories()
-  return NextResponse.json({ success: true, data: rows })
+  return jsonSuccess(rows)
 }
 
 export async function POST(request: NextRequest) {
@@ -28,20 +29,26 @@ export async function POST(request: NextRequest) {
   // 批量排序
   if (body.action === 'reorder') {
     if (!Array.isArray(body.ids)) {
-      return NextResponse.json(
-        { success: false, code: 'VALIDATION_ERROR', message: '排序数据无效' },
-        { status: 400 },
-      )
+      return jsonError({
+        source: request,
+        namespace: 'admin.api.categories',
+        key: 'invalidReorder',
+        code: 'VALIDATION_ERROR',
+        status: 400,
+      })
     }
 
     try {
       await reorderCategories(body.ids)
-      return NextResponse.json({ success: true })
+      return jsonSuccess()
     } catch {
-      return NextResponse.json(
-        { success: false, code: 'VALIDATION_ERROR', message: '排序数据无效' },
-        { status: 400 },
-      )
+      return jsonError({
+        source: request,
+        namespace: 'admin.api.categories',
+        key: 'invalidReorder',
+        code: 'VALIDATION_ERROR',
+        status: 400,
+      })
     }
   }
 
@@ -49,36 +56,45 @@ export async function POST(request: NextRequest) {
   if (body.action === 'recount') {
     await recountCategoriesAndTags()
     await logActivity(request, guard.user.id, 'recount_categories')
-    return NextResponse.json({ success: true })
+    return jsonSuccess()
   }
 
   const { name, slug } = body
 
   if (!name || !slug) {
-    return NextResponse.json(
-      { success: false, code: 'VALIDATION_ERROR', message: '名称和 slug 不能为空' },
-      { status: 400 },
-    )
+    return jsonError({
+      source: request,
+      namespace: 'admin.api.categories',
+      key: 'nameAndSlugRequired',
+      code: 'VALIDATION_ERROR',
+      status: 400,
+    })
   }
 
   const existing = await getCategoryBySlug(slug)
   if (existing) {
-    return NextResponse.json(
-      { success: false, code: 'DUPLICATE_SLUG', message: 'slug 已存在' },
-      { status: 400 },
-    )
+    return jsonError({
+      source: request,
+      namespace: 'admin.api.categories',
+      key: 'duplicateSlug',
+      code: 'DUPLICATE_SLUG',
+      status: 400,
+    })
   }
 
   try {
     const category = await createCategory(body)
     await logActivity(request, guard.user.id, 'create_category')
-    return NextResponse.json({ success: true, data: category })
+    return jsonSuccess(category)
   } catch (err) {
     if (isUniqueConstraintError(err)) {
-      return NextResponse.json(
-        { success: false, code: 'DUPLICATE_SLUG', message: 'slug 已存在' },
-        { status: 400 },
-      )
+      return jsonError({
+        source: request,
+        namespace: 'admin.api.categories',
+        key: 'duplicateSlug',
+        code: 'DUPLICATE_SLUG',
+        status: 400,
+      })
     }
     throw err
   }

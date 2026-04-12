@@ -28,6 +28,7 @@ import {
 import { useDisclosure } from '@mantine/hooks'
 import { IconEdit, IconHistory, IconPlus, IconTrash } from '@tabler/icons-react'
 import dayjs from 'dayjs'
+import { useTranslations } from 'next-intl'
 import { useCallback, useEffect, useState } from 'react'
 
 interface User {
@@ -47,46 +48,9 @@ interface ActivityLog {
   createdAt: string
 }
 
-const ACTION_LABELS: Record<string, string> = {
-  login: '登录',
-  logout: '登出',
-  create_post: '创建文章',
-  update_post: '更新文章',
-  delete_post: '删除文章',
-  create_page: '创建页面',
-  update_page: '更新页面',
-  delete_page: '删除页面',
-  create_user: '创建用户',
-  update_user: '更新用户',
-  delete_user: '删除用户',
-  create_category: '创建分类',
-  update_category: '更新分类',
-  delete_category: '删除分类',
-  create_tag: '创建标签',
-  update_tag: '更新标签',
-  delete_tag: '删除标签',
-  create_menu: '创建菜单',
-  update_menu: '更新菜单',
-  delete_menu: '删除菜单',
-  moderate_comment: '审核评论',
-  delete_comment: '删除评论',
-  moderate_guestbook: '审核留言',
-  delete_guestbook: '删除留言',
-  upload_attachment: '上传附件',
-  delete_attachment: '删除附件',
-  update_settings: '更新设置',
-  create_redirect: '创建重定向',
-  update_redirect: '更新重定向',
-  delete_redirect: '删除重定向',
-  import_data: '导入数据',
-  export_data: '导出数据',
-  export_themes: '导出主题',
-  import_themes: '导入主题',
-  export_custom_styles: '导出自定义 CSS',
-  import_custom_styles: '导入自定义 CSS',
-}
-
 export default function UsersPage() {
+  const t = useTranslations('admin.usersPage')
+  const tCommon = useTranslations('common')
   const currentUser = useCurrentUser()
   const [userList, setUserList] = useState<User[]>([])
   const [createOpened, { open: openCreate, close: closeCreate }] = useDisclosure(false)
@@ -164,7 +128,7 @@ export default function UsersPage() {
     const password = normalizePassword(form.password)
 
     if (!username || !password) {
-      notify({ color: 'red', message: '用户名和密码不能为空' })
+      notify({ color: 'red', message: t('validation.usernameAndPasswordRequired') })
       return
     }
 
@@ -182,15 +146,15 @@ export default function UsersPage() {
       })
       const json = await res.json()
       if (json.success) {
-        notify({ color: 'green', message: '创建成功' })
+        notify({ color: 'green', message: tCommon('messages.createSuccess') })
         closeCreate()
         setForm({ username: '', email: '', password: '', role: 'editor' })
         fetchUsers()
       } else {
-        notify({ color: 'red', message: json.message || '创建失败' })
+        notify({ color: 'red', message: json.message || t('messages.createFailed') })
       }
     } catch {
-      notify({ color: 'red', message: '网络错误' })
+      notify({ color: 'red', message: tCommon('errors.network') })
     } finally {
       setLoading(false)
     }
@@ -209,12 +173,12 @@ export default function UsersPage() {
     const password = normalizePassword(editForm.password)
 
     if (!username) {
-      notify({ color: 'red', message: '用户名不能为空' })
+      notify({ color: 'red', message: t('validation.usernameRequired') })
       return
     }
 
     if (editForm.password && !password) {
-      notify({ color: 'red', message: '密码不能为空' })
+      notify({ color: 'red', message: t('validation.passwordRequired') })
       return
     }
 
@@ -234,29 +198,29 @@ export default function UsersPage() {
       })
       const json = await res.json()
       if (json.success) {
-        notify({ color: 'green', message: '更新成功' })
+        notify({ color: 'green', message: tCommon('messages.updateSuccess') })
         setEditOpened(false)
         fetchUsers()
       } else {
-        notify({ color: 'red', message: json.message || '更新失败' })
+        notify({ color: 'red', message: json.message || t('messages.updateFailed') })
       }
     } catch {
-      notify({ color: 'red', message: '网络错误' })
+      notify({ color: 'red', message: tCommon('errors.network') })
     } finally {
       setLoading(false)
     }
   }
 
   const handleDelete = async (id: number, username: string) => {
-    if (!(await myModal.confirm({ message: `确定要删除用户「${username}」吗？` }))) return
+    if (!(await myModal.confirm({ message: t('deleteConfirm', { username }) }))) return
     const res = await fetch(`/api/users/${id}`, { method: 'DELETE' })
     const json = await res.json()
     if (json.success) {
-      notify({ color: 'green', message: '删除成功' })
+      notify({ color: 'green', message: tCommon('messages.deleteSuccess') })
       fetchUsers()
       if (editUser?.id === id) setEditOpened(false)
     } else {
-      notify({ color: 'red', message: json.message || '删除失败' })
+      notify({ color: 'red', message: json.message || t('messages.deleteFailed') })
     }
   }
 
@@ -264,10 +228,10 @@ export default function UsersPage() {
   const roleOptions =
     currentUser?.role === 'owner'
       ? [
-          { value: 'admin', label: '管理员' },
-          { value: 'editor', label: '编辑' },
+          { value: 'admin', label: t('roleOptions.admin') },
+          { value: 'editor', label: t('roleOptions.editor') },
         ]
-      : [{ value: 'editor', label: '编辑' }]
+      : [{ value: 'editor', label: t('roleOptions.editor') }]
 
   if (!currentUser) {
     return null
@@ -276,10 +240,10 @@ export default function UsersPage() {
   return (
     <Box mt="md">
       <Group justify="space-between" mb="lg">
-        <Title order={3}>用户管理</Title>
+        <Title order={3}>{t('title')}</Title>
         {!isEditor && (
           <Button leftSection={<IconPlus size={16} />} onClick={openCreate}>
-            新建用户
+            {t('newUser')}
           </Button>
         )}
       </Group>
@@ -288,11 +252,11 @@ export default function UsersPage() {
         <Table highlightOnHover>
           <Table.Thead>
             <Table.Tr>
-              <Table.Th>用户名</Table.Th>
-              <Table.Th>邮箱</Table.Th>
-              <Table.Th>角色</Table.Th>
-              <Table.Th>最后活跃</Table.Th>
-              <Table.Th>操作</Table.Th>
+              <Table.Th>{t('columns.username')}</Table.Th>
+              <Table.Th>{t('columns.email')}</Table.Th>
+              <Table.Th>{t('columns.role')}</Table.Th>
+              <Table.Th>{t('columns.lastActive')}</Table.Th>
+              <Table.Th>{t('columns.actions')}</Table.Th>
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
@@ -354,28 +318,28 @@ export default function UsersPage() {
       </Table.ScrollContainer>
 
       {/* 新建用户 Modal */}
-      <Modal opened={createOpened} onClose={closeCreate} title="新建用户">
+      <Modal opened={createOpened} onClose={closeCreate} title={t('createTitle')}>
         <TextInput
-          label="用户名"
+          label={t('fields.username')}
           required
           value={form.username}
           onChange={(e) => setForm({ ...form, username: e.target.value })}
         />
         <TextInput
-          label="邮箱"
+          label={t('fields.email')}
           mt="sm"
           value={form.email}
           onChange={(e) => setForm({ ...form, email: e.target.value })}
         />
         <PasswordInput
-          label="密码"
+          label={t('fields.password')}
           required
           mt="sm"
           value={form.password}
           onChange={(e) => setForm({ ...form, password: e.target.value })}
         />
         <Select
-          label="角色"
+          label={t('fields.role')}
           mt="sm"
           data={roleOptions}
           value={form.role}
@@ -383,10 +347,10 @@ export default function UsersPage() {
         />
         <Group justify="flex-end" mt="lg">
           <Button variant="default" onClick={closeCreate}>
-            取消
+            {tCommon('actions.cancel')}
           </Button>
           <Button onClick={handleCreate} loading={loading}>
-            创建
+            {tCommon('actions.create')}
           </Button>
         </Group>
       </Modal>
@@ -395,7 +359,7 @@ export default function UsersPage() {
       <Drawer
         opened={editOpened}
         onClose={() => setEditOpened(false)}
-        title="编辑用户"
+        title={t('editTitle')}
         position="right"
         size="md"
       >
@@ -404,36 +368,36 @@ export default function UsersPage() {
             <Group gap="xs">
               <RoleLabel role={editUser.role} />
               <Text size="xs" c="dimmed">
-                创建于 {dayjs(editUser.createdAt).format('YYYY-MM-DD HH:mm')}
+                {t('createdAt', { time: dayjs(editUser.createdAt).format('YYYY-MM-DD HH:mm') })}
               </Text>
             </Group>
 
             <Divider />
 
             <TextInput
-              label="用户名"
+              label={t('fields.username')}
               required
               value={editForm.username}
               onChange={(e) => setEditForm({ ...editForm, username: e.target.value })}
             />
             <TextInput
-              label="邮箱"
+              label={t('fields.email')}
               value={editForm.email}
               onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
             />
             <PasswordInput
-              label="密码"
-              description="留空则不修改"
+              label={t('fields.password')}
+              description={t('passwordOptionalDescription')}
               value={editForm.password}
               onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
             />
             {currentUser?.role === 'owner' && editUser.id !== currentUser.id && (
               <Select
-                label="角色"
+                label={t('fields.role')}
                 data={[
-                  { value: 'owner', label: '站长' },
-                  { value: 'admin', label: '管理员' },
-                  { value: 'editor', label: '编辑' },
+                  { value: 'owner', label: t('roleOptions.owner') },
+                  { value: 'admin', label: t('roleOptions.admin') },
+                  { value: 'editor', label: t('roleOptions.editor') },
                 ]}
                 value={editForm.role}
                 onChange={(v) => setEditForm({ ...editForm, role: v || editForm.role })}
@@ -442,7 +406,7 @@ export default function UsersPage() {
 
             <Group mt="md">
               <Button onClick={handleUpdate} loading={loading}>
-                保存
+                {tCommon('actions.save')}
               </Button>
               {canDelete(editUser) && (
                 <Button
@@ -450,7 +414,7 @@ export default function UsersPage() {
                   color="red"
                   onClick={() => handleDelete(editUser.id, editUser.username)}
                 >
-                  删除用户
+                  {t('deleteUser')}
                 </Button>
               )}
             </Group>
@@ -462,22 +426,22 @@ export default function UsersPage() {
       <Drawer
         opened={logsOpened}
         onClose={() => setLogsOpened(false)}
-        title={`活动日志 — ${logsUser?.username || ''}`}
+        title={t('activityTitle', { username: logsUser?.username || '' })}
         position="right"
         size="lg"
       >
         {logs.length === 0 ? (
           <Text c="dimmed" ta="center" py="xl">
-            暂无活动记录
+            {t('emptyLogs')}
           </Text>
         ) : (
           <Stack gap="md">
             <Table highlightOnHover>
               <Table.Thead>
                 <Table.Tr>
-                  <Table.Th>操作</Table.Th>
-                  <Table.Th>IP</Table.Th>
-                  <Table.Th>时间</Table.Th>
+                  <Table.Th>{t('activityColumns.action')}</Table.Th>
+                  <Table.Th>{t('activityColumns.ip')}</Table.Th>
+                  <Table.Th>{t('activityColumns.time')}</Table.Th>
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
@@ -485,7 +449,9 @@ export default function UsersPage() {
                   <Table.Tr key={log.id}>
                     <Table.Td>
                       <NowrapBadge variant="light" size="sm">
-                        {ACTION_LABELS[log.action] || log.action}
+                        {t.has(`activityLabels.${log.action}` as any)
+                          ? t(`activityLabels.${log.action}` as any)
+                          : log.action}
                       </NowrapBadge>
                     </Table.Td>
                     <Table.Td>

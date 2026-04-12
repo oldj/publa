@@ -18,6 +18,7 @@ import {
   Title,
 } from '@mantine/core'
 import { IconDownload, IconEye, IconUpload } from '@tabler/icons-react'
+import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { useAdminCounts, useCurrentUser } from '../../_components/AdminCountsContext'
@@ -34,11 +35,6 @@ interface BlockImportState {
   file: ImportFile | null
   importing: boolean
   results: string[]
-}
-
-const typeLabel: Record<string, string> = {
-  content: '内容数据',
-  settings: '设置数据',
 }
 
 interface DataBlockProps {
@@ -62,26 +58,31 @@ function DataBlock({
   onSelectFile,
   onImport,
 }: DataBlockProps) {
+  const t = useTranslations('admin.importExportPage')
+  const tCommon = useTranslations('common')
+
   return (
     <Paper withBorder p="md">
       <Text fw={500} mb="sm">
         {title}
       </Text>
       <Text size="sm" c="dimmed" mb={extraNote ? 'xs' : 'md'}>
-        包含：{description}
+        {t('containsPrefix')}
+        {description}
       </Text>
       {extraNote && (
         <Text size="sm" c="orange" mb="md">
-          注意：{extraNote}
+          {t('notePrefix')}
+          {extraNote}
         </Text>
       )}
 
       <Group>
         <Button leftSection={<IconDownload size={16} />} onClick={onExport}>
-          导出
+          {tCommon('actions.export')}
         </Button>
         <Button variant="light" leftSection={<IconUpload size={16} />} onClick={onSelectFile}>
-          导入
+          {tCommon('actions.import')}
         </Button>
       </Group>
 
@@ -89,16 +90,16 @@ function DataBlock({
         <div style={{ marginTop: 16 }}>
           <Divider mb="sm" />
           <Group gap="sm" mb="md">
-            <Text size="sm">已选择：{state.file.name}</Text>
-            <Badge variant="light">{typeLabel[state.file.type]}</Badge>
+            <Text size="sm">{t('selectedFile', { name: state.file.name })}</Text>
+            <Badge variant="light">{t(`typeLabels.${state.file.type}` as never)}</Badge>
           </Group>
           <Group>
             <Button onClick={() => onImport('overwrite')} loading={state.importing} color="orange">
-              覆盖导入
+              {t('buttons.overwriteImport')}
             </Button>
             {type === 'content' && (
-              <Button disabled title="合并导入功能即将推出">
-                合并导入
+              <Button disabled title={t('mergeImportComingSoon')}>
+                {t('buttons.mergeImport')}
               </Button>
             )}
           </Group>
@@ -109,7 +110,7 @@ function DataBlock({
         <div style={{ marginTop: 16 }}>
           <Divider mb="sm" />
           <Text size="sm" fw={500} mb="xs">
-            导入结果：
+            {t('resultTitle')}
           </Text>
           <List size="sm">
             {state.results.map((r, i) => (
@@ -123,6 +124,8 @@ function DataBlock({
 }
 
 export default function ImportExportPage() {
+  const t = useTranslations('admin.importExportPage')
+  const tCommon = useTranslations('common')
   const router = useRouter()
   const adminUrl = useAdminUrl()
   const currentUser = useCurrentUser()
@@ -154,10 +157,7 @@ export default function ImportExportPage() {
   }
 
   const handleExport = async (type: 'content' | 'settings') => {
-    const message =
-      type === 'content'
-        ? '将导出文章、页面、分类、标签、评论、留言、附件、历史记录等内容数据，确定导出吗？'
-        : '将导出用户、菜单、系统设置、跳转规则、主题、自定义样式等设置数据。\n注意：密码、存储密钥等敏感信息不会被导出。'
+    const message = type === 'content' ? t('confirm.exportContent') : t('confirm.exportSettings')
     const confirmed = await myModal.confirm({ message })
     if (!confirmed) return
     window.open(`/api/import-export?type=${type}`, '_blank')
@@ -176,14 +176,16 @@ export default function ImportExportPage() {
         const data = JSON.parse(text)
 
         if (!data?.meta?.type || !['content', 'settings'].includes(data.meta.type)) {
-          notify({ color: 'red', message: '无法识别的文件格式' })
+          notify({ color: 'red', message: t('messages.invalidFileFormat') })
           return
         }
 
         if (data.meta.type !== expectedType) {
           notify({
             color: 'red',
-            message: `该文件包含的是${typeLabel[data.meta.type as DataType]}，请在对应区域导入`,
+            message: t('messages.wrongFileType', {
+              type: t(`typeLabels.${data.meta.type as DataType}` as never),
+            }),
           })
           return
         }
@@ -193,7 +195,7 @@ export default function ImportExportPage() {
           results: [],
         })
       } catch {
-        notify({ color: 'red', message: '文件解析失败，请检查 JSON 格式' })
+        notify({ color: 'red', message: t('messages.parseFailed') })
       }
     }
     input.click()
@@ -203,10 +205,10 @@ export default function ImportExportPage() {
     const file = importStates[type].file
     if (!file) return
 
-    const typeText = typeLabel[type]
+    const typeText = t(`typeLabels.${type}` as never)
     if (mode === 'overwrite') {
       const confirmed = await myModal.confirm({
-        message: `覆盖导入将清空现有${typeText}后重新导入，确定继续吗？`,
+        message: t('confirm.overwriteImport', { type: typeText }),
       })
       if (!confirmed) return
     }
@@ -224,14 +226,14 @@ export default function ImportExportPage() {
       if (json.success) {
         updateImportState(type, { importing: false, results: json.data.results })
         await refreshCounts()
-        notify({ color: 'green', message: '导入完成' })
+        notify({ color: 'green', message: t('messages.importComplete') })
       } else {
         updateImportState(type, { importing: false })
-        notify({ color: 'red', message: json.message || '导入失败' })
+        notify({ color: 'red', message: json.message || tCommon('errors.importFailed') })
       }
     } catch {
       updateImportState(type, { importing: false })
-      notify({ color: 'red', message: '导入失败' })
+      notify({ color: 'red', message: tCommon('errors.importFailed') })
     }
   }
 
@@ -260,7 +262,7 @@ export default function ImportExportPage() {
   return (
     <Box mt="md">
       <Group justify="space-between" mb="lg">
-        <Title order={3}>导入导出</Title>
+        <Title order={3}>{t('title')}</Title>
         <Group gap="xs">
           <Button
             variant="subtle"
@@ -268,7 +270,7 @@ export default function ImportExportPage() {
             leftSection={<IconEye size={14} />}
             onClick={showFormat}
           >
-            查看数据格式
+            {t('buttons.viewFormat')}
           </Button>
           <Button
             variant="subtle"
@@ -276,7 +278,7 @@ export default function ImportExportPage() {
             leftSection={<IconDownload size={14} />}
             onClick={downloadFormat}
           >
-            下载文档
+            {t('buttons.downloadDoc')}
           </Button>
         </Group>
       </Group>
@@ -285,8 +287,8 @@ export default function ImportExportPage() {
         {/* 内容数据 */}
         <DataBlock
           type="content"
-          title="内容数据"
-          description="文章、页面、分类、标签、评论、留言、附件、历史记录"
+          title={t('blocks.content.title')}
+          description={t('blocks.content.description')}
           state={importStates.content}
           onExport={() => handleExport('content')}
           onSelectFile={() => handleSelectFile('content')}
@@ -296,9 +298,9 @@ export default function ImportExportPage() {
         {/* 设置数据 */}
         <DataBlock
           type="settings"
-          title="设置数据"
-          description="用户、菜单、系统设置、跳转规则、主题、自定义样式"
-          extraNote="密码、存储密钥等敏感信息不会被导出"
+          title={t('blocks.settings.title')}
+          description={t('blocks.settings.description')}
+          extraNote={t('blocks.settings.extraNote')}
           state={importStates.settings}
           onExport={() => handleExport('settings')}
           onSelectFile={() => handleSelectFile('settings')}
@@ -310,7 +312,7 @@ export default function ImportExportPage() {
       <Drawer
         opened={formatOpened}
         onClose={() => setFormatOpened(false)}
-        title="数据格式说明"
+        title={t('drawerTitle')}
         position="right"
         size="xl"
       >

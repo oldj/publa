@@ -92,7 +92,7 @@ export async function createComment(input: CommentInput) {
   const showCommentsGlobally = toBool(await getSetting('showCommentsGlobally'))
   const enableComment = toBool(await getSetting('enableComment'))
   if (!showCommentsGlobally || !enableComment) {
-    return { success: false, message: '该内容不允许评论' }
+    return { success: false as const, code: 'COMMENT_DISABLED' as const }
   }
 
   // 检查内容是否存在、类型为 post、且允许评论
@@ -104,7 +104,7 @@ export async function createComment(input: CommentInput) {
       .limit(1),
   )
   if (!content || !content.allowComment || !content.showComments || content.deletedAt) {
-    return { success: false, message: '该内容不允许评论' }
+    return { success: false as const, code: 'COMMENT_DISABLED' as const }
   }
 
   // 校验父评论有效性（评论最多嵌套一层，不允许回复子评论）
@@ -117,10 +117,10 @@ export async function createComment(input: CommentInput) {
         .limit(1),
     )
     if (!parent || parent.contentId !== input.contentId) {
-      return { success: false, message: '父评论无效' }
+      return { success: false as const, code: 'INVALID_PARENT' as const }
     }
     if (parent.parentId) {
-      return { success: false, message: '不允许回复子评论' }
+      return { success: false as const, code: 'NESTED_REPLY_NOT_ALLOWED' as const }
     }
   }
 
@@ -145,7 +145,7 @@ export async function createComment(input: CommentInput) {
       .returning(),
   )
 
-  return { success: true, data: row }
+  return { success: true as const, data: row }
 }
 
 /** 获取内容的已审核评论 */

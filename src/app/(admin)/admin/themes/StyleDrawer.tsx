@@ -2,6 +2,7 @@
 
 import { notify } from '@/lib/notify'
 import { Button, Drawer, Group, Stack, Textarea, TextInput } from '@mantine/core'
+import { useTranslations } from 'next-intl'
 import { useEffect, useState } from 'react'
 
 export type StyleKind = 'theme' | 'custom-style'
@@ -21,11 +22,13 @@ interface StyleDrawerProps {
 }
 
 const KIND_LABEL: Record<StyleKind, { title: string; apiBase: string }> = {
-  theme: { title: '主题', apiBase: '/api/themes' },
-  'custom-style': { title: '自定义 CSS', apiBase: '/api/custom-styles' },
+  theme: { title: 'themeTitle', apiBase: '/api/themes' },
+  'custom-style': { title: 'customStyleTitle', apiBase: '/api/custom-styles' },
 }
 
 export function StyleDrawer({ opened, onClose, kind, initial, onSaved }: StyleDrawerProps) {
+  const t = useTranslations('admin.themesPage.styleDrawer')
+  const tCommon = useTranslations('common')
   const [currentId, setCurrentId] = useState<number | null>(null)
   const [name, setName] = useState('')
   const [css, setCss] = useState('')
@@ -41,11 +44,11 @@ export function StyleDrawer({ opened, onClose, kind, initial, onSaved }: StyleDr
 
   const { title, apiBase } = KIND_LABEL[kind]
   const isEditing = currentId !== null
-  const drawerTitle = `${isEditing ? '编辑' : '新建'}${title}`
+  const drawerTitle = `${isEditing ? t('editPrefix') : t('createPrefix')}${t(title)}`
 
   const handleSubmit = async () => {
     if (!name.trim()) {
-      notify({ color: 'red', message: '名称不能为空' })
+      notify({ color: 'red', message: tCommon('errors.validation') })
       return
     }
 
@@ -60,41 +63,42 @@ export function StyleDrawer({ opened, onClose, kind, initial, onSaved }: StyleDr
       })
       const json = await res.json()
       if (json.success) {
-        notify({ color: 'green', message: isEditing ? '更新成功' : '创建成功' })
+        notify({
+          color: 'green',
+          message: isEditing
+            ? tCommon('messages.updateSuccess')
+            : tCommon('messages.createSuccess'),
+        })
         // 新建成功后记住返回的 id，后续保存自动转为编辑模式，避免重复创建
         if (!isEditing && typeof json.data?.id === 'number') {
           setCurrentId(json.data.id)
         }
         onSaved()
       } else {
-        notify({ color: 'red', message: json.message || '保存失败' })
+        notify({ color: 'red', message: json.message || tCommon('errors.saveFailed') })
       }
     } catch {
-      notify({ color: 'red', message: '网络错误' })
+      notify({ color: 'red', message: tCommon('errors.network') })
     } finally {
       setSaving(false)
     }
   }
 
   return (
-    <Drawer
-      opened={opened}
-      onClose={onClose}
-      position="right"
-      size="lg"
-      title={drawerTitle}
-    >
+    <Drawer opened={opened} onClose={onClose} position="right" size="lg" title={drawerTitle}>
       <Stack gap="md">
         <TextInput
-          label="名称"
-          placeholder={kind === 'theme' ? '主题名称' : '自定义 CSS 名称'}
+          label={t('name')}
+          placeholder={
+            kind === 'theme' ? t('themeNamePlaceholder') : t('customStyleNamePlaceholder')
+          }
           required
           value={name}
           onChange={(e) => setName(e.currentTarget.value)}
         />
         <Textarea
           label="CSS"
-          placeholder="/* 输入 CSS 内容 */"
+          placeholder={t('cssPlaceholder')}
           value={css}
           onChange={(e) => setCss(e.currentTarget.value)}
           minRows={20}
@@ -111,10 +115,10 @@ export function StyleDrawer({ opened, onClose, kind, initial, onSaved }: StyleDr
         />
         <Group justify="flex-end">
           <Button variant="default" onClick={onClose}>
-            取消
+            {tCommon('actions.cancel')}
           </Button>
           <Button onClick={handleSubmit} loading={saving}>
-            {isEditing ? '保存' : '创建'}
+            {isEditing ? tCommon('actions.save') : tCommon('actions.create')}
           </Button>
         </Group>
       </Stack>

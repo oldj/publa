@@ -21,6 +21,7 @@ import {
 } from '@mantine/core'
 import { IconCheck, IconMail, IconTrash } from '@tabler/icons-react'
 import dayjs from 'dayjs'
+import { useTranslations } from 'next-intl'
 import { useCallback, useEffect, useState } from 'react'
 
 interface GuestbookItem {
@@ -44,12 +45,9 @@ interface GuestbookDetail {
   createdAt: string
 }
 
-const statusMap: Record<string, { label: string; color: string }> = {
-  unread: { label: '未读', color: 'orange' },
-  read: { label: '已读', color: 'gray' },
-}
-
 export default function GuestbookAdminPage() {
+  const t = useTranslations('admin.guestbookPage')
+  const tCommon = useTranslations('common')
   const { refreshCounts } = useAdminCounts()
   const [data, setData] = useState<{
     items: GuestbookItem[]
@@ -60,6 +58,10 @@ export default function GuestbookAdminPage() {
   const [status, setStatus] = useState<string | null>(null)
   const [detail, setDetail] = useState<GuestbookDetail | null>(null)
   const [drawerOpened, setDrawerOpened] = useState(false)
+  const statusMap: Record<string, { label: string; color: string }> = {
+    unread: { label: t('statuses.unread'), color: 'orange' },
+    read: { label: t('statuses.read'), color: 'gray' },
+  }
 
   const fetchData = useCallback(async () => {
     const params = new URLSearchParams({ page: String(page), pageSize: '50' })
@@ -99,7 +101,11 @@ export default function GuestbookAdminPage() {
     if (json.success) {
       const newStatus = currentStatus === 'unread' ? 'read' : 'unread'
       if (!silent) {
-        notify({ color: 'green', message: newStatus === 'read' ? '已标记为已读' : '已标记为未读' })
+        notify({
+          color: 'green',
+          message:
+            newStatus === 'read' ? t('messages.markReadSuccess') : t('messages.markUnreadSuccess'),
+        })
       }
       fetchData()
       refreshCounts()
@@ -117,18 +123,18 @@ export default function GuestbookAdminPage() {
     })
     const json = await res.json()
     if (json.success) {
-      notify({ color: 'green', message: '全部标记为已读' })
+      notify({ color: 'green', message: t('messages.markAllReadSuccess') })
       fetchData()
       refreshCounts()
     }
   }
 
   const handleDelete = async (id: number) => {
-    if (!(await myModal.confirm({ message: '确定要删除此留言吗？' }))) return
+    if (!(await myModal.confirm({ message: t('deleteConfirm') }))) return
     const res = await fetch(`/api/admin/guestbook?id=${id}`, { method: 'DELETE' })
     const json = await res.json()
     if (json.success) {
-      notify({ color: 'green', message: '删除成功' })
+      notify({ color: 'green', message: tCommon('messages.deleteSuccess') })
       if (data && data.items.length <= 1 && page > 1) {
         setPage(page - 1)
       } else {
@@ -137,24 +143,24 @@ export default function GuestbookAdminPage() {
       refreshCounts()
       if (detail?.id === id) setDrawerOpened(false)
     } else {
-      notify({ color: 'red', message: json.message || '删除失败' })
+      notify({ color: 'red', message: json.message || tCommon('errors.deleteFailed') })
     }
   }
 
   return (
     <Box mt="md">
       <Group justify="space-between" mb="lg">
-        <Title order={3}>留言管理</Title>
+        <Title order={3}>{t('title')}</Title>
         <Group gap="sm">
           <Button variant="light" size="xs" onClick={handleMarkAllRead}>
-            全部已读
+            {t('markAllRead')}
           </Button>
           <Select
-            placeholder="全部状态"
+            placeholder={t('statusPlaceholder')}
             clearable
             data={[
-              { value: 'unread', label: '未读' },
-              { value: 'read', label: '已读' },
+              { value: 'unread', label: t('statuses.unread') },
+              { value: 'read', label: t('statuses.read') },
             ]}
             value={status}
             onChange={(v) => {
@@ -170,11 +176,11 @@ export default function GuestbookAdminPage() {
         <Table highlightOnHover>
           <Table.Thead>
             <Table.Tr>
-              <Table.Th>作者</Table.Th>
-              <Table.Th>内容</Table.Th>
-              <Table.Th>状态</Table.Th>
-              <Table.Th>时间</Table.Th>
-              <Table.Th>操作</Table.Th>
+              <Table.Th>{t('columns.author')}</Table.Th>
+              <Table.Th>{t('columns.content')}</Table.Th>
+              <Table.Th>{t('columns.status')}</Table.Th>
+              <Table.Th>{t('columns.time')}</Table.Th>
+              <Table.Th>{t('columns.actions')}</Table.Th>
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
@@ -215,11 +221,19 @@ export default function GuestbookAdminPage() {
                         variant="subtle"
                         color={msg.status === 'unread' ? 'green' : 'orange'}
                         onClick={() => handleToggleRead(msg.id, msg.status)}
-                        title={msg.status === 'unread' ? '标记为已读' : '标记为未读'}
+                        title={
+                          msg.status === 'unread' ? t('actions.markRead') : t('actions.markUnread')
+                        }
+                        aria-label={t('aria.toggleRead')}
                       >
                         {msg.status === 'unread' ? <IconCheck size={16} /> : <IconMail size={16} />}
                       </ActionIcon>
-                      <ActionIcon variant="subtle" color="red" onClick={() => handleDelete(msg.id)}>
+                      <ActionIcon
+                        variant="subtle"
+                        color="red"
+                        onClick={() => handleDelete(msg.id)}
+                        aria-label={t('aria.delete')}
+                      >
                         <IconTrash size={16} />
                       </ActionIcon>
                     </Group>
@@ -231,7 +245,7 @@ export default function GuestbookAdminPage() {
               <Table.Tr>
                 <Table.Td colSpan={5}>
                   <Text ta="center" c="dimmed" py="md">
-                    暂无留言
+                    {t('empty')}
                   </Text>
                 </Table.Td>
               </Table.Tr>
@@ -244,7 +258,7 @@ export default function GuestbookAdminPage() {
         <Group justify="center" mt="md" gap="md">
           {data.itemCount > 0 && (
             <Text size="sm" c="dimmed">
-              共 {data.itemCount} 条
+              {t('count', { count: data.itemCount })}
             </Text>
           )}
           {data.pageCount > 1 && (
@@ -257,7 +271,7 @@ export default function GuestbookAdminPage() {
       <Drawer
         opened={drawerOpened}
         onClose={() => setDrawerOpened(false)}
-        title="留言详情"
+        title={t('detailTitle')}
         position="right"
         size="lg"
       >
@@ -284,25 +298,25 @@ export default function GuestbookAdminPage() {
             <Stack gap={4}>
               {detail.authorEmail && (
                 <Text size="xs" c="dimmed">
-                  邮箱：{detail.authorEmail}
+                  {t('fields.email')}：{detail.authorEmail}
                 </Text>
               )}
               {detail.authorWebsite && (
                 <Text size="xs" c="dimmed">
-                  网站：{detail.authorWebsite}
+                  {t('fields.website')}：{detail.authorWebsite}
                 </Text>
               )}
               <Text size="xs" c="dimmed">
-                时间：{dayjs(detail.createdAt).format('YYYY-MM-DD HH:mm:ss')}
+                {t('fields.time')}：{dayjs(detail.createdAt).format('YYYY-MM-DD HH:mm:ss')}
               </Text>
               {detail.ipAddress && (
                 <Text size="xs" c="dimmed">
-                  IP：{detail.ipAddress}
+                  {t('fields.ip')}：{detail.ipAddress}
                 </Text>
               )}
               {detail.userAgent && (
                 <Text size="xs" c="dimmed" lineClamp={2}>
-                  UA：{detail.userAgent}
+                  {t('fields.userAgent')}：{detail.userAgent}
                 </Text>
               )}
             </Stack>
@@ -320,7 +334,7 @@ export default function GuestbookAdminPage() {
                 }
                 onClick={() => handleToggleRead(detail.id, detail.status)}
               >
-                {detail.status === 'unread' ? '标记已读' : '标记未读'}
+                {detail.status === 'unread' ? t('actions.markRead') : t('actions.markUnread')}
               </Button>
               <Button
                 variant="light"
@@ -329,7 +343,7 @@ export default function GuestbookAdminPage() {
                 leftSection={<IconTrash size={16} />}
                 onClick={() => handleDelete(detail.id)}
               >
-                删除
+                {t('actions.delete')}
               </Button>
             </Group>
           </Stack>

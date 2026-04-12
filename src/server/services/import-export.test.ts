@@ -96,20 +96,26 @@ async function seedSettingsData() {
 
 describe('validateImportData', () => {
   it('缺少 meta 信息', () => {
-    expect(validateImportData({})).toEqual({ valid: false, message: '缺少 meta 信息' })
-    expect(validateImportData({ meta: {} })).toEqual({ valid: false, message: '缺少 meta 信息' })
+    expect(validateImportData({})).toEqual({ valid: false, code: 'META_REQUIRED' })
+    expect(validateImportData({ meta: {} })).toEqual({ valid: false, code: 'META_REQUIRED' })
   })
 
   it('不支持的版本', () => {
     const result = validateImportData({ meta: { type: 'content', version: '1.0' } })
-    expect(result.valid).toBe(false)
-    expect(result.message).toContain('1.0')
+    expect(result).toEqual({
+      valid: false,
+      code: 'UNSUPPORTED_VERSION',
+      values: { version: '1.0' },
+    })
   })
 
   it('未知的数据类型', () => {
     const result = validateImportData({ meta: { type: 'unknown', version: '2.0' } })
-    expect(result.valid).toBe(false)
-    expect(result.message).toContain('unknown')
+    expect(result).toEqual({
+      valid: false,
+      code: 'UNKNOWN_TYPE',
+      values: { type: 'unknown' },
+    })
   })
 
   it('内容数据缺少必要字段', () => {
@@ -119,8 +125,11 @@ describe('validateImportData', () => {
       tags: [],
       // 缺少 contents
     })
-    expect(result.valid).toBe(false)
-    expect(result.message).toContain('contents')
+    expect(result).toEqual({
+      valid: false,
+      code: 'MISSING_FIELD',
+      values: { field: 'contents' },
+    })
   })
 
   it('内容数据校验通过', () => {
@@ -138,8 +147,11 @@ describe('validateImportData', () => {
       meta: { type: 'settings', version: '2.0' },
       // 缺少 settings
     })
-    expect(result.valid).toBe(false)
-    expect(result.message).toContain('settings')
+    expect(result).toEqual({
+      valid: false,
+      code: 'MISSING_FIELD',
+      values: { field: 'settings' },
+    })
   })
 
   it('设置数据校验通过', () => {
@@ -373,10 +385,10 @@ describe('importContentData', () => {
       1,
     )
 
-    expect(results).toContain('分类: 1 条')
-    expect(results).toContain('标签: 1 条')
+    expect(results).toContainEqual({ key: 'contentCategories', values: { count: 1 } })
+    expect(results).toContainEqual({ key: 'contentTags', values: { count: 1 } })
     // 空数组不出现在结果中
-    expect(results.find((r) => r.includes('内容'))).toBeUndefined()
+    expect(results.find((r) => r.key === 'contentItems')).toBeUndefined()
   })
 
   it('导出后再导入数据一致', async () => {
@@ -1240,11 +1252,16 @@ describe('importSettingsData', () => {
       1,
     )
 
-    expect(results.find((r) => r.startsWith('设置: 1 条'))).toContain('默认补齐')
-    expect(results).toContain('菜单: 1 条')
-    expect(results).toContain('跳转规则: 1 条')
-    expect(results.find((r) => r.includes('用户'))).toContain('新建 1 个')
-    expect(results.find((r) => r.includes('用户'))).toContain('更新 1 个')
+    expect(results).toContainEqual({
+      key: 'settingsItems',
+      values: { count: 1, defaultedCount: expect.any(Number) },
+    })
+    expect(results).toContainEqual({ key: 'settingsMenus', values: { count: 1 } })
+    expect(results).toContainEqual({ key: 'settingsRedirectRules', values: { count: 1 } })
+    expect(results).toContainEqual({
+      key: 'settingsUsers',
+      values: { createdCount: 1, updatedCount: 1 },
+    })
   })
 
   it('导入覆盖 themes 与 customStyles，并补齐内置主题', async () => {

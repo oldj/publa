@@ -127,14 +127,14 @@ describe('renameAttachment', () => {
 
   it('附件不存在时抛出错误', async () => {
     await expect(renameAttachment(99999, '/uploads/2026/03/31/new.png')).rejects.toThrow(
-      '附件不存在',
+      'Attachment not found',
     )
   })
 
   it('已删除的附件不能重命名', async () => {
     const att = await insertAttachment({ deletedAt: new Date().toISOString() })
     await expect(renameAttachment(att.id, '/uploads/2026/03/31/new.png')).rejects.toThrow(
-      '附件已删除',
+      'Attachment has been deleted',
     )
   })
 
@@ -154,7 +154,7 @@ describe('renameAttachment', () => {
     })
 
     await expect(renameAttachment(att.id, '/uploads/2026/03/31/target.png')).rejects.toThrow(
-      '数据库记录冲突',
+      'Target storage key already exists in database',
     )
   })
 
@@ -170,11 +170,7 @@ describe('renameAttachment', () => {
 
     // 验证数据库已更新
     const dbRow = await maybeFirst(
-      testDb
-        .select()
-        .from(schema.attachments)
-        .where(eq(schema.attachments.id, att.id))
-        .limit(1),
+      testDb.select().from(schema.attachments).where(eq(schema.attachments.id, att.id)).limit(1),
     )
     expect(dbRow!.storageKey).toBe(newKey)
     expect(dbRow!.filename).toBe('renamed.png')
@@ -187,6 +183,9 @@ describe('deleteAttachment', () => {
   it('附件不存在时返回失败', async () => {
     const result = await deleteAttachment(99999)
     expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.code).toBe('NOT_FOUND')
+    }
   })
 
   it('正常删除：先删云端再硬删本地记录', async () => {
@@ -198,11 +197,7 @@ describe('deleteAttachment', () => {
 
     // 验证数据库记录已被硬删
     const dbRow = await maybeFirst(
-      testDb
-        .select()
-        .from(schema.attachments)
-        .where(eq(schema.attachments.id, att.id))
-        .limit(1),
+      testDb.select().from(schema.attachments).where(eq(schema.attachments.id, att.id)).limit(1),
     )
     expect(dbRow).toBeNull()
   })
@@ -214,15 +209,13 @@ describe('deleteAttachment', () => {
     const result = await deleteAttachment(att.id)
 
     expect(result.success).toBe(false)
-    expect(result.message).toContain('云端文件删除失败')
+    if (!result.success) {
+      expect(result.code).toBe('DELETE_REMOTE_FAILED')
+    }
 
     // 验证数据库记录仍然存在
     const dbRow = await maybeFirst(
-      testDb
-        .select()
-        .from(schema.attachments)
-        .where(eq(schema.attachments.id, att.id))
-        .limit(1),
+      testDb.select().from(schema.attachments).where(eq(schema.attachments.id, att.id)).limit(1),
     )
     expect(dbRow).toBeDefined()
     expect(dbRow!.deletedAt).toBeNull()
@@ -240,11 +233,7 @@ describe('deleteAttachment', () => {
     expect(result.success).toBe(true)
 
     const dbRow = await maybeFirst(
-      testDb
-        .select()
-        .from(schema.attachments)
-        .where(eq(schema.attachments.id, att.id))
-        .limit(1),
+      testDb.select().from(schema.attachments).where(eq(schema.attachments.id, att.id)).limit(1),
     )
     expect(dbRow).toBeNull()
   })

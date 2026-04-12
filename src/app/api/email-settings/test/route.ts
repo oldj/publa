@@ -1,8 +1,10 @@
 import { requireRole } from '@/server/auth'
+import { jsonError, jsonSuccess } from '@/server/lib/api-response'
 import { safeParseJson } from '@/server/lib/request'
 import { createEmailLog } from '@/server/services/email-logs'
 import { sendEmail } from '@/server/services/email-sender'
-import { NextRequest, NextResponse } from 'next/server'
+import { getServerTranslator } from '@/i18n/server'
+import { NextRequest } from 'next/server'
 
 export async function POST(request: NextRequest) {
   const guard = await requireRole(['owner', 'admin'])
@@ -13,25 +15,32 @@ export async function POST(request: NextRequest) {
 
   const to = typeof body.to === 'string' ? body.to.trim() : ''
   if (!to) {
-    return NextResponse.json(
-      { success: false, code: 'VALIDATION_ERROR', message: '请填写收件人邮箱' },
-      { status: 400 },
-    )
+    return jsonError({
+      source: request,
+      namespace: 'admin.api.email',
+      key: 'recipientRequired',
+      code: 'VALIDATION_ERROR',
+      status: 400,
+    })
   }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
-    return NextResponse.json(
-      { success: false, code: 'VALIDATION_ERROR', message: '邮箱格式不正确' },
-      { status: 400 },
-    )
+    return jsonError({
+      source: request,
+      namespace: 'admin.api.email',
+      key: 'invalidRecipient',
+      code: 'VALIDATION_ERROR',
+      status: 400,
+    })
   }
 
-  const subject = '测试邮件 - Publa'
+  const { t } = await getServerTranslator('admin.api.email', { source: request })
+  const subject = t('testSubject')
   const html = `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"></head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
-  <h2 style="color: #1a1a1a;">邮件配置测试</h2>
-  <p>如果你收到了这封邮件，说明邮件发送配置正确。</p>
+  <h2 style="color: #1a1a1a;">${t('testHeading')}</h2>
+  <p>${t('testBody')}</p>
 </body>
 </html>`
 
@@ -46,11 +55,14 @@ export async function POST(request: NextRequest) {
   })
 
   if (!result.success) {
-    return NextResponse.json(
-      { success: false, code: 'SEND_FAILED', message: result.error || '发送失败' },
-      { status: 500 },
-    )
+    return jsonError({
+      source: request,
+      namespace: 'admin.api.email',
+      key: 'sendFailed',
+      code: 'SEND_FAILED',
+      status: 500,
+    })
   }
 
-  return NextResponse.json({ success: true })
+  return jsonSuccess()
 }

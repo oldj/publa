@@ -179,7 +179,7 @@ const EXPLICIT_DEFAULT_SETTINGS = defineExplicitDefaultSettings({
   rssLimit: 20,
   enableGuestbook: true,
   enableSearch: true,
-  guestbookWelcome: '欢迎给我留言！',
+  guestbookWelcome: '',
   footerCopyright: '{SITE_NAME} &copy; {FULL_YEAR}',
   customAfterPostHtml: '',
   customHeadHtml: '',
@@ -375,33 +375,48 @@ export function deserializeSettingValue(_key: string, raw: string): SettingValue
 export class SettingsValidationError extends Error {
   invalidKeys: string[]
   invalidValueKeys: string[]
+  reason: 'INVALID_OBJECT' | 'INVALID_KEYS' | 'INVALID_VALUES' | 'INVALID_PAYLOAD'
 
   constructor({
     invalidKeys = [],
     invalidValueKeys = [],
     message,
+    reason,
   }: {
     invalidKeys?: string[]
     invalidValueKeys?: string[]
     message?: string
+    reason?: SettingsValidationError['reason']
   }) {
-    super(message ?? SettingsValidationError.buildMessage(invalidKeys, invalidValueKeys))
+    const computedReason =
+      reason ??
+      (invalidKeys.length > 0 && invalidValueKeys.length > 0
+        ? 'INVALID_PAYLOAD'
+        : invalidKeys.length > 0
+          ? 'INVALID_KEYS'
+          : invalidValueKeys.length > 0
+            ? 'INVALID_VALUES'
+            : 'INVALID_PAYLOAD')
+
+    super(message ?? SettingsValidationError.buildMessage(computedReason))
     this.name = 'SettingsValidationError'
     this.invalidKeys = invalidKeys
     this.invalidValueKeys = invalidValueKeys
+    this.reason = computedReason
   }
 
-  private static buildMessage(invalidKeys: string[], invalidValueKeys: string[]) {
-    const messages: string[] = []
-
-    if (invalidKeys.length > 0) {
-      messages.push(`不支持修改以下设置项：${invalidKeys.join(', ')}`)
+  private static buildMessage(reason: SettingsValidationError['reason']) {
+    switch (reason) {
+      case 'INVALID_OBJECT':
+        return 'Settings payload must be an object'
+      case 'INVALID_KEYS':
+        return 'Unsupported settings keys'
+      case 'INVALID_VALUES':
+        return 'Invalid settings values'
+      case 'INVALID_PAYLOAD':
+      default:
+        return 'Invalid settings payload'
     }
-    if (invalidValueKeys.length > 0) {
-      messages.push(`以下设置项的值类型不合法：${invalidValueKeys.join(', ')}`)
-    }
-
-    return messages.join('；') || '设置数据不合法'
   }
 }
 
@@ -420,7 +435,7 @@ export function normalizeSettingsPayload(
   allowedKeys?: readonly string[],
 ): Record<string, SettingValue> {
   if (!input || typeof input !== 'object' || Array.isArray(input)) {
-    throw new SettingsValidationError({ message: '设置数据必须是对象' })
+    throw new SettingsValidationError({ reason: 'INVALID_OBJECT' })
   }
 
   const invalidKeys: string[] = []
