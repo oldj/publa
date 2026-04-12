@@ -24,7 +24,7 @@ describe('seed', () => {
     expect(map.language).toBe('"en"')
     expect(map.siteSlogan).toBe('"Yet Another Amazing Blog"')
     expect(map.enableComment).toBe('true')
-    expect(map.guestbookWelcome).toBe('"欢迎给我留言！"')
+    expect(map.guestbookWelcome).toBe('""')
     expect(map.emailSmtpEncryption).toBe('"tls"')
     expect(map.emailNotifyNewComment).toBe('{"enabled":false,"userIds":[]}')
     expect(map.activeThemeId).toBe(String(lightTheme?.id))

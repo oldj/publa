@@ -157,8 +157,12 @@ describe('/api/attachments/config', () => {
 
   it('存储配置中的对象值会被拒绝', async () => {
     mockNormalizeSettingsPayload.mockImplementationOnce(() => {
-      const error = new Error('以下设置项的值类型不合法：attachmentBaseUrl')
-      error.name = 'SettingsValidationError'
+      const error = Object.assign(new Error('Invalid settings values'), {
+        name: 'SettingsValidationError',
+        invalidKeys: [],
+        invalidValueKeys: ['attachmentBaseUrl'],
+        reason: 'INVALID_VALUES' as const,
+      })
       throw error
     })
 

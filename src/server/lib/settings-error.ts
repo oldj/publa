@@ -55,14 +55,7 @@ export async function jsonSettingsValidationError(
   return jsonError({
     source,
     namespace: 'admin.api.settings',
-    key:
-      reason === 'INVALID_OBJECT'
-        ? 'invalidObject'
-        : reason === 'INVALID_VALUES'
-          ? 'invalidValueKeys'
-          : reason === 'INVALID_KEYS'
-            ? 'unsupportedKeys'
-            : 'invalidPayload',
+    key: reason === 'INVALID_OBJECT' ? 'invalidObject' : 'invalidPayload',
     code: 'VALIDATION_ERROR',
     status: 400,
   })

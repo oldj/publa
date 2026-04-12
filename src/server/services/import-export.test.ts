@@ -1062,7 +1062,7 @@ describe('importSettingsData', () => {
     expect(map.enableComment).toBe('true')
     expect(map.showCommentsGlobally).toBe('true')
     expect(map.rssLimit).toBe('20')
-    expect(map.guestbookWelcome).toBe('"欢迎给我留言！"')
+    expect(map.guestbookWelcome).toBe('""')
     expect(map.emailSmtpEncryption).toBe('"tls"')
     expect(map.emailNotifyNewComment).toBe('{"enabled":false,"userIds":[]}')
     expect(map.activeCustomStyleIds).toBe('[]')
