@@ -25,6 +25,7 @@ export function LanguageSelect({ value, label }: LanguageSelectProps) {
       const params = new URLSearchParams(searchParams?.toString() ?? '')
       params.set('lang', next)
       router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+      router.refresh()
     },
     [router, pathname, searchParams, value],
   )

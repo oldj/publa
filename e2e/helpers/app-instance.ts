@@ -39,6 +39,8 @@ export interface TestAppInstance {
 interface CreateAppInstanceOptions {
   credentials?: Partial<OwnerCredentials>
   startupTimeoutMs?: number
+  /** 跳过初始化（不调用 /api/setup），用于测试 setup 页面本身 */
+  skipInit?: boolean
 }
 
 interface StorageState {
@@ -293,7 +295,20 @@ export async function createAppInstance(
       options.startupTimeoutMs ?? DEFAULT_STARTUP_TIMEOUT_MS,
       logFile,
     )
-    apiContext = await initializeOwner(baseURL, credentials, storageStatePath)
+    if (options.skipInit) {
+      // 写一份空的 storage state，保证字段合法
+      fs.writeFileSync(
+        storageStatePath,
+        `${JSON.stringify({ cookies: [], origins: [] }, null, 2)}\n`,
+        'utf8',
+      )
+      apiContext = await request.newContext({
+        baseURL,
+        extraHTTPHeaders: { Accept: 'application/json' },
+      })
+    } else {
+      apiContext = await initializeOwner(baseURL, credentials, storageStatePath)
+    }
 
     return {
       baseURL,
