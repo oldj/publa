@@ -18,7 +18,7 @@ npm run dev
 DATABASE_URL=libsql://your_db_name-your_org_name.turso.io
 DATABASE_AUTH_TOKEN=your_token
 
-# PostgreSQL
+# PostgreSQL（postgres:// 和 postgresql:// 均可）
 DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/publa
 ```
 
@@ -30,7 +30,7 @@ DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/publa
 
 | 变量 | 必填 | 默认值 | 说明 |
 |------|------|--------|------|
-| `DATABASE_URL` | 否 | `file:{cwd}/data/publa.db` | 数据库连接字符串。SQLite 本地部署可省略；Turso 或 PostgreSQL 必填。数据库类型从 URL 前缀自动识别（`postgres://` → PostgreSQL，其余 → SQLite） |
+| `DATABASE_URL` | 否 | `file:{cwd}/data/publa.db` | 数据库连接字符串。SQLite 本地部署可省略；Turso 或 PostgreSQL 必填。数据库类型从 URL 前缀自动识别（`postgres://` 或 `postgresql://` → PostgreSQL，其余 → SQLite） |
 | `DATABASE_AUTH_TOKEN` | 否 | - | Turso 数据库认证 Token，仅 Turso 需要 |
 | `JWT_SECRET` | 视情况 | - | JWT 签名密钥。生成方式：`openssl rand -base64 32`。详见下方说明 |
 | `CRON_SECRET` | 视情况 | - | 保护定时任务 API 的密钥。自托管部署不需要（使用进程内调度）；Vercel 部署必填 |
@@ -101,7 +101,7 @@ Vercel 部署需要使用 Turso 或外部 PostgreSQL 作为数据库（不支持
 
 | 变量 | 必填 | 说明 |
 |------|------|------|
-| `DATABASE_URL` | 是 | Turso 连接 URL（`libsql://...`）或 PostgreSQL 连接字符串 |
+| `DATABASE_URL` | 是 | Turso 连接 URL（`libsql://...`）或 PostgreSQL 连接字符串（`postgres://` / `postgresql://`） |
 | `DATABASE_AUTH_TOKEN` | Turso 必填 | Turso 数据库认证 Token |
 | `JWT_SECRET` | 是 | JWT 签名密钥，`openssl rand -base64 32` 生成 |
 | `CRON_SECRET` | 是 | 保护定时任务接口，防止未授权访问 |
