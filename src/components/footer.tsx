@@ -7,6 +7,7 @@
 
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
+import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { ICategory, ITag } from 'typings'
 
@@ -20,23 +21,12 @@ interface IProps {
 export default function footer(props: IProps) {
   let { categories, tags, footerCopyright, enableSearch } = props
   const t = useTranslations('frontend.footer')
+  const router = useRouter()
   const [kw, setKw] = useState('')
 
   const onSearch = () => {
-    const hostname = window.location.hostname
-    // 提取根域名：去掉 www 等子域名前缀，保留主域名部分
-    const parts = hostname.split('.')
-    const rootDomain =
-      parts.length > 2
-        ? parts
-            .slice(-2)
-            .join('.')
-            .match(/\.(com|net|org|edu|gov|co)\.\w+$/)
-          ? parts.slice(-3).join('.')
-          : parts.slice(-2).join('.')
-        : hostname
-    const q = `site:${rootDomain} ${kw}`
-    window.open(`https://www.google.com/search?q=${encodeURIComponent(q)}`)
+    if (!kw.trim()) return
+    router.push(`/search?q=${encodeURIComponent(kw.trim())}`)
   }
 
   return (

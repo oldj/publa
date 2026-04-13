@@ -5,30 +5,31 @@
 /* --- CSS 自定义属性 --- */
 :root {
   /* 主色 */
-  --color-primary: #dbe4f0;
+  --color-primary: hsl(209, 77%, 77%);
 
   /* 文字 */
-  --color-text: #e5edf5;
-  --color-text-hover: #f8fafc;
-  --color-text-secondary: #b6c2d2;
-  --color-text-tertiary: #7f8da3;
-  --color-text-error: #f87171;
-  --color-text-warn: #fbbf24;
-  --color-text-reverse: #0b1220;
+  --color-text: rgba(255, 255, 255, 0.8);
+  --color-text-hover: rgba(255, 255, 255, 0.95);
+  --color-text-secondary: rgba(255, 255, 255, 0.6);
+  --color-text-tertiary: rgba(255, 255, 255, 0.4);
+  --color-text-error: hsl(0, 95%, 75%);
+  --color-text-warn: hsl(49, 80%, 60%);
+  --color-text-reverse: #202223;
 
   /* 链接 */
-  --color-link: #93c5fd;
-  --color-link-hover: #7dd3fc;
+  --color-link: hsl(209, 77%, 77%);
+  --color-link-hover: hsl(209, 77%, 68%);
 
   /* 边框 */
-  --color-border: #233044;
-  --color-border-weak: #314158;
-  --color-border-light: #3d4d64;
+  --color-border: rgba(255, 255, 255, 0.12);
+  --color-border-weak: rgba(255, 255, 255, 0.18);
+  --color-border-light: rgba(255, 255, 255, 0.25);
 
   /* 背景 */
-  --bg-paper: #111827;
-  --bg-gray: #0b1220;
-  --bg-reverse: #e5edf5;
+  --bg-paper: #202223;
+  --bg-body: #181a1b;
+  --bg-gray: #2c2f31;
+  --bg-reverse: #e0e0e0;
 
   /* 圆角 */
   --radius-sm: 1px;
@@ -36,9 +37,9 @@
   --radius-lg: 4px;
 
   /* 阴影 */
-  --shadow-base: 0 0 0 1px rgb(61 77 100 / 0.28), 0 8px 24px 0 rgb(2 6 23 / 0.35);
-  --shadow-layout: 0 16px 40px 0 rgb(2 6 23 / 0.45);
-  --shadow-layout-reverse: 0 -16px 40px 0 rgb(2 6 23 / 0.35);
+  --shadow-base: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 8px 24px 0 rgba(0, 0, 0, 0.4);
+  --shadow-layout: 0 16px 40px 0 rgba(0, 0, 0, 0.5);
+  --shadow-layout-reverse: 0 -16px 40px 0 rgba(0, 0, 0, 0.4);
 
   /* 动画 */
   --anim-duration: 300ms;
@@ -63,12 +64,13 @@ body {
   font-size: 14px;
   line-height: 1.5em;
   color: var(--color-text);
+  caret-color: var(--color-text);
 
   --mantine-font-family: var(--fm);
 }
 
 body[data-role="body"] {
-  background: var(--bg-gray);
+  background: var(--bg-body);
 }
 
 main {
@@ -127,7 +129,7 @@ area {
   transition-duration: 300ms;
 
   &:focus-visible {
-    box-shadow: 0 0 0 2px rgb(125 211 252 / 0.32);
+    box-shadow: 0 0 0 2px rgba(25, 113, 194, 0.4);
     border-radius: 2px;
   }
 }
@@ -171,6 +173,9 @@ textarea {
     color: var(--color-text-tertiary);
     opacity: 0.5;
   }
+
+  color: var(--color-text);
+  background: var(--bg-paper);
 }
 
 textarea {
@@ -203,7 +208,7 @@ button {
   }
 
   &:focus-visible {
-    box-shadow: 0 0 0 2px rgb(125 211 252 / 0.36);
+    box-shadow: 0 0 0 2px rgba(25, 113, 194, 0.5);
     border-radius: 2px;
   }
 }
@@ -465,7 +470,7 @@ figure figcaption:empty {
   background: var(--bg-paper);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  box-shadow: 0 12px 28px rgb(2 6 23 / 0.45);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5);
   z-index: 100;
 }
 
@@ -616,6 +621,45 @@ figure figcaption:empty {
 }
 
 .post-list-empty {
+  font-style: italic;
+  color: var(--color-text-tertiary);
+}
+
+/* 搜索页 */
+.search-page {
+  margin-bottom: 40px;
+}
+
+.search-form {
+  display: flex;
+  align-items: center;
+  margin-bottom: 30px;
+  max-width: 480px;
+}
+
+.search-form input,
+.search-form button {
+  height: 36px;
+}
+
+.search-form input {
+  border-radius: var(--radius-md) 0 0 var(--radius-md);
+  padding: 0 12px;
+  border-right: none;
+  flex: 1;
+}
+
+.search-form button {
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  border: none;
+  background: var(--color-primary);
+  color: var(--color-text-reverse);
+  padding: 0 16px;
+  cursor: pointer;
+}
+
+.search-prompt,
+.search-empty {
   font-style: italic;
   color: var(--color-text-tertiary);
 }
@@ -1385,8 +1429,8 @@ figure figcaption:empty {
 
 .lizhi-ad a.lizhi-ad-container:hover {
   box-shadow:
-    0 18px 30px -12px rgb(2 6 23 / 0.55),
-    0 10px 18px -14px rgb(2 6 23 / 0.45) !important;
+    0 18px 30px -12px rgba(0, 0, 0, 0.4),
+    0 10px 18px -14px rgba(0, 0, 0, 0.3) !important;
   border-color: var(--color-link-hover);
   background-color: var(--bg-gray);
 }
@@ -1479,15 +1523,15 @@ figure figcaption:empty {
   transition: var(--anim-duration);
   transform: translateX(calc(100% + 80px));
   border-radius: 0;
-  box-shadow: 0 8px 24px rgb(2 6 23 / 0.28);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
 .back-to-top:hover {
   border-color: var(--color-link-hover);
   color: var(--color-link-hover);
   box-shadow:
-    0 18px 32px -18px rgb(2 6 23 / 0.6),
-    0 10px 16px -14px rgb(2 6 23 / 0.45);
+    0 18px 32px -18px rgba(0, 0, 0, 0.4),
+    0 10px 16px -14px rgba(0, 0, 0, 0.3);
 }
 
 /* --- 预览提示 --- */
@@ -1829,4 +1873,138 @@ figure figcaption:empty {
   .post-comment-children {
     margin: 10px 0 0 20px;
   }
+}
+
+pre code.hljs {
+  display: block;
+  overflow-x: auto;
+  padding: 1em
+}
+code.hljs {
+  padding: 3px 5px
+}
+
+/*!
+  Theme: GitHub Dark Dimmed
+  Description: Dark dimmed theme as seen on github.com
+  Author: github.com
+  Maintainer: @Hirse
+  Updated: 2021-05-15
+
+  Colors taken from GitHub's CSS
+*/
+
+.hljs {
+  color: #adbac7;
+  background: #22272e;
+}
+
+.hljs-doctag,
+.hljs-keyword,
+.hljs-meta .hljs-keyword,
+.hljs-template-tag,
+.hljs-template-variable,
+.hljs-type,
+.hljs-variable.language_ {
+  /* prettylights-syntax-keyword */
+  color: #f47067;
+}
+
+.hljs-title,
+.hljs-title.class_,
+.hljs-title.class_.inherited__,
+.hljs-title.function_ {
+  /* prettylights-syntax-entity */
+  color: #dcbdfb;
+}
+
+.hljs-attr,
+.hljs-attribute,
+.hljs-literal,
+.hljs-meta,
+.hljs-number,
+.hljs-operator,
+.hljs-variable,
+.hljs-selector-attr,
+.hljs-selector-class,
+.hljs-selector-id {
+  /* prettylights-syntax-constant */
+  color: #6cb6ff;
+}
+
+.hljs-regexp,
+.hljs-string,
+.hljs-meta .hljs-string {
+  /* prettylights-syntax-string */
+  color: #96d0ff;
+}
+
+.hljs-built_in,
+.hljs-symbol {
+  /* prettylights-syntax-variable */
+  color: #f69d50;
+}
+
+.hljs-comment,
+.hljs-code,
+.hljs-formula {
+  /* prettylights-syntax-comment */
+  color: #768390;
+}
+
+.hljs-name,
+.hljs-quote,
+.hljs-selector-tag,
+.hljs-selector-pseudo {
+  /* prettylights-syntax-entity-tag */
+  color: #8ddb8c;
+}
+
+.hljs-subst {
+  /* prettylights-syntax-storage-modifier-import */
+  color: #adbac7;
+}
+
+.hljs-section {
+  /* prettylights-syntax-markup-heading */
+  color: #316dca;
+  font-weight: bold;
+}
+
+.hljs-bullet {
+  /* prettylights-syntax-markup-list */
+  color: #eac55f;
+}
+
+.hljs-emphasis {
+  /* prettylights-syntax-markup-italic */
+  color: #adbac7;
+  font-style: italic;
+}
+
+.hljs-strong {
+  /* prettylights-syntax-markup-bold */
+  color: #adbac7;
+  font-weight: bold;
+}
+
+.hljs-addition {
+  /* prettylights-syntax-markup-inserted */
+  color: #b4f1b4;
+  background-color: #1b4721;
+}
+
+.hljs-deletion {
+  /* prettylights-syntax-markup-deleted */
+  color: #ffd8d3;
+  background-color: #78191b;
+}
+
+.hljs-char.escape_,
+.hljs-link,
+.hljs-params,
+.hljs-property,
+.hljs-punctuation,
+.hljs-tag {
+  /* purposely ignored */
 }
