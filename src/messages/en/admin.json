@@ -1075,6 +1075,8 @@
       "addRowBefore": "Insert row above",
       "addRowAfter": "Insert row below",
       "deleteRow": "Delete row",
+      "mergeCells": "Merge cells",
+      "splitCell": "Split cell",
       "deleteTable": "Delete table"
     },
     "linkPopover": {

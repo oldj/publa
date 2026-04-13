@@ -9,6 +9,7 @@ import {
   IconRowRemove,
   IconTableOff,
 } from '@tabler/icons-react'
+import { TableCellsMerge, TableCellsSplit } from 'lucide-react'
 import type { Editor } from '@tiptap/react'
 
 interface TableToolbarProps {
@@ -18,6 +19,8 @@ interface TableToolbarProps {
 
 export default function TableToolbar({ editor, tableToolbar }: TableToolbarProps) {
   const t = useTranslations('admin.editor.tableToolbar')
+  const canMerge = editor.can().mergeCells()
+  const canSplit = editor.can().splitCell()
   return (
     <div
       style={{
@@ -93,6 +96,31 @@ export default function TableToolbar({ editor, tableToolbar }: TableToolbarProps
             onClick={() => editor.chain().focus().deleteRow().run()}
           >
             <IconRowRemove size={16} />
+          </Button>
+        </Tooltip>
+
+        <div style={{ width: 1, height: 16, background: 'var(--mantine-color-gray-3)' }} />
+
+        <Tooltip label={t('mergeCells')} position="top" withArrow>
+          <Button
+            size="compact-xs"
+            variant="subtle"
+            color="gray"
+            disabled={!canMerge}
+            onClick={() => editor.chain().focus().mergeCells().run()}
+          >
+            <TableCellsMerge size={16} />
+          </Button>
+        </Tooltip>
+        <Tooltip label={t('splitCell')} position="top" withArrow>
+          <Button
+            size="compact-xs"
+            variant="subtle"
+            color="gray"
+            disabled={!canSplit}
+            onClick={() => editor.chain().focus().splitCell().run()}
+          >
+            <TableCellsSplit size={16} />
           </Button>
         </Tooltip>
 

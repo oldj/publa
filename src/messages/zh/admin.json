@@ -1075,6 +1075,8 @@
       "addRowBefore": "上方插入行",
       "addRowAfter": "下方插入行",
       "deleteRow": "删除行",
+      "mergeCells": "合并单元格",
+      "splitCell": "拆分单元格",
       "deleteTable": "删除表格"
     },
     "linkPopover": {
