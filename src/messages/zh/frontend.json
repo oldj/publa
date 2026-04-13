@@ -27,7 +27,7 @@
     "refreshAlt": "点击刷新"
   },
   "previewNotice": {
-    "message": "预览模式 - 当前页面仅管理员或编辑可见"
+    "message": "预览模式 - 当前内容仅管理员或编辑可见"
   },
   "toc": {
     "title": "目录"
