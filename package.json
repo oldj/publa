@@ -25,7 +25,7 @@
     "check:i18n-runtime": "node scripts/check-i18n-runtime.mjs",
     "check:error-leaks": "node scripts/check-api-message-leaks.mjs",
     "check:ci-guard": "npm run check:i18n-runtime && npm run check:error-leaks",
-    "up-version": "node scripts/up-version.mjs"
+    "version": "node scripts/sync-version.mjs && git add src/version.json"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1029.0",
