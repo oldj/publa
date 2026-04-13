@@ -7,10 +7,18 @@
       "about": "关于"
     }
   },
+  "search": {
+    "title": "搜索",
+    "placeholder": "搜索文章...",
+    "button": "搜索",
+    "resultsTitle": "\u201c{query}\u201d的搜索结果",
+    "noResults": "没有找到与\u201c{query}\u201d相关的结果",
+    "prompt": "输入关键词搜索"
+  },
   "footer": {
     "categories": "分类",
     "tags": "标签",
-    "searchPlaceholder": "在 Google 中搜索",
+    "searchPlaceholder": "搜索文章...",
     "searchButton": "搜索",
     "rssPrefix": "可通过 ",
     "rssSuffix": " 订阅本站"

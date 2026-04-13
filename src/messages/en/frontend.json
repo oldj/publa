@@ -7,10 +7,18 @@
       "about": "About"
     }
   },
+  "search": {
+    "title": "Search",
+    "placeholder": "Search posts...",
+    "button": "Search",
+    "resultsTitle": "Search results for \"{query}\"",
+    "noResults": "No results found for \"{query}\"",
+    "prompt": "Enter keywords to search"
+  },
   "footer": {
     "categories": "Categories",
     "tags": "Tags",
-    "searchPlaceholder": "Search in Google",
+    "searchPlaceholder": "Search posts...",
     "searchButton": "Search",
     "rssPrefix": "Subscribe to this site via ",
     "rssSuffix": ""

@@ -7,7 +7,7 @@ import { categories, comments, contents, contentTags, tags } from '@/server/db/s
 import { normalizeExternalUrl, renderUserTextToHtml } from '@/server/lib/user-content'
 import { publishScheduledPosts } from '@/server/services/posts'
 import { getSetting, toBool } from '@/server/services/settings'
-import { and, asc, count, desc, eq, exists, inArray, isNull, lte, ne, sql } from 'drizzle-orm'
+import { and, asc, count, desc, eq, exists, inArray, isNull, lte, ne, or, sql } from 'drizzle-orm'
 import type { ICategory, IComment, IItemPage, IPost, ITag } from 'typings'
 
 interface FrontendPostViewer {
@@ -409,6 +409,70 @@ export async function getFrontendArchive() {
   return Object.entries(archive)
     .sort(([a], [b]) => Number(b) - Number(a))
     .map(([year, list]) => ({ year: Number(year), list }))
+}
+
+/** 搜索已发布文章（前台全文搜索） */
+export async function searchFrontendPosts(options: {
+  query: string
+  page?: number
+  pageSize?: number
+}): Promise<IItemPage<IPost>> {
+  await publishScheduledPosts()
+  const { page = 1, pageSize = 10, query } = options
+  const now = new Date().toISOString()
+
+  // 解析关键词：按空白拆分，去空，限制最多 10 个，转义 LIKE 通配符
+  const keywords = query
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 10)
+    .map((kw) => kw.replace(/[%_\\]/g, '\\$&'))
+
+  if (keywords.length === 0) {
+    return { items: [], page, pageCount: 0, pageSize, itemCount: 0 }
+  }
+
+  // 基础条件：已发布的文章
+  const baseCondition = and(
+    eq(contents.type, 'post'),
+    eq(contents.status, 'published'),
+    lte(contents.publishedAt, now),
+    isNull(contents.deletedAt),
+  )
+
+  // 每个关键词须匹配 title / excerpt / excerptAuto / contentText 之一（AND 逻辑）
+  const keywordConditions = keywords.map((kw) => {
+    const pattern = `%${kw}%`
+    return or(
+      sql`LOWER(${contents.title}) LIKE LOWER(${pattern})`,
+      sql`LOWER(${contents.excerpt}) LIKE LOWER(${pattern})`,
+      sql`LOWER(${contents.excerptAuto}) LIKE LOWER(${pattern})`,
+      sql`LOWER(${contents.contentText}) LIKE LOWER(${pattern})`,
+    )
+  })
+
+  const where = and(baseCondition, ...keywordConditions)
+
+  const [{ total }] = await db.select({ total: count() }).from(contents).where(where)
+
+  const rows = await db
+    .select()
+    .from(contents)
+    .where(where)
+    .orderBy(desc(contents.publishedAt))
+    .limit(pageSize)
+    .offset((page - 1) * pageSize)
+
+  const items = await Promise.all(rows.map((r) => buildFrontendPost(r)))
+
+  return {
+    items,
+    page,
+    pageCount: Math.ceil(total / pageSize),
+    pageSize,
+    itemCount: total,
+  }
 }
 
 /** 获取文章评论（兼容 IComment[]） */

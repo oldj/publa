@@ -620,6 +620,45 @@ figure figcaption:empty {
   color: var(--color-text-tertiary);
 }
 
+/* 搜索页 */
+.search-page {
+  margin-bottom: 40px;
+}
+
+.search-form {
+  display: flex;
+  align-items: center;
+  margin-bottom: 30px;
+  max-width: 480px;
+}
+
+.search-form input,
+.search-form button {
+  height: 36px;
+}
+
+.search-form input {
+  border-radius: var(--radius-md) 0 0 var(--radius-md);
+  padding: 0 12px;
+  border-right: none;
+  flex: 1;
+}
+
+.search-form button {
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  border: none;
+  background: var(--color-primary);
+  color: var(--color-text-reverse);
+  padding: 0 16px;
+  cursor: pointer;
+}
+
+.search-prompt,
+.search-empty {
+  font-style: italic;
+  color: var(--color-text-tertiary);
+}
+
 .post-list-pager .post-list-label {
   font-size: 0.875rem;
   line-height: 1.25rem;
