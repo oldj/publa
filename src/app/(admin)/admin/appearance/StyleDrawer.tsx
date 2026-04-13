@@ -27,7 +27,7 @@ const KIND_LABEL: Record<StyleKind, { title: string; apiBase: string }> = {
 }
 
 export function StyleDrawer({ opened, onClose, kind, initial, onSaved }: StyleDrawerProps) {
-  const t = useTranslations('admin.themesPage.styleDrawer')
+  const t = useTranslations('admin.appearancePage.styleDrawer')
   const tCommon = useTranslations('common')
   const [currentId, setCurrentId] = useState<number | null>(null)
   const [name, setName] = useState('')

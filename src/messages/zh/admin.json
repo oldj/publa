@@ -53,7 +53,7 @@
     "site": "站点",
     "menus": "菜单",
     "redirects": "跳转",
-    "themes": "主题",
+    "appearance": "外观",
     "email": "邮件",
     "emailNotify": "邮件通知",
     "emailLogs": "邮件日志",
@@ -455,8 +455,8 @@
       "import_custom_styles": "导入自定义 CSS"
     }
   },
-  "themesPage": {
-    "title": "主题",
+  "appearancePage": {
+    "title": "外观",
     "dirtyMessage": "选中项已变化，需保存后方可生效",
     "preview": "预览",
     "themeTitle": "主题",

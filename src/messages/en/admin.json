@@ -53,7 +53,7 @@
     "site": "Site",
     "menus": "Menus",
     "redirects": "Redirects",
-    "themes": "Themes",
+    "appearance": "Appearance",
     "email": "Email",
     "emailNotify": "Email notifications",
     "emailLogs": "Email logs",
@@ -455,8 +455,8 @@
       "import_custom_styles": "Import custom CSS"
     }
   },
-  "themesPage": {
-    "title": "Themes",
+  "appearancePage": {
+    "title": "Appearance",
     "dirtyMessage": "Selection changed. Save to apply on the frontend",
     "preview": "Preview",
     "themeTitle": "Themes",

@@ -58,7 +58,7 @@ function parseFilename(header: string | null): string | null {
 }
 
 export function ExportModal({ opened, onClose, kind, items }: ExportModalProps) {
-  const t = useTranslations('admin.themesPage.exportModal')
+  const t = useTranslations('admin.appearancePage.exportModal')
   const tCommon = useTranslations('common')
   const labels = LABELS[kind]
   const [selected, setSelected] = useState<string[]>([])

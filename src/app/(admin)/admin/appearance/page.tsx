@@ -86,7 +86,7 @@ function SortableThemeRow({
   onEdit: (theme: Theme) => void
   onDelete: (theme: Theme) => void
 }) {
-  const t = useTranslations('admin.themesPage')
+  const t = useTranslations('admin.appearancePage')
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: theme.id,
   })
@@ -179,7 +179,7 @@ function SortableCustomStyleRow({
   onEdit: (item: CustomStyle) => void
   onDelete: (item: CustomStyle) => void
 }) {
-  const t = useTranslations('admin.themesPage')
+  const t = useTranslations('admin.appearancePage')
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.id,
   })
@@ -242,7 +242,7 @@ function SortableCustomStyleRow({
 export default function ThemesPage() {
   const router = useRouter()
   const adminUrl = useAdminUrl()
-  const t = useTranslations('admin.themesPage')
+  const t = useTranslations('admin.appearancePage')
   const tCommon = useTranslations('common')
   const currentUser = useCurrentUser()
   const [themes, setThemes] = useState<Theme[]>([])

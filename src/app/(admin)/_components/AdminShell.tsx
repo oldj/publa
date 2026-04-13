@@ -87,7 +87,7 @@ function NavLinks({ user }: { user: AuthUser | null }) {
           ? [{ id: 'redirects', label: t('redirects'), link: adminUrl('/redirects') }]
           : []),
         ...(isOwner || isAdmin
-          ? [{ id: 'themes', label: t('themes'), link: adminUrl('/themes') }]
+          ? [{ id: 'appearance', label: t('appearance'), link: adminUrl('/appearance') }]
           : []),
       ],
     },
