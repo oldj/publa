@@ -65,8 +65,8 @@ describe('getLastActiveMap', () => {
     expect(map.size).toBe(2)
     expect(map.has(1)).toBe(true)
     expect(map.has(2)).toBe(true)
-    // user1 最后活跃时间 >= user2（因为 user1 的 create_post 在 user2 的 login 之后）
-    expect(map.get(1)! >= map.get(2)!).toBe(true)
+    // user2 最后活跃时间 >= user1（因为 user2 的 login 在 user1 的 create_post 之后插入）
+    expect(map.get(2)! >= map.get(1)!).toBe(true)
   })
 
   it('无日志时返回空 Map', async () => {
