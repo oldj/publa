@@ -64,8 +64,6 @@ body {
   font-size: 14px;
   line-height: 1.5em;
   color: var(--color-text);
-
-  --mantine-font-family: var(--fm);
 }
 
 body[data-role="body"] {

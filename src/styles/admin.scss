@@ -1,3 +1,7 @@
 body {
+  --fm: "PingFang SC", "Songti SC", Helvetica, Arial, sans-serif;
+  --mantine-font-family: var(--fm);
+
+  font-family: var(--fm);
   background: #f7f7f7;
 }
