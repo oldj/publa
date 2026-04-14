@@ -100,7 +100,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
       const newToken = await createToken(authUser)
       await setAuthCookie(newToken)
     } catch {
-      // Server Component 中不允许修改 cookie，由 proxy 兜底
+      // Server Component 中不允许修改 cookie，下次 API 调用时会续期
     }
   }
 

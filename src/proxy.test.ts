@@ -1,37 +1,17 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 // mock jwt 校验，默认放行
-const { mockJwtVerify, mockSign } = vi.hoisted(() => ({
-  mockJwtVerify: vi.fn().mockResolvedValue({ payload: {} }),
-  mockSign: vi.fn().mockResolvedValue('renewed-token'),
+const mockJwtVerify = vi.hoisted(() => vi.fn().mockResolvedValue({ payload: {} }))
+
+vi.mock('jose', () => ({
+  jwtVerify: mockJwtVerify,
 }))
 
-vi.mock('jose', () => {
-  class MockSignJWT {
-    setProtectedHeader() {
-      return this
-    }
-    setIssuedAt() {
-      return this
-    }
-    setExpirationTime() {
-      return this
-    }
-    sign = mockSign
-  }
-  return { jwtVerify: mockJwtVerify, SignJWT: MockSignJWT }
-})
-
-vi.mock('@/server/auth/shared', async (importOriginal) => {
-  const original = await importOriginal<typeof import('@/server/auth/shared')>()
-  return {
-    AUTH_COOKIE_NAME: '_token',
-    TOKEN_MAX_AGE: 60 * 60 * 24 * 7,
-    shouldRenewToken: original.shouldRenewToken,
-    getJwtSecret: () => new TextEncoder().encode('test-secret'),
-    isAuthConfigError: () => false,
-  }
-})
+vi.mock('@/server/auth/shared', () => ({
+  AUTH_COOKIE_NAME: '_token',
+  getJwtSecret: () => new TextEncoder().encode('test-secret'),
+  isAuthConfigError: () => false,
+}))
 
 // 设置自定义后台路径，必须在 proxy.ts 被 import 之前
 vi.stubEnv('ADMIN_PATH', 'backstage')
@@ -47,57 +27,8 @@ function makeRequest(url: string) {
   })
 }
 
-const TOKEN_MAX_AGE = 60 * 60 * 24 * 7
-
 afterEach(() => {
   mockJwtVerify.mockClear()
-  mockSign.mockClear()
-})
-
-/** 构造不带 token 的 NextRequest */
-function makeAnonymousRequest(url: string) {
-  const { NextRequest } = require('next/server')
-  return new NextRequest(new URL(url, 'http://localhost'))
-}
-
-describe('token 自动续期', () => {
-  it('无 token 时不续期', async () => {
-    const res = await proxy(makeAnonymousRequest('http://localhost/posts/test'))
-    expect(res.cookies.get('_token')).toBeUndefined()
-    expect(mockSign).not.toHaveBeenCalled()
-  })
-
-  it('token 剩余有效期充足时不续期', async () => {
-    const now = Math.floor(Date.now() / 1000)
-    mockJwtVerify.mockResolvedValueOnce({
-      payload: { userId: 1, username: 'admin', role: 'owner', exp: now + TOKEN_MAX_AGE },
-    })
-
-    const res = await proxy(makeRequest('http://localhost/posts/test'))
-    expect(res.cookies.get('_token')).toBeUndefined()
-    expect(mockSign).not.toHaveBeenCalled()
-  })
-
-  it('token 剩余有效期不足一半时续期', async () => {
-    const now = Math.floor(Date.now() / 1000)
-    mockJwtVerify.mockResolvedValueOnce({
-      payload: { userId: 1, username: 'admin', role: 'owner', exp: now + 1000 },
-    })
-
-    const res = await proxy(makeRequest('http://localhost/posts/test'))
-    const cookie = res.cookies.get('_token')
-    expect(cookie).toBeDefined()
-    expect(cookie!.value).toBe('renewed-token')
-    expect(mockSign).toHaveBeenCalledOnce()
-  })
-
-  it('token 无效时不续期', async () => {
-    mockJwtVerify.mockRejectedValueOnce(new Error('invalid token'))
-
-    const res = await proxy(makeRequest('http://localhost/posts/test'))
-    expect(res.cookies.get('_token')).toBeUndefined()
-    expect(mockSign).not.toHaveBeenCalled()
-  })
 })
 
 describe('自定义后台路径 rewrite', () => {
