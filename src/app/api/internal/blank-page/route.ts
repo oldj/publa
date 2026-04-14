@@ -1,8 +1,6 @@
-import { verifyToken } from '@/server/auth'
-import { AUTH_COOKIE_NAME } from '@/server/auth/shared'
+import { getCurrentUser } from '@/server/auth'
 import { getPublishedPageByPath } from '@/server/services/pages'
 import { getPreviewPage, parsePreviewId } from '@/server/services/preview'
-import { cookies } from 'next/headers'
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -13,11 +11,8 @@ export async function GET(request: Request) {
     // 预览模式
     const previewId = parsePreviewId(path)
     if (previewId !== null) {
-      const cookieStore = await cookies()
-      const token = cookieStore.get(AUTH_COOKIE_NAME)?.value
-      if (!token) return Response.json({ blank: false })
-      const payload = await verifyToken(token)
-      if (!payload) return Response.json({ blank: false })
+      const user = await getCurrentUser()
+      if (!user) return Response.json({ blank: false })
 
       const page = await getPreviewPage(previewId)
       if (page?.template === 'blank') {

@@ -1,10 +1,36 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { getJwtSecret, initJwtSecret } from './shared'
+import { getJwtSecret, initJwtSecret, shouldRenewToken, TOKEN_MAX_AGE } from './shared'
 
 vi.mock('@/server/services/settings', () => ({
   getSetting: vi.fn(),
   setSetting: vi.fn(),
 }))
+
+describe('shouldRenewToken', () => {
+  it('exp 为 undefined 时不续期', () => {
+    expect(shouldRenewToken(undefined)).toBe(false)
+  })
+
+  it('剩余有效期充足时不续期', () => {
+    const exp = Math.floor(Date.now() / 1000) + TOKEN_MAX_AGE
+    expect(shouldRenewToken(exp)).toBe(false)
+  })
+
+  it('剩余有效期恰好一半时不续期', () => {
+    const exp = Math.floor(Date.now() / 1000) + TOKEN_MAX_AGE / 2
+    expect(shouldRenewToken(exp)).toBe(false)
+  })
+
+  it('剩余有效期不足一半时续期', () => {
+    const exp = Math.floor(Date.now() / 1000) + TOKEN_MAX_AGE / 2 - 1
+    expect(shouldRenewToken(exp)).toBe(true)
+  })
+
+  it('token 已过期时不续期', () => {
+    const exp = Math.floor(Date.now() / 1000) - 100
+    expect(shouldRenewToken(exp)).toBe(false)
+  })
+})
 
 describe('getJwtSecret', () => {
   const originalEnv = { ...process.env }

@@ -1,6 +1,14 @@
 import crypto from 'crypto'
 
 export const AUTH_COOKIE_NAME = '_token'
+export const TOKEN_MAX_AGE = 60 * 60 * 24 * 7 // 7 天
+
+/** token 剩余有效期是否不足一半，需要续期 */
+export function shouldRenewToken(exp: number | undefined): boolean {
+  if (!exp) return false
+  const remaining = exp - Math.floor(Date.now() / 1000)
+  return remaining > 0 && remaining < TOKEN_MAX_AGE / 2
+}
 
 const DEFAULT_JWT_SECRET = 'blog-jwt-secret-change-me'
 
