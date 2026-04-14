@@ -1,6 +1,12 @@
 import { getAdminPath } from '@/lib/admin-path'
-import { AUTH_COOKIE_NAME, getJwtSecret, isAuthConfigError } from '@/server/auth/shared'
-import { jwtVerify } from 'jose'
+import {
+  AUTH_COOKIE_NAME,
+  TOKEN_MAX_AGE,
+  getJwtSecret,
+  isAuthConfigError,
+  shouldRenewToken,
+} from '@/server/auth/shared'
+import { SignJWT, jwtVerify } from 'jose'
 import { NextRequest, NextResponse } from 'next/server'
 
 const ADMIN_PATH = getAdminPath()
@@ -44,7 +50,44 @@ async function checkAdminAuth(
   return null
 }
 
+/** 已登录用户的 token 剩余有效期不足一半时，在响应上设置续期 cookie */
+async function renewTokenIfNeeded(request: NextRequest, response: NextResponse): Promise<void> {
+  const token = request.cookies.get(AUTH_COOKIE_NAME)?.value
+  if (!token) return
+
+  try {
+    const { payload } = await jwtVerify(token, getJwtSecret())
+    if (!shouldRenewToken(payload.exp)) return
+
+    const newToken = await new SignJWT({
+      userId: payload.userId,
+      username: payload.username,
+      role: payload.role,
+    })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuedAt()
+      .setExpirationTime(`${TOKEN_MAX_AGE}s`)
+      .sign(getJwtSecret())
+
+    response.cookies.set(AUTH_COOKIE_NAME, newToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: TOKEN_MAX_AGE,
+      path: '/',
+    })
+  } catch {
+    // token 无效或配置错误，不续期
+  }
+}
+
 export async function proxy(request: NextRequest) {
+  const response = await handleRequest(request)
+  await renewTokenIfNeeded(request, response)
+  return response
+}
+
+async function handleRequest(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // --- 自定义后台路径处理 ---

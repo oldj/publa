@@ -8,10 +8,15 @@ import { eq } from 'drizzle-orm'
 import { SignJWT, jwtVerify, type JWTPayload } from 'jose'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
-import { AUTH_COOKIE_NAME, getJwtSecret, isAuthConfigError } from './shared'
+import {
+  AUTH_COOKIE_NAME,
+  TOKEN_MAX_AGE,
+  getJwtSecret,
+  isAuthConfigError,
+  shouldRenewToken,
+} from './shared'
 
 const SALT_ROUNDS = 10
-const TOKEN_MAX_AGE = 60 * 60 * 24 * 7 // 7 天
 
 export interface AuthUser {
   id: number
@@ -89,12 +94,13 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     role: user.role as AuthUser['role'],
   }
 
-  // 剩余有效期不足一半时自动续期
-  if (payload.exp) {
-    const remaining = payload.exp - Math.floor(Date.now() / 1000)
-    if (remaining < TOKEN_MAX_AGE / 2) {
+  // 剩余有效期不足一半时尝试续期（Server Component 中无法修改 cookie，静默跳过）
+  if (shouldRenewToken(payload.exp)) {
+    try {
       const newToken = await createToken(authUser)
       await setAuthCookie(newToken)
+    } catch {
+      // Server Component 中不允许修改 cookie，由 proxy 兜底
     }
   }
 
