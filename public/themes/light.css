@@ -1374,6 +1374,11 @@ figure figcaption:empty {
   color: var(--color-text-tertiary);
 }
 
+.comment-form-content-length {
+  color: var(--color-text-tertiary);
+  font-size: 14px;
+}
+
 /* --- 验证码输入：CaptchaInput --- */
 .captcha-input {
   display: flex;
