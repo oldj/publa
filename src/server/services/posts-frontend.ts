@@ -68,7 +68,7 @@ export async function getFrontendTags(): Promise<ITag[]> {
       ),
     )
     .groupBy(tags.id)
-    .orderBy(asc(tags.id))
+    .orderBy(desc(count(contents.id)), asc(tags.name))
 
   return rows
 }
