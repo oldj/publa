@@ -177,7 +177,7 @@ const CommentForm = (props: Props) => {
           rows={8}
           {...register('content')}
         />
-        <span className="comment-form-info">
+        <span className="comment-form-content-length">
           {contentValue?.length || 0} / {COMMENT_MAX_LENGTH}
         </span>
 
