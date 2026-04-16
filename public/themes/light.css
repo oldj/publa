@@ -900,15 +900,7 @@ figure figcaption:empty {
 }
 
 .post-detail-content .embed[data-aspect-ratio="auto"] {
-  position: static;
   aspect-ratio: auto;
-  max-height: 80vh;
-  overflow: auto;
-}
-
-.post-detail-content .embed[data-aspect-ratio="auto"] iframe {
-  position: static;
-  height: 100%;
 }
 
 .post-detail-img {

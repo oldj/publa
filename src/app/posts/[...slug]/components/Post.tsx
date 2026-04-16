@@ -2,6 +2,7 @@
 
 import checkOutLinks from '@/app/posts/[...slug]/libs/checkOutLinks'
 import CommentForm from '@/components/comment-form'
+import TwitterEmbedResize from '@/components/TwitterEmbedResize'
 import PageLoading from '@/components/page-loading'
 import TOC from '@/components/toc'
 import UnsafeHtml from '@/components/UnsafeHtml'
@@ -226,6 +227,7 @@ export default function Post(props: IProps) {
         ref={refContent}
         dangerouslySetInnerHTML={{ __html: html || '' }}
       />
+      <TwitterEmbedResize />
 
       {afterPostHtml && <UnsafeHtml className="post-after-content" html={afterPostHtml} />}
 

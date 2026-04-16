@@ -1,4 +1,5 @@
 import PreviewNotice from '@/components/PreviewNotice'
+import TwitterEmbedResize from '@/components/TwitterEmbedResize'
 import { getServerTranslator } from '@/i18n/server'
 import BasicLayout from '@/layouts/basic'
 import BlankLayout from '@/layouts/blank'
@@ -66,6 +67,7 @@ export default async function DynamicPage({ params }: { params: Promise<{ path: 
             className="dynamic-page-content"
             dangerouslySetInnerHTML={{ __html: page.contentHtml }}
           />
+          <TwitterEmbedResize />
         </BlankLayout>
       )
     }
@@ -78,6 +80,7 @@ export default async function DynamicPage({ params }: { params: Promise<{ path: 
             className="dynamic-page-content"
             dangerouslySetInnerHTML={{ __html: page.contentHtml }}
           />
+          <TwitterEmbedResize />
         </div>
       </BasicLayout>
     )
@@ -96,6 +99,7 @@ export default async function DynamicPage({ params }: { params: Promise<{ path: 
           className="dynamic-page-content"
           dangerouslySetInnerHTML={{ __html: page.contentHtml }}
         />
+        <TwitterEmbedResize />
       </BlankLayout>
     )
   }
@@ -108,6 +112,7 @@ export default async function DynamicPage({ params }: { params: Promise<{ path: 
           className="dynamic-page-content"
           dangerouslySetInnerHTML={{ __html: page.contentHtml }}
         />
+        <TwitterEmbedResize />
       </div>
     </BasicLayout>
   )

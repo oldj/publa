@@ -4,6 +4,7 @@ import {
   PROVIDERS,
   buildEmbedStyle,
   detectProvider,
+  extractTwitterHeight,
   getProviderById,
 } from './providers'
 
@@ -80,14 +81,53 @@ describe('buildEmbedStyle', () => {
     expect(buildEmbedStyle(p)).toBe('aspect-ratio:16/9')
   })
 
-  it('auto 宽高比输出 min-height', () => {
+  it('auto 宽高比输出 min-height + max-width 居中', () => {
     const p = getProviderById('twitter')!
-    expect(buildEmbedStyle(p)).toBe('min-height:420px')
+    const style = buildEmbedStyle(p)
+    expect(style).toContain('min-height:300px')
+    expect(style).toContain('max-width:550px')
+    expect(style).toContain('margin-left:auto')
+    expect(style).toContain('margin-right:auto')
   })
 
   it('无 aspectRatio 时输出空串', () => {
     const style = buildEmbedStyle({ id: 'x', match: /x/, toEmbedSrc: () => '', hostname: '' })
     expect(style).toBe('')
+  })
+})
+
+describe('extractTwitterHeight', () => {
+  it('格式 1：{"twttr.private.resize":[{height}]}', () => {
+    expect(extractTwitterHeight({ 'twttr.private.resize': [{ height: 512.4 }] })).toBe(513)
+  })
+
+  it('格式 2：{method, params}', () => {
+    expect(
+      extractTwitterHeight({ method: 'twttr.private.resize', params: [{ height: 400 }] }),
+    ).toBe(400)
+  })
+
+  it('格式 3：{height}', () => {
+    expect(extractTwitterHeight({ height: 350 })).toBe(350)
+  })
+
+  it('JSON 字符串也能解析', () => {
+    expect(extractTwitterHeight('{"twttr.private.resize":[{"height":600}]}')).toBe(600)
+  })
+
+  it('无关消息返回 null', () => {
+    expect(extractTwitterHeight('hello')).toBeNull()
+    expect(extractTwitterHeight(null)).toBeNull()
+    expect(extractTwitterHeight({})).toBeNull()
+    expect(extractTwitterHeight({ foo: 'bar' })).toBeNull()
+  })
+
+  it('height 为字符串时返回 null（仅接受 number）', () => {
+    expect(extractTwitterHeight({ height: '400px' })).toBeNull()
+  })
+
+  it('向上取整小数高度', () => {
+    expect(extractTwitterHeight({ height: 399.1 })).toBe(400)
   })
 })
 

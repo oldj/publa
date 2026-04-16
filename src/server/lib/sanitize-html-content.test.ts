@@ -70,6 +70,20 @@ describe('sanitizeRichTextHtml', () => {
     expect(result).toContain('aspect-ratio')
   })
 
+  it('保留 max-width 和 margin-left/right:auto（居中布局）', () => {
+    const html = '<div style="max-width:550px;margin-left:auto;margin-right:auto"></div>'
+    const result = sanitizeRichTextHtml(html)
+    expect(result).toContain('max-width')
+    expect(result).toContain('margin-left:auto')
+    expect(result).toContain('margin-right:auto')
+  })
+
+  it('剥离 margin-left 非 auto 值', () => {
+    const html = '<div style="margin-left:10px"></div>'
+    const result = sanitizeRichTextHtml(html)
+    expect(result).not.toContain('margin-left')
+  })
+
   it('幂等：净化后再净化结果不变', () => {
     const html = '<div data-embed="" data-provider="bilibili" class="embed"><iframe src="https://player.bilibili.com/player.html?bvid=BV1xx" allow="fullscreen" loading="lazy"></iframe></div>'
     const first = sanitizeRichTextHtml(html)

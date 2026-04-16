@@ -1,6 +1,7 @@
 import { NodeViewWrapper } from '@tiptap/react'
 import type { NodeViewProps } from '@tiptap/react'
-import { buildEmbedStyle, getProviderById } from './providers'
+import { useEffect, useRef, useState } from 'react'
+import { buildEmbedStyle, extractTwitterHeight, getProviderById } from './providers'
 
 /**
  * 编辑态下的嵌入节点渲染。
@@ -11,7 +12,29 @@ export default function EmbedView({ node, selected }: NodeViewProps) {
   const providerId = (node.attrs.provider as string | null) ?? ''
   const provider = getProviderById(providerId)
   const aspectRatio = provider?.aspectRatio ?? '16/9'
-  const containerStyle = provider ? buildEmbedStyle(provider) : 'aspect-ratio:16/9'
+  const baseStyle = provider ? buildEmbedStyle(provider) : 'aspect-ratio:16/9'
+
+  const iframeRef = useRef<HTMLIFrameElement>(null)
+  const [tweetHeight, setTweetHeight] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (providerId !== 'twitter') return
+
+    const onMessage = (e: MessageEvent) => {
+      if (e.origin !== 'https://platform.twitter.com') return
+      if (e.source !== iframeRef.current?.contentWindow) return
+      const h = extractTwitterHeight(e.data)
+      if (h) setTweetHeight(h)
+    }
+
+    window.addEventListener('message', onMessage)
+    return () => window.removeEventListener('message', onMessage)
+  }, [providerId])
+
+  const containerStyle: React.CSSProperties = {
+    ...parseStyleString(baseStyle),
+    ...(tweetHeight ? { minHeight: tweetHeight, maxHeight: 'none', overflow: 'visible' } : {}),
+  }
 
   return (
     <NodeViewWrapper
@@ -19,9 +42,10 @@ export default function EmbedView({ node, selected }: NodeViewProps) {
       data-embed=""
       data-provider={providerId}
       data-aspect-ratio={aspectRatio}
-      style={parseStyleString(containerStyle)}
+      style={containerStyle}
     >
       <iframe
+        ref={iframeRef}
         src={src}
         loading="lazy"
         frameBorder={0}
@@ -29,6 +53,7 @@ export default function EmbedView({ node, selected }: NodeViewProps) {
         allowFullScreen
         referrerPolicy="strict-origin-when-cross-origin"
         title={`${providerId} embed`}
+        style={tweetHeight ? { height: tweetHeight } : undefined}
       />
       {/* 透明点击层，只在未选中时覆盖 iframe，点击后让 ProseMirror 选中节点 */}
       {!selected && <div className="embed-click-mask" contentEditable={false} />}

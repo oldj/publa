@@ -25,6 +25,8 @@ export interface Provider {
   aspectRatio?: string
   /** aspectRatio='auto' 时的最小高度（px） */
   minHeight?: number
+  /** 容器最大宽度（px），用于居中显示 */
+  maxWidth?: number
   /** 站点特有 iframe 属性覆盖 */
   iframeAttrs?: Record<string, string>
 }
@@ -54,10 +56,12 @@ export const PROVIDERS: Provider[] = [
   {
     id: 'twitter',
     match: /(?:twitter\.com|x\.com)\/[^/]+\/status\/(\d+)/i,
-    toEmbedSrc: (m) => `https://platform.twitter.com/embed/Tweet.html?id=${m[1]}`,
+    toEmbedSrc: (m) => `https://platform.twitter.com/embed/Tweet.html?id=${m[1]}&dnt=true`,
     hostname: 'platform.twitter.com',
     aspectRatio: 'auto',
-    minHeight: 420,
+    minHeight: 300,
+    /** 推文标准宽度 */
+    maxWidth: 550,
   },
   {
     id: 'codepen',
@@ -95,6 +99,39 @@ export function getProviderById(id: string | null | undefined): Provider | null 
   return PROVIDERS.find((p) => p.id === id) ?? null
 }
 
+/**
+ * 从 postMessage 的 data 中提取 Twitter embed 的高度。
+ * Twitter 使用多种格式，此函数做宽泛匹配。
+ */
+export function extractTwitterHeight(raw: unknown): number | null {
+  try {
+    const data = typeof raw === 'string' ? JSON.parse(raw) : raw
+    if (!data || typeof data !== 'object') return null
+
+    // 格式 1：{"twttr.private.resize":[{height}]}
+    const resize = (data as Record<string, unknown>)['twttr.private.resize']
+    if (Array.isArray(resize) && resize[0]?.height) {
+      return Math.ceil(resize[0].height as number)
+    }
+
+    // 格式 2：{method:"twttr.private.resize", params:[{height}]}
+    if ((data as Record<string, unknown>).method === 'twttr.private.resize') {
+      const params = (data as Record<string, unknown>).params
+      if (Array.isArray(params) && params[0]?.height) {
+        return Math.ceil(params[0].height as number)
+      }
+    }
+
+    // 格式 3：{height} 或 {"twttr.embed":{height}} 等变体
+    if (typeof (data as Record<string, unknown>).height === 'number') {
+      return Math.ceil((data as Record<string, unknown>).height as number)
+    }
+  } catch {
+    // 非 JSON，忽略
+  }
+  return null
+}
+
 /** 根据 provider 生成外层容器 inline style，供 renderHTML 使用 */
 export function buildEmbedStyle(provider: Provider): string {
   const parts: string[] = []
@@ -103,6 +140,11 @@ export function buildEmbedStyle(provider: Provider): string {
   }
   if (provider.aspectRatio === 'auto' && provider.minHeight) {
     parts.push(`min-height:${provider.minHeight}px`)
+  }
+  if (provider.maxWidth) {
+    parts.push(`max-width:${provider.maxWidth}px`)
+    parts.push('margin-left:auto')
+    parts.push('margin-right:auto')
   }
   return parts.join(';')
 }
