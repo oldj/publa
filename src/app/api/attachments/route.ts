@@ -16,8 +16,9 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url)
   const page = parseIntParam(searchParams.get('page'), 1, 1)
+  const mimeType = searchParams.get('mimeType') || undefined
 
-  const result = await listAttachments({ page })
+  const result = await listAttachments({ page, mimeTypePrefix: mimeType })
   return jsonSuccess(result)
 }
 

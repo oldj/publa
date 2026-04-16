@@ -106,11 +106,15 @@ export async function uploadAttachment(input: {
 }
 
 /** 列出附件（动态拼接完整 URL） */
-export async function listAttachments(options: { page?: number; pageSize?: number } = {}) {
-  const { page = 1, pageSize = 24 } = options
+export async function listAttachments(
+  options: { page?: number; pageSize?: number; mimeTypePrefix?: string } = {},
+) {
+  const { page = 1, pageSize = 24, mimeTypePrefix } = options
   const baseUrl = String((await getSetting('attachmentBaseUrl')) ?? '')
 
-  const where = isNull(attachments.deletedAt)
+  const where = mimeTypePrefix
+    ? and(isNull(attachments.deletedAt), like(attachments.mimeType, `${mimeTypePrefix}%`))
+    : isNull(attachments.deletedAt)
   const [{ total }] = await db.select({ total: count() }).from(attachments).where(where)
 
   const rows = await db

@@ -20,6 +20,7 @@ import { useCallback, useEffect, useImperativeHandle, useRef, useState } from 'r
 import CodeBlockView, { lowlight } from './CodeBlockView'
 import { Embed } from './embed/EmbedNode'
 import EmbedPopoverControl from './embed/EmbedPopover'
+import ImagePickerModal from './ImagePickerModal'
 import ImageToolbar from './ImageToolbar'
 import LinkPopoverControl from './LinkPopover'
 import MathModal from './MathModal'
@@ -63,6 +64,10 @@ export default function RichTextEditorWrapper({
   const [customSizeOpen, setCustomSizeOpen] = useState(false)
   const [customWidth, setCustomWidth] = useState('')
   const [customHeight, setCustomHeight] = useState('')
+
+  // 图片选择器状态
+  const [imagePickerOpen, setImagePickerOpen] = useState(false)
+  const imageInsertPosRef = useRef<number | null>(null)
 
   // 公式编辑状态
   const [mathModalOpen, setMathModalOpen] = useState(false)
@@ -171,6 +176,20 @@ export default function RichTextEditorWrapper({
   useImperativeHandle(editorRef, () => ({
     getEditor: () => editor,
   }))
+
+  // 从图片选择器插入多张图片（单个事务，一次 undo 可撤销）
+  const handleImageInsert = useCallback(
+    (urls: string[]) => {
+      if (!editor || urls.length === 0) return
+      // 使用打开 Modal 时保存的光标位置，无则插入到文档末尾
+      const pos = imageInsertPosRef.current ?? editor.state.doc.content.size
+      const content = urls.map((url) => ({ type: 'image', attrs: { src: url } }))
+      editor.chain().focus().insertContentAt(pos, content).run()
+      imageInsertPosRef.current = null
+      // Modal 关闭由 ImagePickerModal 的 handleInsert 调用 onClose 完成
+    },
+    [editor],
+  )
 
   // 编辑器就绪时通知父组件
   const onReadyCalledRef = useRef(false)
@@ -375,22 +394,9 @@ export default function RichTextEditorWrapper({
                     })
                     return
                   }
-                  const input = document.createElement('input')
-                  input.type = 'file'
-                  input.accept = 'image/*'
-                  input.onchange = async () => {
-                    const file = input.files?.[0]
-                    if (!file) return
-                    try {
-                      const url = await onImageUpload(file)
-                      editor?.chain().focus().setImage({ src: url }).run()
-                    } catch (err: any) {
-                      await myModal.alert({
-                        message: t('imageUploadFailed', { message: err.message }),
-                      })
-                    }
-                  }
-                  input.click()
+                  // 保存当前光标位置，Modal 打开后编辑器会失焦
+                  imageInsertPosRef.current = editor?.state.selection.anchor ?? null
+                  setImagePickerOpen(true)
                 }}
                 title={t('insertImage')}
               >
@@ -461,6 +467,13 @@ export default function RichTextEditorWrapper({
         setMathLatex={setMathLatex}
         mathEditType={mathEditType}
         mathEditPos={mathEditPos}
+      />
+
+      {/* 图片选择器弹窗 */}
+      <ImagePickerModal
+        opened={imagePickerOpen}
+        onClose={() => setImagePickerOpen(false)}
+        onInsert={handleImageInsert}
       />
     </>
   )

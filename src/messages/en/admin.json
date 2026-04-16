@@ -1096,6 +1096,13 @@
       "inlineMath": "Inline math",
       "blockMath": "Math block"
     },
+    "imagePickerModal": {
+      "title": "Insert Image",
+      "selectedCount": "{count} / {max} selected",
+      "insert": "Insert",
+      "uploadFailed": "Upload failed: {message}",
+      "maxSelection": "You can select up to {max} images"
+    },
     "mathModal": {
       "editInline": "Edit inline math",
       "editBlock": "Edit math block",

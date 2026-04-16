@@ -1096,6 +1096,13 @@
       "inlineMath": "行内公式",
       "blockMath": "公式块"
     },
+    "imagePickerModal": {
+      "title": "插入图片",
+      "selectedCount": "已选 {count} / {max}",
+      "insert": "插入",
+      "uploadFailed": "上传失败: {message}",
+      "maxSelection": "最多可选择 {max} 张图片"
+    },
     "mathModal": {
       "editInline": "编辑行内公式",
       "editBlock": "编辑公式块",

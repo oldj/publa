@@ -84,6 +84,7 @@
     "react-dom": "19.2.5",
     "react-hook-form": "^7.72.1",
     "react-icons": "^5.6.0",
+    "react-virtuoso": "^4.18.5",
     "resend": "^6.10.0",
     "sanitize-html": "^2.17.2",
     "svg-captcha": "^1.4.0",
