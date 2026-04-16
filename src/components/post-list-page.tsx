@@ -52,6 +52,7 @@ const PostCard = (props: { post: IPost; highlightQuery?: string }) => {
       )}
       <div className="post-list-body">
         <h2 className="post-list-title">
+          {post.pinned && <span className="post-list-pinned">{t('pinned')}</span>}
           <Link href={postUrl}>{post.title}</Link>
         </h2>
         <div className="post-list-time post-list-info">{pubTime}</div>

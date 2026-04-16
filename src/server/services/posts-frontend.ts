@@ -165,6 +165,7 @@ async function buildFrontendPost(
     canShowComments: preview ? false : canShowComments,
     seoTitle: post.seoTitle || undefined,
     seoDescription: post.seoDescription || undefined,
+    pinned: post.pinned ?? false,
     related: [],
   }
 }

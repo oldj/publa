@@ -51,7 +51,8 @@
     "tagPrefix": "Tag:",
     "list": {
       "readMore": "Read more",
-      "empty": "No records"
+      "empty": "No records",
+      "pinned": "Pinned"
     },
     "detail": {
       "category": "Category:",

@@ -51,7 +51,8 @@
     "tagPrefix": "标签：",
     "list": {
       "readMore": "阅读全文",
-      "empty": "没有记录"
+      "empty": "没有记录",
+      "pinned": "置顶"
     },
     "detail": {
       "category": "分类：",
