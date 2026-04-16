@@ -184,7 +184,7 @@ export default function EmbedPopoverControl({ editor }: { editor: Editor | null 
       <Popover.Dropdown style={{ padding: 8 }}>
         <div style={{ display: 'flex', gap: 8, minWidth: 420, alignItems: 'center' }}>
           <TextInput
-            placeholder={t('placeholder', { list: providerList })}
+            placeholder={t('placeholder')}
             value={url}
             onChange={(e) => {
               setUrl(e.target.value)
@@ -240,9 +240,13 @@ export default function EmbedPopoverControl({ editor }: { editor: Editor | null 
 
         {error && (
           <Text size="xs" c="red" mt={6}>
-            {error === 'unsupported' ? t('unsupported', { list: providerList }) : t('invalidUrl')}
+            {error === 'unsupported' ? t('unsupported') : t('invalidUrl')}
           </Text>
         )}
+
+        <Text size="xs" c="dimmed" mt={6}>
+          {t('supportedSites', { list: providerList })}
+        </Text>
       </Popover.Dropdown>
     </Popover>
   )

@@ -1104,12 +1104,13 @@
     },
     "embedPopover": {
       "insertEmbed": "Insert embed",
-      "placeholder": "Paste a URL (supports {list})",
+      "placeholder": "Paste a URL",
       "apply": "Apply",
       "remove": "Remove",
       "openOriginal": "Open original page",
-      "unsupported": "This site is not supported. Currently supported: {list}",
+      "unsupported": "This site is not supported",
       "invalidUrl": "Invalid URL",
+      "supportedSites": "Supported: {list}",
       "providers": {
         "youtube": "YouTube",
         "bilibili": "Bilibili",
