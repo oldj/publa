@@ -313,17 +313,7 @@ figure figcaption:empty {
   display: none;
 }
 
-/* 文章内容中的图片对齐 */
-.post-content img[data-align="center"] {
-  display: block;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.post-content img[data-align="right"] {
-  display: block;
-  margin-left: auto;
-}
+/* 文章内容中的图片对齐（由外层 .post-detail-img 容器控制） */
 
 /* 表格样式限定在 .post-content 内以避免影响后台 */
 .post-content table {
@@ -926,6 +916,16 @@ figure figcaption:empty {
   justify-content: center;
   padding: 0.5em 0;
   text-align: center;
+}
+
+.post-detail-img[data-align="left"] {
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.post-detail-img[data-align="right"] {
+  justify-content: flex-end;
+  text-align: right;
 }
 
 .post-detail-props {

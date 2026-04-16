@@ -112,16 +112,7 @@ export default function RichTextEditorWrapper({
         },
         renderHTML({ HTMLAttributes }) {
           const { align, ...rest } = HTMLAttributes
-          const style =
-            align === 'center'
-              ? 'display:block;margin-left:auto;margin-right:auto'
-              : align === 'right'
-                ? 'display:block;margin-left:auto'
-                : undefined
-          return [
-            'img',
-            { ...rest, ...(align ? { 'data-align': align } : {}), ...(style ? { style } : {}) },
-          ]
+          return ['img', { ...rest, ...(align ? { 'data-align': align } : {}) }]
         },
       }).configure({
         inline: false,
