@@ -101,7 +101,7 @@ export default function RichTextEditorWrapper({
           return {
             ...this.parent?.(),
             align: {
-              default: null,
+              default: 'center',
               parseHTML: (element) => element.getAttribute('data-align'),
               renderHTML: (attributes) => {
                 if (!attributes.align) return {}
@@ -156,7 +156,7 @@ export default function RichTextEditorWrapper({
           onImageUpload(file)
             .then((url) => {
               const { schema } = view.state
-              const node = schema.nodes.image.create({ src: url })
+              const node = schema.nodes.image.create({ src: url, align: 'center' })
               const insertTr = view.state.tr.replaceSelectionWith(node)
               view.dispatch(insertTr)
             })
@@ -183,7 +183,7 @@ export default function RichTextEditorWrapper({
       if (!editor || urls.length === 0) return
       // 使用打开 Modal 时保存的光标位置，无则插入到文档末尾
       const pos = imageInsertPosRef.current ?? editor.state.doc.content.size
-      const content = urls.map((url) => ({ type: 'image', attrs: { src: url } }))
+      const content = urls.map((url) => ({ type: 'image', attrs: { src: url, align: 'center' } }))
       editor.chain().focus().insertContentAt(pos, content).run()
       imageInsertPosRef.current = null
       // Modal 关闭由 ImagePickerModal 的 handleInsert 调用 onClose 完成
