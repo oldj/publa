@@ -204,7 +204,7 @@
     "invertSelection": "反选",
     "deleteSelected": "删除选中 ({count})",
     "deleteSelectedConfirm": "确定要删除选中的 {count} 个版本吗？",
-    "restoreConfirm": "确定要恢复到此版本吗？这将创建一次新的发布。",
+    "restoreConfirm": "确定要恢复到此版本吗？内容将作为草稿加载，不会直接发布。",
     "restoreSuccess": "版本恢复成功",
     "restoreFailed": "恢复失败",
     "restore": "恢复",

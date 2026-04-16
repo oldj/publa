@@ -2,8 +2,6 @@ import { requireCurrentUser } from '@/server/auth'
 import { db } from '@/server/db'
 import { jsonError, jsonSuccess } from '@/server/lib/api-response'
 import { parseIdParam } from '@/server/lib/request'
-import { updatePage } from '@/server/services/pages'
-import { buildPageRestoreInput } from '@/server/services/revision-restore'
 import { restoreRevision } from '@/server/services/revisions'
 import { NextRequest } from 'next/server'
 
@@ -21,13 +19,7 @@ export async function POST(
   if (revError) return revError
 
   const result = await db.transaction(async (tx) => {
-    const restored = await restoreRevision('page', pageId, revId, guard.user.id, tx)
-    if (!restored) return null
-
-    // 将恢复的内容同步到页面主表
-    await updatePage(pageId, buildPageRestoreInput(restored.content), tx)
-
-    return restored
+    return await restoreRevision('page', pageId, revId, guard.user.id, tx)
   })
 
   if (!result) {

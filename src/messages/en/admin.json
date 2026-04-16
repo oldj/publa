@@ -204,7 +204,7 @@
     "invertSelection": "Invert selection",
     "deleteSelected": "Delete selected ({count})",
     "deleteSelectedConfirm": "Are you sure you want to delete the selected {count} revisions?",
-    "restoreConfirm": "Restore to this revision? This will create a new publication.",
+    "restoreConfirm": "Restore to this revision? The content will be loaded as a draft without publishing.",
     "restoreSuccess": "Revision restored",
     "restoreFailed": "Failed to restore revision",
     "restore": "Restore",
