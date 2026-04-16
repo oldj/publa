@@ -200,6 +200,9 @@ export default async function Page({
         headers={data.headers}
         afterPostHtml={String(afterPostHtml ?? '') || undefined}
         adminPath={getAdminPath()}
+        highlightQuery={
+          typeof resolvedSearchParams.q === 'string' ? resolvedSearchParams.q : undefined
+        }
       />
     </BasicLayout>
   )

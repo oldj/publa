@@ -1792,6 +1792,12 @@ figure figcaption:empty {
   padding: 40px 0;
 }
 
+/* --- 搜索关键词高亮 --- */
+::highlight(search-highlight) {
+  background-color: rgba(250, 204, 21, 0.35);
+  color: inherit;
+}
+
 /* --- 响应式 --- */
 @media screen and (max-width: 800px) {
   body {
