@@ -531,6 +531,19 @@ figure figcaption:empty {
 
 .post-list-item h2.post-list-title {
   padding: 0;
+  display: flex;
+  align-items: center;
+}
+
+.post-list-pinned {
+  font-size: 14px;
+  line-height: 1;
+  padding: 4px 8px;
+  margin-right: 8px;
+  background: var(--color-primary);
+  border-radius: var(--radius-md);
+  color: var(--color-text-reverse);
+  font-weight: normal;
 }
 
 .post-list-time {
@@ -1790,6 +1803,12 @@ figure figcaption:empty {
   font-size: 12px;
   text-align: center;
   padding: 40px 0;
+}
+
+/* --- 搜索关键词高亮 --- */
+::highlight(search-highlight) {
+  background-color: rgba(250, 204, 21, 0.35);
+  color: inherit;
 }
 
 /* --- 响应式 --- */

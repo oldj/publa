@@ -322,7 +322,7 @@ export async function deleteRevisions(targetType: TargetType, targetId: number, 
   return result.length
 }
 
-/** 恢复版本：用历史内容创建草稿并立即发布 */
+/** 恢复版本：用历史内容创建草稿 */
 export async function restoreRevision<TMetadata extends DraftMetadata = DraftMetadata>(
   targetType: TargetType,
   targetId: number,
@@ -346,8 +346,8 @@ export async function restoreRevision<TMetadata extends DraftMetadata = DraftMet
   }
 
   await saveDraft(targetType, targetId, content, userId, tx)
-  const published = await publishDraft<TMetadata>(targetType, targetId, userId, tx)
-  return { revision: published, content }
+  const draft = await getDraft<TMetadata>(targetType, targetId, tx)
+  return { revision: draft, content }
 }
 
 /** 删除某 target 的所有修订 */

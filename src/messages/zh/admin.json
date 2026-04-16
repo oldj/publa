@@ -204,7 +204,7 @@
     "invertSelection": "反选",
     "deleteSelected": "删除选中 ({count})",
     "deleteSelectedConfirm": "确定要删除选中的 {count} 个版本吗？",
-    "restoreConfirm": "确定要恢复到此版本吗？这将创建一次新的发布。",
+    "restoreConfirm": "确定要恢复到此版本吗？内容将作为草稿加载，不会直接发布。",
     "restoreSuccess": "版本恢复成功",
     "restoreFailed": "恢复失败",
     "restore": "恢复",
@@ -1095,6 +1095,13 @@
       "insertImage": "插入图片",
       "inlineMath": "行内公式",
       "blockMath": "公式块"
+    },
+    "imagePickerModal": {
+      "title": "插入图片",
+      "selectedCount": "已选 {count} / {max}",
+      "insert": "插入",
+      "uploadFailed": "上传失败: {message}",
+      "maxSelection": "最多可选择 {max} 张图片"
     },
     "mathModal": {
       "editInline": "编辑行内公式",

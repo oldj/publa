@@ -5,6 +5,7 @@
 
 'use client'
 
+import useSearchHighlight from '@/hooks/useSearchHighlight'
 import { IconChevronRight } from '@tabler/icons-react'
 import dayjs from 'dayjs'
 import lodash from 'lodash'
@@ -12,12 +13,13 @@ import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import qs from 'qs'
-import { Suspense } from 'react'
+import { Suspense, useMemo, useRef } from 'react'
 import PageLoading from 'src/components/page-loading'
 import { IItemPage, IPost } from 'typings'
 
 interface Props {
   data: IItemPage<IPost>
+  highlightQuery?: string
 }
 
 interface PageProps {
@@ -27,17 +29,20 @@ interface PageProps {
   itemCount: number
 }
 
-const PostCard = (props: { post: IPost }) => {
-  const { post } = props
+const PostCard = (props: { post: IPost; highlightQuery?: string }) => {
+  const { post, highlightQuery } = props
   const t = useTranslations('frontend.posts.list')
   const router = useRouter()
   const pubTime = post.pubTime ? dayjs(post.pubTime).format('YYYY-MM-DD') : ''
+
+  // 从搜索页跳转到详情页时，带上关键词参数
+  const postUrl = highlightQuery ? `${post.url}?q=${encodeURIComponent(highlightQuery)}` : post.url
 
   return (
     <div
       className={`post-list-item${post.coverImage ? ' has-cover' : ''}`}
       onClick={async () => {
-        await router.push(post.url)
+        await router.push(postUrl)
       }}
     >
       {post.coverImage && (
@@ -47,11 +52,12 @@ const PostCard = (props: { post: IPost }) => {
       )}
       <div className="post-list-body">
         <h2 className="post-list-title">
-          <Link href={post.url}>{post.title}</Link>
+          {post.pinned && <span className="post-list-pinned">{t('pinned')}</span>}
+          <Link href={postUrl}>{post.title}</Link>
         </h2>
         <div className="post-list-time post-list-info">{pubTime}</div>
         <div className="post-list-summary">{post.html}</div>
-        <Link href={post.url} className="post-list-read-more">
+        <Link href={postUrl} className="post-list-read-more">
           <span>{t('readMore')}</span>
           <span className="post-list-read-more-icon">
             <IconChevronRight size={16} />
@@ -90,8 +96,16 @@ const Pager = (props: PageProps) => {
 }
 
 const PostListPage = (props: Props) => {
-  const { data } = props
+  const { data, highlightQuery } = props
   const t = useTranslations('frontend.posts.list')
+  const listRef = useRef<HTMLDivElement>(null)
+  const keywords = useMemo(
+    () => (highlightQuery ? highlightQuery.split(/\s+/).filter(Boolean) : []),
+    [highlightQuery],
+  )
+  const highlightContainers = useMemo(() => [listRef], [])
+
+  useSearchHighlight(highlightContainers, keywords)
 
   if (!data) {
     return <PageLoading />
@@ -102,9 +116,9 @@ const PostListPage = (props: Props) => {
   }
 
   return (
-    <div className="post-list">
+    <div className="post-list" ref={listRef}>
       {data.items.map((post, idx) => {
-        return <PostCard post={post} key={idx} />
+        return <PostCard post={post} key={idx} highlightQuery={highlightQuery} />
       })}
 
       <Suspense fallback={null}>

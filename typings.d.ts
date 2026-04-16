@@ -40,6 +40,7 @@ export interface IPost {
   slug?: string
   coverImage?: string
   pubTime?: string
+  pinned?: boolean
   seoTitle?: string
   seoDescription?: string
   category: ICategory | null

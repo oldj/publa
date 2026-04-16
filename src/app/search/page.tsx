@@ -30,8 +30,9 @@ export default async function Page({
     })
 
     // 截取摘要，清除评论（与文章列表页一致）
+    const keywords = query.split(/\s+/).filter(Boolean)
     postsPage.items = postsPage.items.map((item: IPost) => {
-      item.html = contentSummary(item.html)
+      item.html = contentSummary(item.html, 100, keywords)
       item.comments = []
       return item
     })
@@ -40,7 +41,7 @@ export default async function Page({
       postsPage.itemCount > 0 ? (
         <>
           <h1 className="page_title">{t('search.resultsTitle', { query })}</h1>
-          <PostListPage data={postsPage} />
+          <PostListPage data={postsPage} highlightQuery={query} />
         </>
       ) : (
         <>

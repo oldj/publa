@@ -260,6 +260,36 @@ describe('listAttachments', () => {
     expect(result.items[0].filename).toBe('active.png')
   })
 
+  it('mimeTypePrefix 只返回匹配类型的附件', async () => {
+    await insertAttachment({
+      filename: 'photo.png',
+      originalFilename: 'photo.png',
+      mimeType: 'image/png',
+      storageKey: '/uploads/2026/03/31/photo.png',
+    })
+    await insertAttachment({
+      filename: 'doc.pdf',
+      originalFilename: 'doc.pdf',
+      mimeType: 'application/pdf',
+      storageKey: '/uploads/2026/03/31/doc.pdf',
+    })
+    await insertAttachment({
+      filename: 'avatar.jpeg',
+      originalFilename: 'avatar.jpeg',
+      mimeType: 'image/jpeg',
+      storageKey: '/uploads/2026/03/31/avatar.jpeg',
+    })
+
+    const imageOnly = await listAttachments({ mimeTypePrefix: 'image/' })
+    expect(imageOnly.items).toHaveLength(2)
+    expect(imageOnly.items.every((i) => i.mimeType.startsWith('image/'))).toBe(true)
+    expect(imageOnly.itemCount).toBe(2)
+
+    const all = await listAttachments()
+    expect(all.items).toHaveLength(3)
+    expect(all.itemCount).toBe(3)
+  })
+
   it('分页参数正确', async () => {
     for (let i = 0; i < 5; i++) {
       await insertAttachment({

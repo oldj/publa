@@ -1,0 +1,74 @@
+.grid {
+  height: 420px;
+}
+
+.tile {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: var(--mantine-radius-sm);
+  overflow: hidden;
+  cursor: pointer;
+  position: relative;
+  border: 2px solid var(--mantine-color-default-border);
+  background: var(--mantine-color-body);
+
+  &:hover {
+    border-color: var(--mantine-color-blue-4);
+  }
+
+  &.selected {
+    border-color: var(--mantine-color-blue-filled);
+  }
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+}
+
+.uploadTile {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: var(--mantine-radius-sm);
+  border: 2px dashed var(--mantine-color-dimmed);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 150ms;
+  background: var(--mantine-color-body);
+  color: var(--mantine-color-dimmed);
+
+  &:hover {
+    border-color: var(--mantine-color-blue-filled);
+    color: var(--mantine-color-blue-filled);
+  }
+}
+
+.badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 1;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--mantine-color-blue-filled);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: var(--mantine-spacing-sm);
+  border-top: 1px solid var(--mantine-color-default-border);
+}

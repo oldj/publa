@@ -485,7 +485,10 @@ describePostgres('postgres contract', () => {
     const remaining = await revisionsService.listPublishedRevisions('post', 42)
     const restored = await revisionsService.restoreRevision('post', 42, remaining[0].id, editorId)
     expect(restored?.content.contentRaw).toBe('content-v1')
-    expect(await revisionsService.getDraft('post', 42)).toBeNull()
-    expect(await revisionsService.listPublishedRevisions('post', 42)).toHaveLength(2)
+    // 恢复为草稿，不会新增 published 记录
+    const restoredDraft = await revisionsService.getDraft('post', 42)
+    expect(restoredDraft).not.toBeNull()
+    expect(restoredDraft!.contentRaw).toBe('content-v1')
+    expect(await revisionsService.listPublishedRevisions('post', 42)).toHaveLength(1)
   })
 })

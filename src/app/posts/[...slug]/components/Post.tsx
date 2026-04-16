@@ -6,6 +6,7 @@ import TwitterEmbedResize from '@/components/TwitterEmbedResize'
 import PageLoading from '@/components/page-loading'
 import TOC from '@/components/toc'
 import UnsafeHtml from '@/components/UnsafeHtml'
+import useSearchHighlight from '@/hooks/useSearchHighlight'
 import { codeHighlightAliases, codeHighlightLanguages } from '@/lib/code-highlight'
 import { IHeader } from '@/lib/getHeadersFromHTML'
 import Spacer from '@/widgets/Spacer'
@@ -18,7 +19,7 @@ import 'katex/dist/katex.css'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { IoChevronUp } from 'react-icons/io5'
 import { IAccount, ICategory, IComment, IPost, ITag } from 'typings'
 import Comment from './Comment'
@@ -40,10 +41,11 @@ interface IProps {
   headers?: IHeader[]
   afterPostHtml?: string
   adminPath?: string
+  highlightQuery?: string
 }
 
 export default function Post(props: IProps) {
-  const { account, post, html, headers, afterPostHtml, adminPath = 'admin' } = props
+  const { account, post, html, headers, afterPostHtml, adminPath = 'admin', highlightQuery } = props
   const t = useTranslations('frontend.posts.detail')
   const router = useRouter()
   const [comments, setComments] = useState<IComment[]>(post?.comments || [])
@@ -51,9 +53,18 @@ export default function Post(props: IProps) {
   // const [headers, setHeaders] = useState<IHeader[]>([])
   const [showBackToTop, setShowBackToTop] = useState<boolean>(false)
   const [showToc2, setShowToc2] = useState<boolean>(false)
+  const refTitle = useRef<HTMLHeadingElement>(null)
   const refContent = useRef<HTMLDivElement>(null)
   const refToc1 = useRef<HTMLDivElement>(null)
   const refToc2 = useRef<HTMLDivElement>(null)
+
+  // 搜索关键词高亮
+  const highlightKeywords = useMemo(
+    () => (highlightQuery ? highlightQuery.split(/\s+/).filter(Boolean) : []),
+    [highlightQuery],
+  )
+  const highlightContainers = useMemo(() => [refTitle, refContent], [])
+  useSearchHighlight(highlightContainers, highlightKeywords)
 
   if (!post) {
     return <PageLoading />
@@ -217,7 +228,9 @@ export default function Post(props: IProps) {
       {post.coverImage && (
         <img className="post-detail-cover" src={post.coverImage} alt={post.title} />
       )}
-      <h1 className="post-detail-title">{post.title}</h1>
+      <h1 className="post-detail-title" ref={refTitle}>
+        {post.title}
+      </h1>
       <div className="post-detail-date post-detail-info">
         {dayjs(post.pubTime).format('YYYY-MM-DD')}
       </div>

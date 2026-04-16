@@ -34,6 +34,7 @@ import {
   IconCloudOff,
   IconCopy,
   IconDice3,
+  IconExclamationMark,
   IconFile,
   IconGridDots,
   IconLink,
@@ -130,7 +131,6 @@ export default function AttachmentsPage() {
 
   const isConfigured =
     config?.storageProvider && ['s3', 'oss', 'cos', 'r2'].includes(config.storageProvider)
-  const uploadEnabled = canManageConfig ? isConfigured : true
 
   const fetchData = useCallback(async () => {
     const res = await fetch(`/api/attachments?page=${page}`)
@@ -239,6 +239,10 @@ export default function AttachmentsPage() {
 
   const handleUpload = async (files: File[]) => {
     if (!files.length) return
+    if (canManageConfig && !isConfigured) {
+      notify({ color: 'orange', message: t('upload.needConfig') })
+      return
+    }
     setUploading(true)
 
     for (const file of files) {
@@ -463,33 +467,41 @@ export default function AttachmentsPage() {
       </Group>
 
       {/* 上传区域 */}
-      <Dropzone
-        onDrop={handleUpload}
-        loading={uploading}
-        disabled={!uploadEnabled}
-        mb="lg"
-        className={styles.dropzone}
+      <div
+        onClickCapture={(e) => {
+          if (canManageConfig && !isConfigured) {
+            e.stopPropagation()
+            e.preventDefault()
+            notify({
+              color: 'orange',
+              icon: <IconExclamationMark size={18} />,
+              message: t('upload.needConfig'),
+            })
+          }
+        }}
       >
-        <Group justify="center" gap="xl" style={{ pointerEvents: 'none' }}>
-          <Dropzone.Accept>
-            <IconUpload size={40} stroke={1.5} />
-          </Dropzone.Accept>
-          <Dropzone.Reject>
-            <IconX size={40} stroke={1.5} />
-          </Dropzone.Reject>
-          <Dropzone.Idle>
-            <IconPhoto size={40} stroke={1.5} color="var(--mantine-color-dimmed)" />
-          </Dropzone.Idle>
-          <div>
-            <Text size="lg" inline>
-              {isConfigured ? t('upload.ready') : t('upload.needConfig')}
-            </Text>
-            <Text size="sm" c="dimmed" inline mt={7}>
-              {t('upload.hint')}
-            </Text>
-          </div>
-        </Group>
-      </Dropzone>
+        <Dropzone onDrop={handleUpload} loading={uploading} mb="lg" className={styles.dropzone}>
+          <Group justify="center" gap="xl" style={{ pointerEvents: 'none' }}>
+            <Dropzone.Accept>
+              <IconUpload size={40} stroke={1.5} />
+            </Dropzone.Accept>
+            <Dropzone.Reject>
+              <IconX size={40} stroke={1.5} />
+            </Dropzone.Reject>
+            <Dropzone.Idle>
+              <IconPhoto size={40} stroke={1.5} color="var(--mantine-color-dimmed)" />
+            </Dropzone.Idle>
+            <div>
+              <Text size="lg" inline>
+                {isConfigured ? t('upload.ready') : t('upload.needConfig')}
+              </Text>
+              <Text size="sm" c="dimmed" inline mt={7}>
+                {t('upload.hint')}
+              </Text>
+            </div>
+          </Group>
+        </Dropzone>
+      </div>
 
       {/* 视图切换 + 批量操作 */}
       <Group justify="space-between" mb="sm">

@@ -459,10 +459,14 @@ describe('restoreRevision', () => {
     expect(result).not.toBeNull()
     expect(result!.content.contentRaw).toBe('v1')
 
+    // 恢复为草稿，不会新增 published 记录
     const newRevisions = await listPublishedRevisions('post', 1)
-    expect(newRevisions).toHaveLength(3)
+    expect(newRevisions).toHaveLength(2)
 
-    expect(await getDraft('post', 1)).toBeNull()
+    // 恢复后应存在草稿
+    const draft = await getDraft('post', 1)
+    expect(draft).not.toBeNull()
+    expect(draft!.contentRaw).toBe('v1')
   })
 
   it('不能恢复不属于当前 target 的版本', async () => {

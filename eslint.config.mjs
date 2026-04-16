@@ -9,6 +9,7 @@ import globals from 'globals'
 const customGlobals = {
   AbortController: 'readonly',
   AbortSignal: 'readonly',
+  Highlight: 'readonly',
   NodeJS: 'readonly',
   React: 'readonly',
 }
