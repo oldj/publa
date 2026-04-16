@@ -2,6 +2,7 @@ import { requireCurrentUser } from '@/server/auth'
 import { db } from '@/server/db'
 import { jsonError, jsonSuccess } from '@/server/lib/api-response'
 import { renderMarkdown, htmlToText } from '@/server/lib/markdown'
+import { sanitizeRichTextHtml } from '@/server/lib/sanitize-html-content'
 import { isUniqueConstraintError, parseIntParam, safeParseJson } from '@/server/lib/request'
 import {
   createEmptyPage,
@@ -103,17 +104,21 @@ export async function POST(request: NextRequest) {
     })
   }
 
-  // 根据内容类型处理
+  // 根据内容类型处理（contentRaw !== undefined 表示字段显式提交，包括空串清空场景）
   const ct = body.contentType || 'richtext'
   body.contentType = ct
-  if (body.contentRaw) {
+  if (body.contentRaw !== undefined) {
     if (ct === 'markdown') {
-      body.contentHtml = await renderMarkdown(body.contentRaw)
+      body.contentHtml = await renderMarkdown(body.contentRaw || '')
       body.contentText = htmlToText(body.contentHtml)
     } else {
-      body.contentHtml = body.contentHtml || body.contentRaw
+      body.contentHtml = sanitizeRichTextHtml(body.contentHtml || body.contentRaw)
       body.contentText = body.contentText || htmlToText(body.contentHtml)
     }
+  } else if (body.contentHtml) {
+    // 只传 contentHtml 不传 contentRaw 时同样要过白名单，避免绕过
+    body.contentHtml = sanitizeRichTextHtml(body.contentHtml)
+    body.contentText = body.contentText || htmlToText(body.contentHtml)
   }
 
   try {

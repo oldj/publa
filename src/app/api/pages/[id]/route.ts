@@ -2,6 +2,7 @@ import { requireCurrentUser } from '@/server/auth'
 import { db } from '@/server/db'
 import { jsonError, jsonSuccess } from '@/server/lib/api-response'
 import { renderMarkdown, htmlToText } from '@/server/lib/markdown'
+import { sanitizeRichTextHtml } from '@/server/lib/sanitize-html-content'
 import { isUniqueConstraintError, parseIdParam, safeParseJson } from '@/server/lib/request'
 import {
   deletePage,
@@ -139,12 +140,17 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   body.contentType = ct
   if (body.contentRaw !== undefined) {
     if (ct === 'markdown') {
-      body.contentHtml = await renderMarkdown(body.contentRaw)
+      body.contentHtml = await renderMarkdown(body.contentRaw || '')
       body.contentText = htmlToText(body.contentHtml)
     } else {
-      body.contentHtml = body.contentHtml || body.contentRaw
+      // richtext/html：内容作为 HTML 保存前需要经过白名单净化
+      body.contentHtml = sanitizeRichTextHtml(body.contentHtml || body.contentRaw)
       body.contentText = body.contentText || htmlToText(body.contentHtml)
     }
+  } else if (body.contentHtml) {
+    // 只传 contentHtml 不传 contentRaw 时同样要过白名单，避免绕过
+    body.contentHtml = sanitizeRichTextHtml(body.contentHtml)
+    body.contentText = body.contentText || htmlToText(body.contentHtml)
   }
 
   try {

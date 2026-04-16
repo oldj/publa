@@ -1102,6 +1102,24 @@
       "placeholderBlock": "输入 LaTeX 公式，如 \\int_0^\\infty x^2 dx",
       "placeholderInline": "输入 LaTeX 公式，如 E=mc^2"
     },
+    "embedPopover": {
+      "insertEmbed": "插入嵌入内容",
+      "placeholder": "粘贴嵌入链接",
+      "apply": "应用",
+      "remove": "移除",
+      "openOriginal": "打开原页面",
+      "unsupported": "暂不支持该站点",
+      "invalidUrl": "链接格式不正确",
+      "supportedSites": "支持：{list}",
+      "providers": {
+        "youtube": "YouTube",
+        "bilibili": "Bilibili",
+        "vimeo": "Vimeo",
+        "twitter": "X.com",
+        "codepen": "CodePen",
+        "codesandbox": "CodeSandbox"
+      }
+    },
     "publishSettings": {
       "title": "发布设置",
       "currentDraft": "当前为草稿状态",
