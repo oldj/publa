@@ -1,6 +1,7 @@
 import { requireCurrentUser } from '@/server/auth'
 import { jsonError, jsonSuccess } from '@/server/lib/api-response'
 import { renderMarkdown, htmlToText } from '@/server/lib/markdown'
+import { sanitizeRichTextHtml } from '@/server/lib/sanitize-html-content'
 import { parseIdParam, safeParseJson } from '@/server/lib/request'
 import { getPostById } from '@/server/services/posts'
 import { saveDraft, getDraft, deleteDraft } from '@/server/services/revisions'
@@ -52,12 +53,18 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   // 推导 contentType
   const ct = body.contentType || (body.isMarkdown ? 'markdown' : 'richtext')
 
-  // 根据内容类型处理
-  if (ct === 'markdown' && contentRaw) {
-    contentHtml = await renderMarkdown(contentRaw)
-    contentText = htmlToText(contentHtml)
-  } else if (contentRaw && !contentHtml) {
-    contentHtml = contentRaw
+  // 根据内容类型处理（contentRaw !== undefined 表示字段显式提交，包括空串清空场景）
+  if (contentRaw !== undefined) {
+    if (ct === 'markdown') {
+      contentHtml = await renderMarkdown(contentRaw || '')
+      contentText = htmlToText(contentHtml)
+    } else {
+      contentHtml = sanitizeRichTextHtml(contentHtml || contentRaw)
+      if (!contentText) contentText = htmlToText(contentHtml)
+    }
+  } else if (contentHtml) {
+    // 只传 contentHtml 不传 contentRaw 时同样要过白名单，避免绕过
+    contentHtml = sanitizeRichTextHtml(contentHtml)
     if (!contentText) contentText = htmlToText(contentHtml)
   }
 

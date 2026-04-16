@@ -17,8 +17,9 @@ import StarterKit from '@tiptap/starter-kit'
 import 'katex/dist/katex.min.css'
 import { useTranslations } from 'next-intl'
 import { useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react'
-
 import CodeBlockView, { lowlight } from './CodeBlockView'
+import { Embed } from './embed/EmbedNode'
+import EmbedPopoverControl from './embed/EmbedPopover'
 import ImageToolbar from './ImageToolbar'
 import LinkPopoverControl from './LinkPopover'
 import MathModal from './MathModal'
@@ -136,6 +137,7 @@ export default function RichTextEditorWrapper({
         },
       }),
       Placeholder.configure({ placeholder: effectivePlaceholder }),
+      Embed,
     ],
     content: initialContent || '',
     editorProps: {
@@ -394,6 +396,7 @@ export default function RichTextEditorWrapper({
               >
                 <IconPhoto size={16} />
               </RichTextEditor.Control>
+              <EmbedPopoverControl editor={editor} />
             </RichTextEditor.ControlsGroup>
 
             <RichTextEditor.ControlsGroup>

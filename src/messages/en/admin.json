@@ -1102,6 +1102,23 @@
       "placeholderBlock": "Enter a LaTeX formula, e.g. \\int_0^\\infty x^2 dx",
       "placeholderInline": "Enter a LaTeX formula, e.g. E=mc^2"
     },
+    "embedPopover": {
+      "insertEmbed": "Insert embed",
+      "placeholder": "Paste a URL (supports {list})",
+      "apply": "Apply",
+      "remove": "Remove",
+      "openOriginal": "Open original page",
+      "unsupported": "This site is not supported. Currently supported: {list}",
+      "invalidUrl": "Invalid URL",
+      "providers": {
+        "youtube": "YouTube",
+        "bilibili": "Bilibili",
+        "vimeo": "Vimeo",
+        "twitter": "X.com",
+        "codepen": "CodePen",
+        "codesandbox": "CodeSandbox"
+      }
+    },
     "publishSettings": {
       "title": "Publishing",
       "currentDraft": "Currently in draft status",
