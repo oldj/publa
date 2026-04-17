@@ -723,6 +723,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
       }
 
       const currentMeta = getMetaSnapshot(formRef.current)
+      // 故意跳过空内容：避免误操作清空后立即把空草稿同步到云端；元数据变化仍会照常保存
       const contentChanged =
         content.contentRaw && content.contentRaw !== lastAutoSaveContent.current
       const metaChanged = currentMeta !== lastAutoSaveMetaRef.current
@@ -1141,22 +1142,19 @@ export default function PostEditor({ postId }: { postId?: number }) {
                   setAutoSaveTime(null)
                   const targetPostId = getTargetPostId()
                   if (targetPostId) {
-                    fetch(`/api/posts/${targetPostId}/draft`, {
-                      method: 'PUT',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        title: form.title,
-                        excerpt: form.excerpt,
-                        contentRaw,
-                        contentHtml,
-                        contentText,
-                        contentType: newType,
-                      }),
-                    })
-                      .then((r) => r.json())
-                      .then((json) => {
+                    const formState = form
+                    const content = {
+                      contentType: newType,
+                      contentRaw,
+                      contentHtml,
+                      contentText,
+                    }
+                    // 走 saveDraftRevision 保证带上 metadata，避免清空 slug/分类/标签/SEO
+                    saveDraftRevision(targetPostId, formState, content)
+                      .then(({ json }) => {
                         if (json.success) {
                           lastAutoSaveContent.current = contentRaw
+                          lastAutoSaveMetaRef.current = getMetaSnapshot(formState)
                           setAutoSaveTime(json.data.updatedAt)
                         }
                       })

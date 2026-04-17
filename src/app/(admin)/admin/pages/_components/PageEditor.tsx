@@ -660,6 +660,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
       }
 
       const currentMeta = getMetaSnapshot(formRef.current)
+      // 故意跳过空内容：避免误操作清空后立即把空草稿同步到云端；元数据变化仍会照常保存
       const contentChanged =
         content.contentRaw && content.contentRaw !== lastAutoSaveContent.current
       const metaChanged = currentMeta !== lastAutoSaveMetaRef.current
@@ -887,6 +888,23 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
     setContentType(newType)
     contentTypeRef.current = newType
     setDirty(true)
+    setAutoSaveTime(null)
+
+    // 立即落库，与 PostEditor 对齐；失败时下一次自动保存会兜底
+    const targetPageId = getTargetPageId()
+    if (targetPageId) {
+      const formState = formRef.current
+      const content = getCurrentContent()
+      saveDraftRevision(targetPageId, formState, content)
+        .then(({ json }) => {
+          if (json.success) {
+            lastAutoSaveContent.current = content.contentRaw
+            lastAutoSaveMetaRef.current = getMetaSnapshot(formState)
+            setAutoSaveTime(json.data.updatedAt)
+          }
+        })
+        .catch(() => {})
+    }
   }
 
   const isEdit = !!pageId
