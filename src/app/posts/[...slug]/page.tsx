@@ -3,6 +3,7 @@ import PreviewNotice from '@/components/PreviewNotice'
 import BasicLayout from '@/layouts/basic'
 import { getAdminPath } from '@/lib/admin-path'
 import getHeadersFromHTML, { IHeader } from '@/lib/getHeadersFromHTML'
+import wrapBlockImages from '@/lib/wrapBlockImages'
 import { getCurrentUser } from '@/server/auth'
 import { db } from '@/server/db'
 import { maybeFirst } from '@/server/db/query'
@@ -84,8 +85,8 @@ async function getData({ slugKey, pathname, preview, viewer }: GetDataOptions): 
     if (!viewer) notFound()
     const post = await getPreviewPost(previewId)
     if (!post) notFound()
-    const { html, headers } = getHeadersFromHTML(post.html || '')
-    return { post, html, headers }
+    const { html: rawHtml, headers } = getHeadersFromHTML(post.html || '')
+    return { post, html: wrapBlockImages(rawHtml), headers }
   }
 
   const post = await getFrontendPostBySlug(slugKey, {
@@ -114,11 +115,11 @@ async function getData({ slugKey, pathname, preview, viewer }: GetDataOptions): 
     notFound()
   }
 
-  const { html, headers } = getHeadersFromHTML(post.html || '')
+  const { html: rawHtml, headers } = getHeadersFromHTML(post.html || '')
 
   return {
     post,
-    html,
+    html: wrapBlockImages(rawHtml),
     headers,
   }
 }

@@ -63,7 +63,7 @@ export const sanitizeOptions: sanitizeHtml.IOptions = {
   ]),
   allowedAttributes: {
     ...sanitizeHtml.defaults.allowedAttributes,
-    img: ['src', 'srcset', 'alt', 'title', 'width', 'height', 'loading'],
+    img: ['src', 'srcset', 'alt', 'title', 'width', 'height', 'loading', 'data-align'],
     a: ['href', 'title', 'target', 'rel'],
     video: ['src', 'controls', 'width', 'height', 'poster'],
     audio: ['src', 'controls'],

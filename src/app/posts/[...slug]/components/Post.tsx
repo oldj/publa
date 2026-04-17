@@ -179,20 +179,7 @@ export default function Post(props: IProps) {
       el.appendChild(tb)
     })
 
-    document.querySelectorAll('.post-detail-content img').forEach((img) => {
-      const parent: HTMLElement = img.parentNode as HTMLElement
-      if (!parent) return
-
-      if (
-        parent.tagName.toLowerCase() === 'center' ||
-        (parent.className && parent.className.indexOf('post-detail-content') >= 0)
-      ) {
-        const p = document.createElement('p')
-        parent.insertBefore(p, img)
-        p.className = 'post-detail-img'
-        p.appendChild(img)
-      }
-    })
+    // 图片包裹已在服务端由 wrapBlockImages 完成，此处无需重复处理
   }, [post.id])
 
   useEffect(() => {

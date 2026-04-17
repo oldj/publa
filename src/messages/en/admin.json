@@ -1154,6 +1154,11 @@
       "autoSaveFailed": "Auto-save failed repeatedly. Please check your network connection",
       "notFound": "Post not found",
       "loadFailed": "Failed to load post",
+      "localBackup": {
+        "recoverBody": "A local draft has not been synced to the cloud (about {minutes} minutes ago). Restore it?",
+        "recoverBtn": "Restore",
+        "ignoreBtn": "Ignore"
+      },
       "createDraftFailed": "Failed to create draft",
       "draftSaved": "Draft saved",
       "titleRequired": "Title is required",
@@ -1211,6 +1216,11 @@
       "autoSaveFailed": "Auto-save failed repeatedly. Please check your network connection",
       "uploadFailed": "Upload failed",
       "loadFailed": "Failed to load page",
+      "localBackup": {
+        "recoverBody": "A local draft has not been synced to the cloud (about {minutes} minutes ago). Restore it?",
+        "recoverBtn": "Restore",
+        "ignoreBtn": "Ignore"
+      },
       "createDraftFailed": "Failed to create draft",
       "draftSaved": "Draft saved",
       "titleRequired": "Title is required",

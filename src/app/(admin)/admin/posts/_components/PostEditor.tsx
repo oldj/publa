@@ -29,12 +29,17 @@ import {
   TextInput,
   Textarea,
 } from '@mantine/core'
-import { notifications } from '@mantine/notifications'
 import { IconAlertTriangle } from '@tabler/icons-react'
 import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { shouldCreateDraftRecord } from '../../_lib/draft-persistence'
+import {
+  AUTO_SAVE_INTERVAL,
+  NEW_DOC_POLL_INTERVAL_MS,
+  useAutoSavePhase,
+} from '../../_lib/use-auto-save-phase'
+import { type LocalDraftBackup, useLocalDraftBackup } from '../../_lib/use-local-draft-backup'
 import { buildPostDraftPayload, buildPostSaveBody } from './post-save-payload'
 import RevisionHistory from './RevisionHistory'
 
@@ -94,7 +99,6 @@ interface PostDraftContent {
 interface FormState {
   title: string
   slug: string
-  contentRaw: string
   excerpt: string
   status: string
   categoryId: string
@@ -112,7 +116,6 @@ function createEmptyPostForm(): FormState {
   return {
     title: '',
     slug: '',
-    contentRaw: '',
     excerpt: '',
     status: 'draft',
     categoryId: '',
@@ -159,23 +162,17 @@ export default function PostEditor({ postId }: { postId?: number }) {
   const skipInitialLoadForCreatedPostIdRef = useRef<number | null>(null)
   const routePostIdRef = useRef<number | undefined>(postId)
 
-  // 自动保存失败计数
-  const autoSaveFailCountRef = useRef(0)
-  const onAutoSaveFail = useCallback(() => {
-    autoSaveFailCountRef.current += 1
-    if (autoSaveFailCountRef.current >= 3) {
-      notify({
-        id: AUTO_SAVE_FAIL_ID,
-        color: 'red',
-        message: t('autoSaveFailed'),
-        autoClose: false,
-      })
-    }
-  }, [t])
-  const clearAutoSaveFail = useCallback(() => {
-    autoSaveFailCountRef.current = 0
-    notifications.hide(AUTO_SAVE_FAIL_ID)
-  }, [])
+  // 自动保存状态机
+  const { autoSavePhaseRef, onAutoSaveFail, clearAutoSaveFail } = useAutoSavePhase({
+    notificationId: AUTO_SAVE_FAIL_ID,
+    failMessage: t('autoSaveFailed'),
+  })
+
+  // 本地草稿备份（localStorage）：
+  // pendingBackup 非 null 时展示恢复提示条；backupReadyRef 为 false 时暂停写入，
+  // 避免初始加载或等待用户确认阶段覆盖掉已有备份
+  const [pendingBackup, setPendingBackup] = useState<LocalDraftBackup<FormState> | null>(null)
+  const backupReadyRef = useRef(true)
 
   // 图片上传：存储配置状态
   const storageConfigured = useRef<boolean | null>(null)
@@ -290,6 +287,51 @@ export default function PostEditor({ postId }: { postId?: number }) {
     [clearAutoSaveFail, getEditor, getMetaSnapshot, makeSnapshot],
   )
 
+  const getCurrentContent = useCallback(() => {
+    const ct = contentTypeRef.current
+    const ed = getEditor()
+    let contentRaw = ''
+    let contentHtml = ''
+    let contentText = ''
+
+    if (ct === 'richtext' && ed) {
+      contentHtml = ed.getHTML()
+      contentText = ed.getText()
+      contentRaw = contentHtml
+    } else if (ct === 'html') {
+      contentRaw = textContentRef.current
+      contentHtml = textContentRef.current
+    } else {
+      contentRaw = textContentRef.current
+    }
+
+    return {
+      contentType: ct,
+      contentRaw,
+      contentHtml,
+      contentText,
+    }
+  }, [getEditor])
+
+  const getBackupSnapshot = useCallback(() => {
+    if (!backupReadyRef.current) return null
+    const content = getCurrentContent()
+    return {
+      form: formRef.current,
+      content: {
+        contentType: content.contentType,
+        contentRaw: content.contentRaw,
+        contentHtml: content.contentHtml,
+      },
+    }
+  }, [getCurrentContent])
+
+  const { readBackup, discardBackup } = useLocalDraftBackup<FormState>({
+    type: 'post',
+    id: postId ?? null,
+    getSnapshot: getBackupSnapshot,
+  })
+
   // 加载分类、标签和全局设置
   useEffect(() => {
     Promise.all([
@@ -318,12 +360,17 @@ export default function PostEditor({ postId }: { postId?: number }) {
     if (skipInitialLoadForCreatedPostIdRef.current === postId) {
       skipInitialLoadForCreatedPostIdRef.current = null
       pendingCreatedPostIdRef.current = null
+      // 刚 createAndRedirect 进入的路由：内容已在 state 中，直接允许写入备份
+      backupReadyRef.current = true
+      setPendingBackup(null)
       setLoading(false)
       return
     }
 
     if (!postId) {
       resetEditorState()
+      backupReadyRef.current = true
+      setPendingBackup(null)
       return
     }
 
@@ -332,6 +379,10 @@ export default function PostEditor({ postId }: { postId?: number }) {
     } else {
       setLoading(true)
     }
+
+    // 加载期间暂停备份写入，避免空表单或云端内容覆盖已有本地备份
+    backupReadyRef.current = false
+    setPendingBackup(null)
 
     const controller = new AbortController()
     let active = true
@@ -362,7 +413,6 @@ export default function PostEditor({ postId }: { postId?: number }) {
           publishedAt: postData.publishedAt,
           seoTitle: postData.seoTitle || '',
           seoDescription: postData.seoDescription || '',
-          contentRaw: postData.contentRaw,
         }
 
         // 优先使用草稿内容（如果有）
@@ -373,7 +423,6 @@ export default function PostEditor({ postId }: { postId?: number }) {
           ? {
               title: draft.title,
               slug: draft.slug,
-              contentRaw,
               excerpt: draft.excerpt,
               status: postData.status,
               categoryId: draft.categoryId ? String(draft.categoryId) : '',
@@ -433,11 +482,33 @@ export default function PostEditor({ postId }: { postId?: number }) {
         editorDirty.current = false
         // 有未发布的草稿时显示「已修改」
         setDirty(!!draft)
+
+        // 对比本地备份：正文或任一表单字段与云端不一致则提示恢复，
+        // 否则说明本地备份已被云端覆盖，静默清掉
+        const backup = readBackup()
+        if (backup) {
+          const backupMatchesCloud =
+            backup.content.contentRaw === contentRaw &&
+            backup.content.contentType === effectiveCT &&
+            JSON.stringify(backup.form) === JSON.stringify(nextForm)
+          if (backupMatchesCloud) {
+            discardBackup()
+            backupReadyRef.current = true
+            setPendingBackup(null)
+          } else {
+            setPendingBackup(backup)
+          }
+        } else {
+          backupReadyRef.current = true
+          setPendingBackup(null)
+        }
       })
       .catch((error: unknown) => {
         if (!active) return
         if (error instanceof Error && error.name === 'AbortError') return
 
+        backupReadyRef.current = true
+        setPendingBackup(null)
         notify({ color: 'red', message: t('loadFailed') })
         router.push(adminUrl('/posts'))
       })
@@ -451,7 +522,18 @@ export default function PostEditor({ postId }: { postId?: number }) {
       active = false
       controller.abort()
     }
-  }, [postId, adminUrl, router, getEditor, getMetaSnapshot, makeSnapshot, resetEditorState, t])
+  }, [
+    postId,
+    adminUrl,
+    router,
+    getEditor,
+    getMetaSnapshot,
+    makeSnapshot,
+    resetEditorState,
+    t,
+    readBackup,
+    discardBackup,
+  ])
 
   // 同步 ref 以供定时器读取最新值
   useEffect(() => {
@@ -463,32 +545,6 @@ export default function PostEditor({ postId }: { postId?: number }) {
   useEffect(() => {
     formRef.current = form
   }, [form])
-
-  const getCurrentContent = useCallback(() => {
-    const ct = contentTypeRef.current
-    const ed = getEditor()
-    let contentRaw = ''
-    let contentHtml = ''
-    let contentText = ''
-
-    if (ct === 'richtext' && ed) {
-      contentHtml = ed.getHTML()
-      contentText = ed.getText()
-      contentRaw = contentHtml
-    } else if (ct === 'html') {
-      contentRaw = textContentRef.current
-      contentHtml = textContentRef.current
-    } else {
-      contentRaw = textContentRef.current
-    }
-
-    return {
-      contentType: ct,
-      contentRaw,
-      contentHtml,
-      contentText,
-    }
-  }, [getEditor])
 
   const resolveTagIds = useCallback(async (tagNames: string[]) => {
     const tagIds: number[] = []
@@ -598,10 +654,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
         lastAutoSaveMetaRef.current = getMetaSnapshot(formState)
         textContentRef.current = content.contentRaw
         setTextContent(content.contentRaw)
-        savedSnapshot.current = makeSnapshot(
-          { ...formState, contentRaw: content.contentRaw },
-          content.contentRaw,
-        )
+        savedSnapshot.current = makeSnapshot(formState, content.contentRaw)
         setAutoSaveTime(draftSave.json.data.updatedAt)
         setDirty(true)
         skipInitialLoadForCreatedPostIdRef.current = newId
@@ -632,15 +685,28 @@ export default function PostEditor({ postId }: { postId?: number }) {
     ],
   )
 
-  // 自动保存定时器
+  // 自动保存定时器（递归 setTimeout，间隔随 phase 动态变化）
   useEffect(() => {
-    const timer = setInterval(() => {
-      if (autoSavingRef.current) return
-      const content = getCurrentContent()
+    let cancelled = false
 
+    function scheduleNext() {
+      if (cancelled) return
+      const delay = AUTO_SAVE_INTERVAL[autoSavePhaseRef.current]
+      setTimeout(tick, delay)
+    }
+
+    function tick() {
+      if (cancelled) return
+      if (autoSavingRef.current) {
+        scheduleNext()
+        return
+      }
+
+      const content = getCurrentContent()
       const targetPostId = getTargetPostId()
 
-      // 新文章：首次有实际内容时创建记录并跳转到真实编辑页
+      // 新文章：首次有实际内容时创建记录并跳转到真实编辑页；
+      // 此阶段用固定 5s 轮询（不受 phase 影响），避免用户起草时等一整个 30s 才落库
       if (!targetPostId) {
         if (
           shouldCreateDraftRecord({
@@ -652,14 +718,19 @@ export default function PostEditor({ postId }: { postId?: number }) {
         ) {
           void createAndRedirect({ silent: true })
         }
+        setTimeout(tick, NEW_DOC_POLL_INTERVAL_MS)
         return
       }
 
       const currentMeta = getMetaSnapshot(formRef.current)
+      // 故意跳过空内容：避免误操作清空后立即把空草稿同步到云端；元数据变化仍会照常保存
       const contentChanged =
         content.contentRaw && content.contentRaw !== lastAutoSaveContent.current
       const metaChanged = currentMeta !== lastAutoSaveMetaRef.current
-      if (!contentChanged && !metaChanged) return
+      if (!contentChanged && !metaChanged) {
+        scheduleNext()
+        return
+      }
 
       autoSavingRef.current = true
       saveDraftRevision(targetPostId, formRef.current, content)
@@ -669,6 +740,8 @@ export default function PostEditor({ postId }: { postId?: number }) {
             lastAutoSaveContent.current = content.contentRaw
             lastAutoSaveMetaRef.current = currentMeta
             setAutoSaveTime(json.data.updatedAt)
+            // 云端已吸收最新内容，清掉本地兜底备份
+            discardBackup()
           } else {
             onAutoSaveFail()
           }
@@ -678,10 +751,15 @@ export default function PostEditor({ postId }: { postId?: number }) {
         })
         .finally(() => {
           autoSavingRef.current = false
+          scheduleNext()
         })
-    }, 5000)
+    }
 
-    return () => clearInterval(timer)
+    scheduleNext()
+
+    return () => {
+      cancelled = true
+    }
   }, [
     getTargetPostId,
     createAndRedirect,
@@ -690,7 +768,51 @@ export default function PostEditor({ postId }: { postId?: number }) {
     saveDraftRevision,
     clearAutoSaveFail,
     onAutoSaveFail,
+    discardBackup,
   ])
+
+  // 恢复本地备份到编辑器
+  const applyBackupRestore = useCallback(
+    (backup: LocalDraftBackup<FormState>) => {
+      const nextForm = backup.form
+      const nextContent = backup.content
+      const ct = nextContent.contentType
+
+      setForm(nextForm)
+      formRef.current = nextForm
+      setContentType(ct)
+      contentTypeRef.current = ct
+
+      if (ct === 'richtext') {
+        const html = nextContent.contentHtml ?? nextContent.contentRaw
+        const ed = getEditor()
+        if (ed) {
+          ed.commands.setContent(html)
+        } else {
+          pendingEditorContent.current = html
+        }
+      }
+      setTextContent(nextContent.contentRaw)
+      textContentRef.current = nextContent.contentRaw
+
+      // 让自动保存把恢复后的内容上传到云端；
+      // 不主动清本地备份，等云端上传成功后再清，避免中间窗口丢数据
+      lastAutoSaveContent.current = ''
+      lastAutoSaveMetaRef.current = ''
+      editorDirty.current = true
+      setDirty(true)
+
+      backupReadyRef.current = true
+      setPendingBackup(null)
+    },
+    [getEditor],
+  )
+
+  const ignorePendingBackup = useCallback(() => {
+    discardBackup()
+    backupReadyRef.current = true
+    setPendingBackup(null)
+  }, [discardBackup])
 
   // 预览：先保存草稿，再在新窗口打开预览
   const handlePreview = async () => {
@@ -708,6 +830,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
         lastAutoSaveContent.current = draftSave.content.contentRaw
         lastAutoSaveMetaRef.current = getMetaSnapshot(formState)
         setAutoSaveTime(draftSave.json.data.updatedAt)
+        discardBackup()
         window.open(`/posts/--preview-${targetPostId}`, '_blank')
       } else {
         notify({ color: 'red', message: draftSave.json.message || tCommon('errors.saveFailed') })
@@ -736,6 +859,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
         lastAutoSaveContent.current = draftSave.content.contentRaw
         lastAutoSaveMetaRef.current = getMetaSnapshot(formState)
         setAutoSaveTime(draftSave.json.data.updatedAt)
+        discardBackup()
         notify({ color: 'green', message: t('draftSaved') })
       } else {
         notify({ color: 'red', message: draftSave.json.message || tCommon('errors.saveFailed') })
@@ -798,7 +922,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
         else if (status === 'scheduled') msg = t('scheduledSet')
         notify({ color: 'green', message: msg })
         savedSnapshot.current = makeSnapshot(
-          { ...form, status, publishedAt: newPublishedAt, contentRaw: content.contentRaw },
+          { ...form, status, publishedAt: newPublishedAt },
           content.contentRaw,
         )
         editorDirty.current = false
@@ -808,9 +932,9 @@ export default function PostEditor({ postId }: { postId?: number }) {
           ...form,
           status,
           publishedAt: newPublishedAt,
-          contentRaw: content.contentRaw,
         })
         setAutoSaveTime(null)
+        discardBackup()
         if (!postId) {
           const nextId = targetPostId ?? json.data.id
           pendingCreatedPostIdRef.current = null
@@ -861,7 +985,6 @@ export default function PostEditor({ postId }: { postId?: number }) {
           const restoredForm: FormState = {
             title: postData.title,
             slug: postData.slug || '',
-            contentRaw: postData.contentRaw,
             excerpt: postData.excerpt || '',
             status: postData.status,
             categoryId: postData.categoryId ? String(postData.categoryId) : '',
@@ -900,8 +1023,44 @@ export default function PostEditor({ postId }: { postId?: number }) {
           editorDirty.current = false
           setDirty(false)
           setAutoSaveTime(null)
+          discardBackup()
         }}
       />
+
+      {pendingBackup && (
+        <Alert
+          variant="light"
+          color="yellow"
+          icon={<IconAlertTriangle size={16} />}
+          my="sm"
+          data-role="local-backup-alert"
+        >
+          <Text size="sm" mb="xs">
+            {t('localBackup.recoverBody', {
+              minutes: Math.max(1, Math.round((Date.now() - pendingBackup.savedAt) / 60_000)),
+            })}
+          </Text>
+          <Group gap="xs">
+            <Button
+              size="xs"
+              variant="filled"
+              onClick={() => applyBackupRestore(pendingBackup)}
+              data-role="local-backup-recover"
+            >
+              {t('localBackup.recoverBtn')}
+            </Button>
+            <Button
+              size="xs"
+              variant="subtle"
+              color="gray"
+              onClick={ignorePendingBackup}
+              data-role="local-backup-ignore"
+            >
+              {t('localBackup.ignoreBtn')}
+            </Button>
+          </Group>
+        </Alert>
+      )}
 
       <Grid>
         {/* 主编辑区 */}
@@ -983,22 +1142,19 @@ export default function PostEditor({ postId }: { postId?: number }) {
                   setAutoSaveTime(null)
                   const targetPostId = getTargetPostId()
                   if (targetPostId) {
-                    fetch(`/api/posts/${targetPostId}/draft`, {
-                      method: 'PUT',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        title: form.title,
-                        excerpt: form.excerpt,
-                        contentRaw,
-                        contentHtml,
-                        contentText,
-                        contentType: newType,
-                      }),
-                    })
-                      .then((r) => r.json())
-                      .then((json) => {
+                    const formState = form
+                    const content = {
+                      contentType: newType,
+                      contentRaw,
+                      contentHtml,
+                      contentText,
+                    }
+                    // 走 saveDraftRevision 保证带上 metadata，避免清空 slug/分类/标签/SEO
+                    saveDraftRevision(targetPostId, formState, content)
+                      .then(({ json }) => {
                         if (json.success) {
                           lastAutoSaveContent.current = contentRaw
+                          lastAutoSaveMetaRef.current = getMetaSnapshot(formState)
                           setAutoSaveTime(json.data.updatedAt)
                         }
                       })
