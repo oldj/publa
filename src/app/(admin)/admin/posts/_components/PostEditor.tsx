@@ -99,7 +99,6 @@ interface PostDraftContent {
 interface FormState {
   title: string
   slug: string
-  contentRaw: string
   excerpt: string
   status: string
   categoryId: string
@@ -117,7 +116,6 @@ function createEmptyPostForm(): FormState {
   return {
     title: '',
     slug: '',
-    contentRaw: '',
     excerpt: '',
     status: 'draft',
     categoryId: '',
@@ -415,7 +413,6 @@ export default function PostEditor({ postId }: { postId?: number }) {
           publishedAt: postData.publishedAt,
           seoTitle: postData.seoTitle || '',
           seoDescription: postData.seoDescription || '',
-          contentRaw: postData.contentRaw,
         }
 
         // 优先使用草稿内容（如果有）
@@ -426,7 +423,6 @@ export default function PostEditor({ postId }: { postId?: number }) {
           ? {
               title: draft.title,
               slug: draft.slug,
-              contentRaw,
               excerpt: draft.excerpt,
               status: postData.status,
               categoryId: draft.categoryId ? String(draft.categoryId) : '',
@@ -487,17 +483,14 @@ export default function PostEditor({ postId }: { postId?: number }) {
         // 有未发布的草稿时显示「已修改」
         setDirty(!!draft)
 
-        // 对比本地备份：正文或任一 draft 元数据与云端不一致则提示恢复，
-        // 否则说明本地备份已被云端覆盖，静默清掉。
-        // 注意：用 getMetaSnapshot 比较 form，而不是直接 JSON.stringify(form)——
-        // FormState.contentRaw 是遗留字段，编辑正文时不会被同步，
-        // 直接对比会因 form.contentRaw 一直停留在加载时快照而产生假阳性。
+        // 对比本地备份：正文或任一表单字段与云端不一致则提示恢复，
+        // 否则说明本地备份已被云端覆盖，静默清掉
         const backup = readBackup()
         if (backup) {
           const backupMatchesCloud =
             backup.content.contentRaw === contentRaw &&
             backup.content.contentType === effectiveCT &&
-            getMetaSnapshot(backup.form) === getMetaSnapshot(nextForm)
+            JSON.stringify(backup.form) === JSON.stringify(nextForm)
           if (backupMatchesCloud) {
             discardBackup()
             backupReadyRef.current = true
@@ -661,10 +654,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
         lastAutoSaveMetaRef.current = getMetaSnapshot(formState)
         textContentRef.current = content.contentRaw
         setTextContent(content.contentRaw)
-        savedSnapshot.current = makeSnapshot(
-          { ...formState, contentRaw: content.contentRaw },
-          content.contentRaw,
-        )
+        savedSnapshot.current = makeSnapshot(formState, content.contentRaw)
         setAutoSaveTime(draftSave.json.data.updatedAt)
         setDirty(true)
         skipInitialLoadForCreatedPostIdRef.current = newId
@@ -931,7 +921,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
         else if (status === 'scheduled') msg = t('scheduledSet')
         notify({ color: 'green', message: msg })
         savedSnapshot.current = makeSnapshot(
-          { ...form, status, publishedAt: newPublishedAt, contentRaw: content.contentRaw },
+          { ...form, status, publishedAt: newPublishedAt },
           content.contentRaw,
         )
         editorDirty.current = false
@@ -941,7 +931,6 @@ export default function PostEditor({ postId }: { postId?: number }) {
           ...form,
           status,
           publishedAt: newPublishedAt,
-          contentRaw: content.contentRaw,
         })
         setAutoSaveTime(null)
         discardBackup()
@@ -995,7 +984,6 @@ export default function PostEditor({ postId }: { postId?: number }) {
           const restoredForm: FormState = {
             title: postData.title,
             slug: postData.slug || '',
-            contentRaw: postData.contentRaw,
             excerpt: postData.excerpt || '',
             status: postData.status,
             categoryId: postData.categoryId ? String(postData.categoryId) : '',
