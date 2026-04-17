@@ -29,12 +29,12 @@ import {
   TextInput,
   Textarea,
 } from '@mantine/core'
-import { notifications } from '@mantine/notifications'
 import { IconAlertTriangle } from '@tabler/icons-react'
 import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { shouldCreateDraftRecord } from '../../_lib/draft-persistence'
+import { AUTO_SAVE_INTERVAL, useAutoSavePhase } from '../../_lib/use-auto-save-phase'
 import { buildPostDraftPayload, buildPostSaveBody } from './post-save-payload'
 import RevisionHistory from './RevisionHistory'
 
@@ -159,23 +159,11 @@ export default function PostEditor({ postId }: { postId?: number }) {
   const skipInitialLoadForCreatedPostIdRef = useRef<number | null>(null)
   const routePostIdRef = useRef<number | undefined>(postId)
 
-  // 自动保存失败计数
-  const autoSaveFailCountRef = useRef(0)
-  const onAutoSaveFail = useCallback(() => {
-    autoSaveFailCountRef.current += 1
-    if (autoSaveFailCountRef.current >= 3) {
-      notify({
-        id: AUTO_SAVE_FAIL_ID,
-        color: 'red',
-        message: t('autoSaveFailed'),
-        autoClose: false,
-      })
-    }
-  }, [t])
-  const clearAutoSaveFail = useCallback(() => {
-    autoSaveFailCountRef.current = 0
-    notifications.hide(AUTO_SAVE_FAIL_ID)
-  }, [])
+  // 自动保存状态机
+  const { autoSavePhaseRef, onAutoSaveFail, clearAutoSaveFail } = useAutoSavePhase({
+    notificationId: AUTO_SAVE_FAIL_ID,
+    failMessage: t('autoSaveFailed'),
+  })
 
   // 图片上传：存储配置状态
   const storageConfigured = useRef<boolean | null>(null)
@@ -632,12 +620,24 @@ export default function PostEditor({ postId }: { postId?: number }) {
     ],
   )
 
-  // 自动保存定时器
+  // 自动保存定时器（递归 setTimeout，间隔随 phase 动态变化）
   useEffect(() => {
-    const timer = setInterval(() => {
-      if (autoSavingRef.current) return
-      const content = getCurrentContent()
+    let cancelled = false
 
+    function scheduleNext() {
+      if (cancelled) return
+      const delay = AUTO_SAVE_INTERVAL[autoSavePhaseRef.current]
+      setTimeout(tick, delay)
+    }
+
+    function tick() {
+      if (cancelled) return
+      if (autoSavingRef.current) {
+        scheduleNext()
+        return
+      }
+
+      const content = getCurrentContent()
       const targetPostId = getTargetPostId()
 
       // 新文章：首次有实际内容时创建记录并跳转到真实编辑页
@@ -652,6 +652,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
         ) {
           void createAndRedirect({ silent: true })
         }
+        scheduleNext()
         return
       }
 
@@ -659,7 +660,10 @@ export default function PostEditor({ postId }: { postId?: number }) {
       const contentChanged =
         content.contentRaw && content.contentRaw !== lastAutoSaveContent.current
       const metaChanged = currentMeta !== lastAutoSaveMetaRef.current
-      if (!contentChanged && !metaChanged) return
+      if (!contentChanged && !metaChanged) {
+        scheduleNext()
+        return
+      }
 
       autoSavingRef.current = true
       saveDraftRevision(targetPostId, formRef.current, content)
@@ -678,10 +682,15 @@ export default function PostEditor({ postId }: { postId?: number }) {
         })
         .finally(() => {
           autoSavingRef.current = false
+          scheduleNext()
         })
-    }, 5000)
+    }
 
-    return () => clearInterval(timer)
+    scheduleNext()
+
+    return () => {
+      cancelled = true
+    }
   }, [
     getTargetPostId,
     createAndRedirect,
