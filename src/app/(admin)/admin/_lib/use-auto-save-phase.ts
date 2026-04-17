@@ -19,6 +19,9 @@ export const AUTO_SAVE_INTERVAL: Record<AutoSavePhase, number> = {
   throttled: 30_000,
 }
 
+/** 新文档（尚未落库）轮询创建 id 的间隔，独立于 phase，避免用户要等完整一个 30s */
+export const NEW_DOC_POLL_INTERVAL_MS = 5_000
+
 const FAIL_THRESHOLD_WARNING = 3
 const FAIL_THRESHOLD_THROTTLE = 10
 

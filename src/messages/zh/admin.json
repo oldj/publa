@@ -1154,6 +1154,11 @@
       "autoSaveFailed": "自动保存连续失败，请检查网络连接",
       "notFound": "文章不存在",
       "loadFailed": "加载文章失败",
+      "localBackup": {
+        "recoverBody": "检测到本地有未同步到云端的草稿（约 {minutes} 分钟前），是否恢复？",
+        "recoverBtn": "恢复",
+        "ignoreBtn": "忽略"
+      },
       "createDraftFailed": "创建草稿失败",
       "draftSaved": "草稿已保存",
       "titleRequired": "标题不能为空",
@@ -1211,6 +1216,11 @@
       "autoSaveFailed": "自动保存连续失败，请检查网络连接",
       "uploadFailed": "上传失败",
       "loadFailed": "加载页面失败",
+      "localBackup": {
+        "recoverBody": "检测到本地有未同步到云端的草稿（约 {minutes} 分钟前），是否恢复？",
+        "recoverBtn": "恢复",
+        "ignoreBtn": "忽略"
+      },
       "createDraftFailed": "创建草稿失败",
       "draftSaved": "草稿已保存",
       "titleRequired": "标题不能为空",

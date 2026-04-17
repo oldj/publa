@@ -15,12 +15,30 @@ import RichTextEditorWrapper, {
 } from '@/components/editors/RichTextEditorWrapper'
 import { getClientErrorMessage } from '@/lib/client-error'
 import { notify } from '@/lib/notify'
-import { Button, Grid, Menu, Paper, Select, Stack, Text, TextInput, Textarea } from '@mantine/core'
+import {
+  Alert,
+  Button,
+  Grid,
+  Group,
+  Menu,
+  Paper,
+  Select,
+  Stack,
+  Text,
+  TextInput,
+  Textarea,
+} from '@mantine/core'
+import { IconAlertTriangle } from '@tabler/icons-react'
 import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { shouldCreateDraftRecord } from '../../_lib/draft-persistence'
-import { AUTO_SAVE_INTERVAL, useAutoSavePhase } from '../../_lib/use-auto-save-phase'
+import {
+  AUTO_SAVE_INTERVAL,
+  NEW_DOC_POLL_INTERVAL_MS,
+  useAutoSavePhase,
+} from '../../_lib/use-auto-save-phase'
+import { type LocalDraftBackup, useLocalDraftBackup } from '../../_lib/use-local-draft-backup'
 import RevisionHistory from '../../posts/_components/RevisionHistory'
 import { buildPageDraftPayload, buildPageSaveBody } from './page-save-payload'
 
@@ -92,6 +110,11 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
     failMessage: t('autoSaveFailed'),
   })
   const autoSavingRef = useRef(false)
+
+  // 本地草稿备份（localStorage）
+  type PageFormState = ReturnType<typeof createEmptyPageForm>
+  const [pendingBackup, setPendingBackup] = useState<LocalDraftBackup<PageFormState> | null>(null)
+  const backupReadyRef = useRef(true)
   const [contentType, setContentType] = useState<ContentType>('richtext')
   const contentTypeRef = useRef<ContentType>('richtext')
   const [textContent, setTextContent] = useState('')
@@ -214,6 +237,52 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
     [t, tCommon],
   )
 
+  const getCurrentContent = useCallback(() => {
+    const ct = contentTypeRef.current
+    const ed = richTextRef.current?.getEditor()
+    let contentRaw = ''
+    let contentHtml = ''
+    let contentText = ''
+
+    if (ct === 'richtext' && ed) {
+      contentHtml = ed.getHTML()
+      contentText = ed.getText()
+      contentRaw = contentHtml
+    } else if (ct === 'html') {
+      contentRaw = textContentRef.current
+      contentHtml = textContentRef.current
+    } else {
+      contentRaw = textContentRef.current
+      contentText = textContentRef.current
+    }
+
+    return {
+      contentType: ct,
+      contentRaw,
+      contentHtml,
+      contentText,
+    }
+  }, [])
+
+  const getBackupSnapshot = useCallback(() => {
+    if (!backupReadyRef.current) return null
+    const content = getCurrentContent()
+    return {
+      form: formRef.current,
+      content: {
+        contentType: content.contentType,
+        contentRaw: content.contentRaw,
+        contentHtml: content.contentHtml,
+      },
+    }
+  }, [getCurrentContent])
+
+  const { readBackup, discardBackup } = useLocalDraftBackup<PageFormState>({
+    type: 'page',
+    id: pageId ?? null,
+    getSnapshot: getBackupSnapshot,
+  })
+
   // 加载页面数据（编辑模式）
   useEffect(() => {
     const previousPageId = routePageIdRef.current
@@ -222,12 +291,16 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
     if (skipInitialLoadForCreatedPageIdRef.current === pageId) {
       skipInitialLoadForCreatedPageIdRef.current = null
       pendingCreatedPageIdRef.current = null
+      backupReadyRef.current = true
+      setPendingBackup(null)
       setLoading(false)
       return
     }
 
     if (!pageId) {
       resetEditorState()
+      backupReadyRef.current = true
+      setPendingBackup(null)
       return
     }
 
@@ -236,6 +309,10 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
     } else {
       setLoading(true)
     }
+
+    // 加载期间暂停备份写入，避免空表单或云端内容覆盖已有本地备份
+    backupReadyRef.current = false
+    setPendingBackup(null)
 
     const controller = new AbortController()
     let active = true
@@ -323,12 +400,40 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
           editorDirty.current = false
           // 有未发布的草稿时显示「已修改」
           setDirty(!!draft)
+
+          // 对比本地备份：正文或任一 draft 元数据与云端不一致则提示恢复，
+          // 否则说明本地备份已被云端覆盖，静默清掉。
+          // 用 getMetaSnapshot 比较：只包含 draft 相关字段，与 autosave 的变更检测同源
+          const backup = readBackup()
+          if (backup) {
+            const backupMatchesCloud =
+              backup.content.contentRaw === contentRaw &&
+              backup.content.contentType === ct &&
+              getMetaSnapshot(backup.form) === getMetaSnapshot(nextForm)
+            if (backupMatchesCloud) {
+              discardBackup()
+              backupReadyRef.current = true
+              setPendingBackup(null)
+            } else {
+              setPendingBackup(backup)
+            }
+          } else {
+            backupReadyRef.current = true
+            setPendingBackup(null)
+          }
+        } else {
+          // 服务端返回 { success: false }（未登录、权限不足等）：不强制跳转，
+          // 但恢复写入开关，避免 writer 永久停摆
+          backupReadyRef.current = true
+          setPendingBackup(null)
         }
       })
       .catch((error: unknown) => {
         if (!active) return
         if (error instanceof Error && error.name === 'AbortError') return
 
+        backupReadyRef.current = true
+        setPendingBackup(null)
         notify({ color: 'red', message: t('loadFailed') })
         router.push(adminUrl('/pages'))
       })
@@ -342,7 +447,18 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
       active = false
       controller.abort()
     }
-  }, [pageId, adminUrl, router, getMetaSnapshot, makeSnapshot, resetEditorState, t, validatePath])
+  }, [
+    pageId,
+    adminUrl,
+    router,
+    getMetaSnapshot,
+    makeSnapshot,
+    resetEditorState,
+    t,
+    validatePath,
+    readBackup,
+    discardBackup,
+  ])
 
   // 同步 ref
   useEffect(() => {
@@ -355,32 +471,46 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
     contentTypeRef.current = contentType
   }, [contentType])
 
-  const getCurrentContent = useCallback(() => {
-    const ct = contentTypeRef.current
-    const ed = richTextRef.current?.getEditor()
-    let contentRaw = ''
-    let contentHtml = ''
-    let contentText = ''
+  const applyBackupRestore = useCallback(
+    (backup: LocalDraftBackup<PageFormState>) => {
+      const nextForm = backup.form
+      const nextContent = backup.content
+      const ct = nextContent.contentType
 
-    if (ct === 'richtext' && ed) {
-      contentHtml = ed.getHTML()
-      contentText = ed.getText()
-      contentRaw = contentHtml
-    } else if (ct === 'html') {
-      contentRaw = textContentRef.current
-      contentHtml = textContentRef.current
-    } else {
-      contentRaw = textContentRef.current
-      contentText = textContentRef.current
-    }
+      setForm(nextForm)
+      formRef.current = nextForm
+      setPathError(nextForm.path ? validatePath(nextForm.path) : null)
+      setContentType(ct)
+      contentTypeRef.current = ct
 
-    return {
-      contentType: ct,
-      contentRaw,
-      contentHtml,
-      contentText,
-    }
-  }, [])
+      if (ct === 'richtext') {
+        const html = nextContent.contentHtml ?? nextContent.contentRaw
+        const ed = richTextRef.current?.getEditor()
+        if (ed) {
+          ed.commands.setContent(html)
+        } else {
+          pendingEditorContent.current = html
+        }
+      }
+      setTextContent(nextContent.contentRaw)
+      textContentRef.current = nextContent.contentRaw
+
+      lastAutoSaveContent.current = ''
+      lastAutoSaveMetaRef.current = ''
+      editorDirty.current = true
+      setDirty(true)
+
+      backupReadyRef.current = true
+      setPendingBackup(null)
+    },
+    [validatePath],
+  )
+
+  const ignorePendingBackup = useCallback(() => {
+    discardBackup()
+    backupReadyRef.current = true
+    setPendingBackup(null)
+  }, [discardBackup])
 
   const saveDraftRevision = useCallback(
     async (targetId: number, formState: typeof form, content = getCurrentContent()) => {
@@ -512,7 +642,8 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
       const content = getCurrentContent()
       const targetPageId = getTargetPageId()
 
-      // 新页面：首次有实际内容时创建记录并跳转到真实编辑页
+      // 新页面：首次有实际内容时创建记录并跳转到真实编辑页；
+      // 此阶段用固定 5s 轮询（不受 phase 影响），避免用户起草时等一整个 30s 才落库
       if (!targetPageId) {
         if (
           shouldCreateDraftRecord({
@@ -524,7 +655,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
         ) {
           void createAndRedirect({ silent: true })
         }
-        scheduleNext()
+        setTimeout(tick, NEW_DOC_POLL_INTERVAL_MS)
         return
       }
 
@@ -545,6 +676,8 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
             lastAutoSaveContent.current = content.contentRaw
             lastAutoSaveMetaRef.current = currentMeta
             setAutoSaveTime(json.data.updatedAt)
+            // 云端已吸收最新内容，清掉本地兜底备份
+            discardBackup()
           } else {
             onAutoSaveFail()
           }
@@ -571,6 +704,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
     saveDraftRevision,
     clearAutoSaveFail,
     onAutoSaveFail,
+    discardBackup,
   ])
 
   const handlePathChange = (value: string) => {
@@ -594,6 +728,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
         lastAutoSaveContent.current = draftSave.content.contentRaw
         lastAutoSaveMetaRef.current = getMetaSnapshot(formState)
         setAutoSaveTime(draftSave.json.data.updatedAt)
+        discardBackup()
         window.open(`/--preview-${targetPageId}`, '_blank')
       } else {
         notify({ color: 'red', message: draftSave.json.message || tCommon('errors.saveFailed') })
@@ -622,6 +757,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
         lastAutoSaveContent.current = draftSave.content.contentRaw
         lastAutoSaveMetaRef.current = getMetaSnapshot(formState)
         setAutoSaveTime(draftSave.json.data.updatedAt)
+        discardBackup()
         notify({ color: 'green', message: t('draftSaved') })
       } else {
         notify({ color: 'red', message: draftSave.json.message || tCommon('errors.saveFailed') })
@@ -671,6 +807,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
       const json = await res.json()
       if (json.success) {
         clearAutoSaveFail()
+        discardBackup()
         if (!pageId) {
           const nextId = targetPageId ?? json.data.id
           pendingCreatedPageIdRef.current = null
@@ -817,8 +954,44 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
           } else {
             setScheduledTime(null)
           }
+          discardBackup()
         }}
       />
+
+      {pendingBackup && (
+        <Alert
+          variant="light"
+          color="yellow"
+          icon={<IconAlertTriangle size={16} />}
+          my="sm"
+          data-role="local-backup-alert"
+        >
+          <Text size="sm" mb="xs">
+            {t('localBackup.recoverBody', {
+              minutes: Math.max(1, Math.round((Date.now() - pendingBackup.savedAt) / 60_000)),
+            })}
+          </Text>
+          <Group gap="xs">
+            <Button
+              size="xs"
+              variant="filled"
+              onClick={() => applyBackupRestore(pendingBackup)}
+              data-role="local-backup-recover"
+            >
+              {t('localBackup.recoverBtn')}
+            </Button>
+            <Button
+              size="xs"
+              variant="subtle"
+              color="gray"
+              onClick={ignorePendingBackup}
+              data-role="local-backup-ignore"
+            >
+              {t('localBackup.ignoreBtn')}
+            </Button>
+          </Group>
+        </Alert>
+      )}
 
       <Grid>
         {/* 主编辑区 */}
