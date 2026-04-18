@@ -1,8 +1,9 @@
 import { requireRole } from '@/server/auth'
+import { jsonSuccess } from '@/server/lib/api-response'
 import { parseIdParam, safeParseJson } from '@/server/lib/request'
 import { logActivity } from '@/server/services/activity-logs'
 import { deleteMenu, updateMenu } from '@/server/services/menus'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const guard = await requireRole(['owner', 'admin'])
@@ -15,7 +16,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   if (error) return error
   const menu = await updateMenu(menuId, body)
   await logActivity(request, guard.user.id, 'update_menu')
-  return NextResponse.json({ success: true, data: menu })
+  return jsonSuccess(menu)
 }
 
 export async function DELETE(
@@ -30,5 +31,5 @@ export async function DELETE(
   if (idError) return idError
   await deleteMenu(menuId)
   await logActivity(request, guard.user.id, 'delete_menu')
-  return NextResponse.json({ success: true })
+  return jsonSuccess()
 }

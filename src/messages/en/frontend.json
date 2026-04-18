@@ -139,7 +139,8 @@
   "api": {
     "comments": {
       "slugRequired": "Slug is required",
-      "contentAndUsernameRequired": "Username and content are required"
+      "contentAndUsernameRequired": "Username and content are required",
+      "invalidInput": "Invalid input format"
     },
     "guestbook": {
       "contentAndUsernameRequired": "Username and content are required"

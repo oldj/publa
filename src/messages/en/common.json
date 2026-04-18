@@ -74,6 +74,7 @@
     "invalidId": "Invalid ID",
     "unauthorized": "You are not signed in or your session has expired",
     "forbidden": "Permission denied",
+    "forbiddenOrigin": "Invalid request origin",
     "cronSecretNotConfigured": "Cron secret is not configured",
     "invalidCronSecret": "Invalid cron secret",
     "authenticationUnavailable": "Authentication is temporarily unavailable",

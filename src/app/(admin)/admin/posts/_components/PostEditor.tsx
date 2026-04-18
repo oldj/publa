@@ -691,7 +691,10 @@ export default function PostEditor({ postId }: { postId?: number }) {
 
     function scheduleNext() {
       if (cancelled) return
-      const delay = AUTO_SAVE_INTERVAL[autoSavePhaseRef.current]
+      // 新文档阶段用固定 5s 轮询，避免初次等满一个 phase 间隔（30s）才触发首次落库
+      const delay = getTargetPostId()
+        ? AUTO_SAVE_INTERVAL[autoSavePhaseRef.current]
+        : NEW_DOC_POLL_INTERVAL_MS
       setTimeout(tick, delay)
     }
 
@@ -718,7 +721,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
         ) {
           void createAndRedirect({ silent: true })
         }
-        setTimeout(tick, NEW_DOC_POLL_INTERVAL_MS)
+        scheduleNext()
         return
       }
 

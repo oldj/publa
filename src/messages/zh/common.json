@@ -74,6 +74,7 @@
     "invalidId": "无效的 ID",
     "unauthorized": "未登录或登录已失效",
     "forbidden": "权限不足",
+    "forbiddenOrigin": "请求来源无效",
     "cronSecretNotConfigured": "定时任务密钥未配置",
     "invalidCronSecret": "定时任务密钥无效",
     "authenticationUnavailable": "认证服务暂不可用",

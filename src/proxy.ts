@@ -6,6 +6,58 @@ import { NextRequest, NextResponse } from 'next/server'
 const ADMIN_PATH = getAdminPath()
 const IS_CUSTOM_ADMIN = ADMIN_PATH !== 'admin'
 
+// 对 /api 下的写方法强制同源校验，弥补 SameSite=lax 在部分场景下的 CSRF 缺口
+const WRITE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
+
+// 由外部定时器触发、无 Origin 的内部接口豁免 Origin 校验
+const ORIGIN_CHECK_EXEMPT_PREFIXES = ['/api/cron']
+
+function isOriginCheckExempt(pathname: string): boolean {
+  for (const prefix of ORIGIN_CHECK_EXEMPT_PREFIXES) {
+    if (pathname === prefix || pathname.startsWith(`${prefix}/`)) return true
+  }
+  return false
+}
+
+// 首选用 Sec-Fetch-Site 判定是否同源：
+// - 这是浏览器强制设置的 Fetch Metadata 头（Forbidden Header），
+//   脚本无法覆写，跨站攻击者也无法伪造，是最可靠的 CSRF 判据；
+// - 不依赖服务器知道自己的 hostname，反代即使改写了 Host / 未转发
+//   X-Forwarded-Host 也不影响判断；
+// - 支持度：Chrome 76+ / Firefox 90+ / Safari 16.4+。
+// 对更老的浏览器退回到 Origin hostname 比对。
+function isSameOriginWrite(request: NextRequest): boolean {
+  const secFetchSite = request.headers.get('sec-fetch-site')
+  if (secFetchSite) {
+    // same-origin：浏览器已判定同源；其它值（same-site / cross-site / none）一律拒绝
+    return secFetchSite === 'same-origin'
+  }
+  return hasMatchingOriginHostname(request)
+}
+
+function hasMatchingOriginHostname(request: NextRequest): boolean {
+  const origin = request.headers.get('origin')
+  if (!origin) return false
+
+  // 仅比较 hostname：CSRF 防御只需确认"同域"。跨 scheme（http/https）
+  // 或显式端口差异在反代部署下会产生假阴性，真实 CSRF 攻击的源 hostname
+  // 必然不同，因此 hostname 相同即可放行。
+  let originHost: string
+  try {
+    originHost = new URL(origin).hostname
+  } catch {
+    return false
+  }
+  if (!originHost) return false
+
+  // 期望 host：反代优先用 X-Forwarded-Host，其次 Host，兜底 nextUrl
+  const rawHost =
+    request.headers.get('x-forwarded-host') || request.headers.get('host') || request.nextUrl.host
+  const expectedHost = rawHost.split(':')[0].toLowerCase()
+
+  return originHost.toLowerCase() === expectedHost
+}
+
 // 不可能是自定义页面的路径前缀（静态资源目录 _next、uploads 等已包含在内）
 // ADMIN_PATH 经过 SLUG_PATTERN 校验，只含 [a-zA-Z0-9_-]，可安全拼入正则
 const SKIP_BLANK_CHECK = new RegExp(
@@ -46,6 +98,20 @@ async function checkAdminAuth(
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
+
+  // --- /api 单独短路：仅做写方法同源校验，无需走后续 admin / blank-page 逻辑 ---
+  if (pathname.startsWith('/api/')) {
+    if (
+      WRITE_METHODS.has(request.method) &&
+      !isOriginCheckExempt(pathname) &&
+      !isSameOriginWrite(request)
+    ) {
+      // 返回稳定错误码，前端按 code 翻译展示（proxy 阶段不走 i18n 翻译）
+      return NextResponse.json({ success: false, code: 'FORBIDDEN_ORIGIN' }, { status: 403 })
+    }
+    // API 请求不需要 x-pathname / x-search 注入，直接放行
+    return NextResponse.next()
+  }
 
   // --- 自定义后台路径处理 ---
   if (IS_CUSTOM_ADMIN) {
@@ -129,5 +195,11 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/setup', '/((?!api|_next/static|_next/image|favicon\\.ico).*)'],
+  matcher: [
+    '/admin/:path*',
+    '/setup',
+    // 对 /api 写方法做 Origin 校验（proxy 内部会短路返回，不跑后续逻辑）
+    '/api/:path*',
+    '/((?!api|_next/static|_next/image|favicon\\.ico).*)',
+  ],
 }

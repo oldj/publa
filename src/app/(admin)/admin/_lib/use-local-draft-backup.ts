@@ -19,6 +19,29 @@ const TTL_MS = 14 * 24 * 60 * 60 * 1000
 const MAX_ENTRIES = 20
 const MAX_SINGLE_SIZE = 2 * 1024 * 1024
 
+/** 清空所有编辑器本地草稿备份；登出/切换账号时调用，避免草稿泄露给下一个使用者。 */
+export function clearAllLocalDraftBackups(): void {
+  if (typeof window === 'undefined') return
+  let storage: Storage
+  try {
+    storage = window.localStorage
+  } catch {
+    return
+  }
+  const keysToRemove: string[] = []
+  for (let i = 0; i < storage.length; i++) {
+    const key = storage.key(i)
+    if (key && key.startsWith(STORAGE_KEY_PREFIX)) keysToRemove.push(key)
+  }
+  for (const key of keysToRemove) {
+    try {
+      storage.removeItem(key)
+    } catch {
+      // 忽略单条清理失败
+    }
+  }
+}
+
 export interface LocalDraftBackupContent {
   contentType: ContentType
   contentRaw: string

@@ -1,7 +1,8 @@
 import { requireRole } from '@/server/auth'
+import { jsonSuccess } from '@/server/lib/api-response'
 import { parseIdParam } from '@/server/lib/request'
 import { deleteEmailLog } from '@/server/services/email-logs'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 
 export async function DELETE(
   _request: NextRequest,
@@ -15,5 +16,5 @@ export async function DELETE(
   if (error) return error
 
   await deleteEmailLog(id)
-  return NextResponse.json({ success: true })
+  return jsonSuccess()
 }

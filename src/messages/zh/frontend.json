@@ -139,7 +139,8 @@
   "api": {
     "comments": {
       "slugRequired": "slug 不能为空",
-      "contentAndUsernameRequired": "用户名和内容不能为空"
+      "contentAndUsernameRequired": "用户名和内容不能为空",
+      "invalidInput": "输入内容格式不正确"
     },
     "guestbook": {
       "contentAndUsernameRequired": "用户名和内容不能为空"

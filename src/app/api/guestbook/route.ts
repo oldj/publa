@@ -23,7 +23,12 @@ export async function POST(request: NextRequest) {
 
   const { data: body, error } = await safeParseJson(request)
   if (error) return error
-  const { username, email, url, content, captchaCode } = body
+  // 两端空白视为空；既防御纯空白提交，又避免脏数据入库
+  const username = typeof body.username === 'string' ? body.username.trim() : ''
+  const email = typeof body.email === 'string' ? body.email.trim() : ''
+  const url = typeof body.url === 'string' ? body.url.trim() : ''
+  const content = typeof body.content === 'string' ? body.content.trim() : ''
+  const captchaCode = typeof body.captchaCode === 'string' ? body.captchaCode : ''
 
   if (!content || !username) {
     return jsonError({
