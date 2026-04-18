@@ -19,25 +19,43 @@ function isOriginCheckExempt(pathname: string): boolean {
   return false
 }
 
-function hasMatchingOrigin(request: NextRequest): boolean {
+// 首选用 Sec-Fetch-Site 判定是否同源：
+// - 这是浏览器强制设置的 Fetch Metadata 头（Forbidden Header），
+//   脚本无法覆写，跨站攻击者也无法伪造，是最可靠的 CSRF 判据；
+// - 不依赖服务器知道自己的 hostname，反代即使改写了 Host / 未转发
+//   X-Forwarded-Host 也不影响判断；
+// - 支持度：Chrome 76+ / Firefox 90+ / Safari 16.4+。
+// 对更老的浏览器退回到 Origin hostname 比对。
+function isSameOriginWrite(request: NextRequest): boolean {
+  const secFetchSite = request.headers.get('sec-fetch-site')
+  if (secFetchSite) {
+    // same-origin：浏览器已判定同源；其它值（same-site / cross-site / none）一律拒绝
+    return secFetchSite === 'same-origin'
+  }
+  return hasMatchingOriginHostname(request)
+}
+
+function hasMatchingOriginHostname(request: NextRequest): boolean {
   const origin = request.headers.get('origin')
   if (!origin) return false
 
-  // 标准化成 `scheme://host` 一起比，避免 http/https 被当作同源
-  let originKey: string
+  // 仅比较 hostname：CSRF 防御只需确认"同域"。跨 scheme（http/https）
+  // 或显式端口差异在反代部署下会产生假阴性，真实 CSRF 攻击的源 hostname
+  // 必然不同，因此 hostname 相同即可放行。
+  let originHost: string
   try {
-    const u = new URL(origin)
-    originKey = `${u.protocol}//${u.host}`
+    originHost = new URL(origin).hostname
   } catch {
     return false
   }
+  if (!originHost) return false
 
-  // 期望的 origin：反代部署优先用 X-Forwarded-*，其次 Host，兜底 nextUrl
-  const proto =
-    request.headers.get('x-forwarded-proto') || request.nextUrl.protocol.replace(/:$/, '')
-  const host =
+  // 期望 host：反代优先用 X-Forwarded-Host，其次 Host，兜底 nextUrl
+  const rawHost =
     request.headers.get('x-forwarded-host') || request.headers.get('host') || request.nextUrl.host
-  return originKey === `${proto}://${host}`
+  const expectedHost = rawHost.split(':')[0].toLowerCase()
+
+  return originHost.toLowerCase() === expectedHost
 }
 
 // 不可能是自定义页面的路径前缀（静态资源目录 _next、uploads 等已包含在内）
@@ -86,7 +104,7 @@ export async function proxy(request: NextRequest) {
     if (
       WRITE_METHODS.has(request.method) &&
       !isOriginCheckExempt(pathname) &&
-      !hasMatchingOrigin(request)
+      !isSameOriginWrite(request)
     ) {
       // 返回稳定错误码，前端按 code 翻译展示（proxy 阶段不走 i18n 翻译）
       return NextResponse.json({ success: false, code: 'FORBIDDEN_ORIGIN' }, { status: 403 })
