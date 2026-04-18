@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { clearAuthCookie, getCurrentUser } from '@/server/auth'
 import { db } from '@/server/db'
 import { users } from '@/server/db/schema'
+import { jsonSuccess } from '@/server/lib/api-response'
 import { logActivity } from '@/server/services/activity-logs'
 import { eq, sql } from 'drizzle-orm'
 
@@ -22,5 +23,5 @@ export async function POST(request: NextRequest) {
     await logActivity(request, user.id, 'logout')
   }
 
-  return NextResponse.json({ success: true })
+  return jsonSuccess()
 }
