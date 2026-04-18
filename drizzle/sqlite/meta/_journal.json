@@ -85,6 +85,13 @@
       "when": 1775884463055,
       "tag": "0011_overjoyed_sugar_man",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1776430193421,
+      "tag": "0012_parallel_scarlet_spider",
+      "breakpoints": true
     }
   ]
 }

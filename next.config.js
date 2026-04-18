@@ -2,9 +2,17 @@ const createNextIntlPlugin = require('next-intl/plugin')
 
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts')
 
+// 开发模式允许的 Origin（仅 next dev 下生效）：
+// 默认保留本机回环地址；通过 ALLOWED_DEV_ORIGINS（逗号分隔）追加自定义域名。
+const extraDevOrigins = (process.env.ALLOWED_DEV_ORIGINS || '')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean)
+const allowedDevOrigins = ['127.0.0.1', ...extraDevOrigins]
+
 const next_configs = {
   output: 'standalone',
-  allowedDevOrigins: ['127.0.0.1', '*.oldj.net', '*.tominlab.com'],
+  allowedDevOrigins,
   serverExternalPackages: [
     'svg-captcha',
     'ali-oss',

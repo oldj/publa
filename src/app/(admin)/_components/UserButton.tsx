@@ -1,5 +1,6 @@
 'use client'
 
+import { clearAllLocalDraftBackups } from '@/app/(admin)/admin/_lib/use-local-draft-backup'
 import type { AuthUser } from '@/server/auth'
 import { ActionIcon, Avatar, Group, Text } from '@mantine/core'
 import { IconLogout } from '@tabler/icons-react'
@@ -18,6 +19,8 @@ export function UserButton({ user }: { user: AuthUser | null }) {
   const handleLogout = async () => {
     if (!(await myModal.confirm({ message: t('logoutConfirm') }))) return
     await fetch('/api/auth/logout', { method: 'POST' })
+    // 清空本地编辑器草稿备份，避免下一位使用者在同一浏览器读取到草稿
+    clearAllLocalDraftBackups()
     router.push(adminUrl('/login'))
   }
 

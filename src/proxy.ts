@@ -6,6 +6,40 @@ import { NextRequest, NextResponse } from 'next/server'
 const ADMIN_PATH = getAdminPath()
 const IS_CUSTOM_ADMIN = ADMIN_PATH !== 'admin'
 
+// 对 /api 下的写方法强制同源校验，弥补 SameSite=lax 在部分场景下的 CSRF 缺口
+const WRITE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
+
+// 由外部定时器触发、无 Origin 的内部接口豁免 Origin 校验
+const ORIGIN_CHECK_EXEMPT_PREFIXES = ['/api/cron']
+
+function isOriginCheckExempt(pathname: string): boolean {
+  for (const prefix of ORIGIN_CHECK_EXEMPT_PREFIXES) {
+    if (pathname === prefix || pathname.startsWith(`${prefix}/`)) return true
+  }
+  return false
+}
+
+function hasMatchingOrigin(request: NextRequest): boolean {
+  const origin = request.headers.get('origin')
+  if (!origin) return false
+
+  // 标准化成 `scheme://host` 一起比，避免 http/https 被当作同源
+  let originKey: string
+  try {
+    const u = new URL(origin)
+    originKey = `${u.protocol}//${u.host}`
+  } catch {
+    return false
+  }
+
+  // 期望的 origin：反代部署优先用 X-Forwarded-*，其次 Host，兜底 nextUrl
+  const proto =
+    request.headers.get('x-forwarded-proto') || request.nextUrl.protocol.replace(/:$/, '')
+  const host =
+    request.headers.get('x-forwarded-host') || request.headers.get('host') || request.nextUrl.host
+  return originKey === `${proto}://${host}`
+}
+
 // 不可能是自定义页面的路径前缀（静态资源目录 _next、uploads 等已包含在内）
 // ADMIN_PATH 经过 SLUG_PATTERN 校验，只含 [a-zA-Z0-9_-]，可安全拼入正则
 const SKIP_BLANK_CHECK = new RegExp(
@@ -46,6 +80,20 @@ async function checkAdminAuth(
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
+
+  // --- /api 单独短路：仅做写方法同源校验，无需走后续 admin / blank-page 逻辑 ---
+  if (pathname.startsWith('/api/')) {
+    if (
+      WRITE_METHODS.has(request.method) &&
+      !isOriginCheckExempt(pathname) &&
+      !hasMatchingOrigin(request)
+    ) {
+      // 返回稳定错误码，前端按 code 翻译展示（proxy 阶段不走 i18n 翻译）
+      return NextResponse.json({ success: false, code: 'FORBIDDEN_ORIGIN' }, { status: 403 })
+    }
+    // API 请求不需要 x-pathname / x-search 注入，直接放行
+    return NextResponse.next()
+  }
 
   // --- 自定义后台路径处理 ---
   if (IS_CUSTOM_ADMIN) {
@@ -129,5 +177,11 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/setup', '/((?!api|_next/static|_next/image|favicon\\.ico).*)'],
+  matcher: [
+    '/admin/:path*',
+    '/setup',
+    // 对 /api 写方法做 Origin 校验（proxy 内部会短路返回，不跑后续逻辑）
+    '/api/:path*',
+    '/((?!api|_next/static|_next/image|favicon\\.ico).*)',
+  ],
 }

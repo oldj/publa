@@ -203,9 +203,10 @@ async function initializeOwner(
   credentials: OwnerCredentials,
   storageStatePath: string,
 ): Promise<APIRequestContext> {
+  // proxy 对 /api 写方法做同源校验，APIRequestContext 默认不发 Origin，这里显式指定
   const bootstrapContext = await request.newContext({
     baseURL,
-    extraHTTPHeaders: { Accept: 'application/json' },
+    extraHTTPHeaders: { Accept: 'application/json', Origin: baseURL },
   })
 
   const response = await bootstrapContext.post('/api/setup', {
@@ -236,7 +237,7 @@ async function initializeOwner(
   return request.newContext({
     baseURL,
     storageState: storageStatePath,
-    extraHTTPHeaders: { Accept: 'application/json' },
+    extraHTTPHeaders: { Accept: 'application/json', Origin: baseURL },
   })
 }
 
@@ -304,7 +305,7 @@ export async function createAppInstance(
       )
       apiContext = await request.newContext({
         baseURL,
-        extraHTTPHeaders: { Accept: 'application/json' },
+        extraHTTPHeaders: { Accept: 'application/json', Origin: baseURL },
       })
     } else {
       apiContext = await initializeOwner(baseURL, credentials, storageStatePath)

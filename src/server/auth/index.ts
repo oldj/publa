@@ -30,6 +30,8 @@ interface TokenPayload extends JWTPayload {
   userId: number
   username: string
   role: string
+  // 与 users.token_version 对齐；登出、改密后用户侧自增，旧 token 校验失败
+  tokenVersion: number
 }
 
 type AuthGuardResult = { ok: true; user: AuthUser } | { ok: false; response: NextResponse }
@@ -52,10 +54,21 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 export async function createToken(user: AuthUser): Promise<string> {
   const jwtSecret = getJwtSecret()
 
+  // 读取当前 tokenVersion 写入 payload；后续登出/改密会自增这个值，让旧 token 失效
+  const row = await maybeFirst(
+    db
+      .select({ tokenVersion: users.tokenVersion })
+      .from(users)
+      .where(eq(users.id, user.id))
+      .limit(1),
+  )
+  const tokenVersion = row?.tokenVersion ?? 0
+
   return new SignJWT({
     userId: user.id,
     username: user.username,
     role: user.role,
+    tokenVersion,
   })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
@@ -87,6 +100,9 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     db.select().from(users).where(eq(users.id, payload.userId)).limit(1),
   )
   if (!user) return null
+
+  // 校验 token 版本：登出、改密后服务端自增，旧 token 立即失效
+  if ((payload.tokenVersion ?? 0) !== user.tokenVersion) return null
 
   const authUser: AuthUser = {
     id: user.id,

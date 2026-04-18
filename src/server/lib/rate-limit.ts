@@ -4,6 +4,13 @@ import { and, count, eq, gte, lt } from 'drizzle-orm'
 
 type RateEventType = 'login_fail' | 'comment' | 'guestbook'
 
+// 同 IP 提交节流阈值（评论/留言共用）
+// 取值经验：在挡住自动化批量提交的同时，允许 NAT/移动出口下多个真人共用一个出口 IP。
+const IP_SHORT_WINDOW_MS = 60 * 1000
+const IP_SHORT_LIMIT = 6
+const IP_LONG_WINDOW_MS = 5 * 60 * 1000
+const IP_LONG_LIMIT = 20
+
 /** 记录一条速率事件 */
 export async function recordRateEvent(
   eventType: RateEventType,
@@ -40,18 +47,51 @@ export async function acquireSubmissionSlot(
   ipAddress?: string,
 ): Promise<boolean> {
   return db.transaction(async (tx) => {
-    const threshold = new Date(Date.now() - 30 * 1000).toISOString()
-    const [row] = await tx
+    const now = Date.now()
+
+    // 1) sessionId 维度：30 秒内不得重复（同一 captcha 会话）
+    const sessionThreshold = new Date(now - 30 * 1000).toISOString()
+    const [sessionRow] = await tx
       .select({ total: count() })
       .from(rateEvents)
       .where(
         and(
           eq(rateEvents.eventType, eventType),
           eq(rateEvents.identifier, sessionId),
-          gte(rateEvents.createdAt, threshold),
+          gte(rateEvents.createdAt, sessionThreshold),
         ),
       )
-    if ((row?.total ?? 0) >= 1) return false
+    if ((sessionRow?.total ?? 0) >= 1) return false
+
+    // 2) IP 维度（仅当能拿到 IP 时）：清 cookie 也无法绕过
+    if (ipAddress) {
+      const shortThreshold = new Date(now - IP_SHORT_WINDOW_MS).toISOString()
+      const [shortRow] = await tx
+        .select({ total: count() })
+        .from(rateEvents)
+        .where(
+          and(
+            eq(rateEvents.eventType, eventType),
+            eq(rateEvents.ipAddress, ipAddress),
+            gte(rateEvents.createdAt, shortThreshold),
+          ),
+        )
+      if ((shortRow?.total ?? 0) >= IP_SHORT_LIMIT) return false
+
+      const longThreshold = new Date(now - IP_LONG_WINDOW_MS).toISOString()
+      const [longRow] = await tx
+        .select({ total: count() })
+        .from(rateEvents)
+        .where(
+          and(
+            eq(rateEvents.eventType, eventType),
+            eq(rateEvents.ipAddress, ipAddress),
+            gte(rateEvents.createdAt, longThreshold),
+          ),
+        )
+      if ((longRow?.total ?? 0) >= IP_LONG_LIMIT) return false
+    }
+
     await tx.insert(rateEvents).values({ eventType, identifier: sessionId, ipAddress })
     return true
   })

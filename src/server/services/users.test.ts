@@ -148,6 +148,28 @@ describe('updateUser', () => {
     expect(after!.passwordHash).not.toBe('newpassword')
   })
 
+  it('改密会自增 tokenVersion，让旧 JWT 立即失效', async () => {
+    const { db } = await import('@/server/db')
+    const before = await maybeFirst(db.select().from(users).where(eq(users.id, 2)).limit(1))
+    const oldVersion = before!.tokenVersion
+
+    await updateUser(2, { password: 'newpassword' })
+
+    const after = await maybeFirst(db.select().from(users).where(eq(users.id, 2)).limit(1))
+    expect(after!.tokenVersion).toBe(oldVersion + 1)
+  })
+
+  it('不改密码时不动 tokenVersion，避免误伤已登录会话', async () => {
+    const { db } = await import('@/server/db')
+    const before = await maybeFirst(db.select().from(users).where(eq(users.id, 2)).limit(1))
+    const oldVersion = before!.tokenVersion
+
+    await updateUser(2, { username: 'renamed', email: 'foo@example.com', role: 'admin' })
+
+    const after = await maybeFirst(db.select().from(users).where(eq(users.id, 2)).limit(1))
+    expect(after!.tokenVersion).toBe(oldVersion)
+  })
+
   it('更新时会清洗用户名邮箱和密码', async () => {
     await updateUser(2, {
       username: '  newname  ',

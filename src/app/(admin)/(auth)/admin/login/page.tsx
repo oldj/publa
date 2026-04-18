@@ -2,6 +2,7 @@
 
 import { useAdminUrl } from '@/app/(admin)/_components/AdminPathContext'
 import { useSiteShortTitle } from '@/app/(admin)/_components/SiteShortTitleContext'
+import { clearAllLocalDraftBackups } from '@/app/(admin)/admin/_lib/use-local-draft-backup'
 import { notify } from '@/lib/notify'
 import { normalizePassword, normalizeUsername } from '@/lib/user-input'
 import { version } from '@/lib/version'
@@ -41,6 +42,8 @@ export default function AdminLoginPage() {
       const data = await res.json()
 
       if (data.success) {
+        // 登录成功：清空前一个账号残留的本地草稿备份
+        clearAllLocalDraftBackups()
         router.push(adminUrl())
       } else {
         notify({ color: 'red', message: data.message || t('errors.loginFailed') })

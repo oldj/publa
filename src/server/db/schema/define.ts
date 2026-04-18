@@ -48,6 +48,8 @@ export function defineSchema(kit: DialectKit) {
     passwordHash: text('password_hash').notNull(),
     role: text('role', { enum: userRole }).notNull().default('editor'),
     avatarUrl: text('avatar_url'),
+    // token 版本号：登出、改密等操作可自增，使已签发 JWT 立即失效
+    tokenVersion: integer('token_version').notNull().default(0),
     createdAt: text('created_at').notNull().$defaultFn(isoNow),
     updatedAt: text('updated_at').notNull().$defaultFn(isoNow),
   })
@@ -322,6 +324,7 @@ export function defineSchema(kit: DialectKit) {
     },
     (t: any) => [
       index('rate_events_type_identifier_created_idx').on(t.eventType, t.identifier, t.createdAt),
+      index('rate_events_type_ip_created_idx').on(t.eventType, t.ipAddress, t.createdAt),
       index('rate_events_created_idx').on(t.createdAt),
     ],
   )

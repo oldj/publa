@@ -3,7 +3,7 @@ import { hashPassword } from '@/server/auth'
 import { db } from '@/server/db'
 import { insertOne, maybeFirst, updateOne } from '@/server/db/query'
 import { activityLogs, users } from '@/server/db/schema'
-import { eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 
 /** 列出所有用户 */
 export async function listUsers() {
@@ -83,6 +83,8 @@ export async function updateUser(
     const password = normalizePassword(input.password)
     if (!password) throw new Error('Password cannot be empty after normalization')
     updateData.passwordHash = await hashPassword(password)
+    // 改密/重置密码：自增 tokenVersion 让所有已签发的 JWT 立即失效
+    updateData.tokenVersion = sql`${users.tokenVersion} + 1`
   }
   if (input.role) updateData.role = input.role
 
