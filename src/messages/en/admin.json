@@ -1050,7 +1050,7 @@
       "edit": "Edit",
       "new": "New",
       "modified": "Modified",
-      "autosaveAt": "Auto-saved: {time}",
+      "lastSavedAt": "Saved: {time}",
       "publishConfirm": "Are you sure you want to publish this {entityLabel}?",
       "discardDraftConfirm": "Discard all unpublished changes?"
     },

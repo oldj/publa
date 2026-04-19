@@ -81,7 +81,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
   const [dirty, setDirty] = useState(false)
   const savedSnapshot = useRef<string>('')
   const editorDirty = useRef(false)
-  const [autoSaveTime, setAutoSaveTime] = useState<string | null>(null)
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null)
   const [historyOpen, setHistoryOpen] = useState(false)
 
   // 发布设置面板
@@ -183,7 +183,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
       skipInitialLoadForCreatedPageIdRef.current = null
       creatingRef.current = false
       setDirty(false)
-      setAutoSaveTime(null)
+      setLastSavedAt(null)
       setScheduledTime(null)
       setPublishTab('draft')
       setHistoryOpen(false)
@@ -382,7 +382,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
             seoDescription: draft ? draft.seoDescription : p.seoDescription || '',
           })
           if (draft) {
-            setAutoSaveTime(draft.updatedAt)
+            setLastSavedAt(draft.updatedAt)
           }
 
           // 保存初始快照，用于已修改状态判定
@@ -592,7 +592,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
         textContentRef.current = content.contentRaw
         setTextContent(content.contentRaw)
         savedSnapshot.current = makeSnapshot(formState, content.contentRaw)
-        setAutoSaveTime(draftSave.json.data.updatedAt)
+        setLastSavedAt(draftSave.json.data.updatedAt)
         setDirty(true)
         skipInitialLoadForCreatedPageIdRef.current = newId
         router.replace(adminUrl(`/pages/${newId}`))
@@ -679,7 +679,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
             clearAutoSaveFail()
             lastAutoSaveContent.current = content.contentRaw
             lastAutoSaveMetaRef.current = currentMeta
-            setAutoSaveTime(json.data.updatedAt)
+            setLastSavedAt(json.data.updatedAt)
             // 云端已吸收最新内容，清掉本地兜底备份
             discardBackup()
           } else {
@@ -731,7 +731,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
       if (draftSave.json.success) {
         lastAutoSaveContent.current = draftSave.content.contentRaw
         lastAutoSaveMetaRef.current = getMetaSnapshot(formState)
-        setAutoSaveTime(draftSave.json.data.updatedAt)
+        setLastSavedAt(draftSave.json.data.updatedAt)
         discardBackup()
         window.open(`/--preview-${targetPageId}`, '_blank')
       } else {
@@ -760,7 +760,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
         clearAutoSaveFail()
         lastAutoSaveContent.current = draftSave.content.contentRaw
         lastAutoSaveMetaRef.current = getMetaSnapshot(formState)
-        setAutoSaveTime(draftSave.json.data.updatedAt)
+        setLastSavedAt(draftSave.json.data.updatedAt)
         discardBackup()
         notify({ color: 'green', message: t('draftSaved') })
       } else {
@@ -842,7 +842,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
             status,
             publishedAt: newPublishedAt,
           })
-          setAutoSaveTime(null)
+          setLastSavedAt(null)
         }
       } else {
         // 服务端路径校验错误回填到输入框
@@ -891,7 +891,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
     setContentType(newType)
     contentTypeRef.current = newType
     setDirty(true)
-    setAutoSaveTime(null)
+    setLastSavedAt(null)
 
     // 立即落库，与 PostEditor 对齐；失败时下一次自动保存会兜底
     const targetPageId = getTargetPageId()
@@ -903,7 +903,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
           if (json.success) {
             lastAutoSaveContent.current = content.contentRaw
             lastAutoSaveMetaRef.current = getMetaSnapshot(formState)
-            setAutoSaveTime(json.data.updatedAt)
+            setLastSavedAt(json.data.updatedAt)
           }
         })
         .catch(() => {})
@@ -922,7 +922,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
         status={form.status}
         dirty={dirty}
         loading={loading}
-        autoSaveTime={autoSaveTime}
+        lastSavedAt={lastSavedAt}
         onPreview={handlePreview}
         onSaveDraft={handleSaveDraft}
         onPublish={handleSave}
@@ -962,7 +962,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
           savedSnapshot.current = makeSnapshot(restoredForm, pageData.contentRaw)
           editorDirty.current = false
           setDirty(false)
-          setAutoSaveTime(null)
+          setLastSavedAt(null)
           setPublishTab(
             pageData.status === 'published'
               ? 'published'
@@ -1046,7 +1046,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
               onUpdate={() => {
                 editorDirty.current = true
                 setDirty(true)
-                setAutoSaveTime(null)
+                setLastSavedAt(null)
               }}
               onReady={(editor) => {
                 if (pendingEditorContent.current) {

@@ -15,7 +15,7 @@ interface EditorHeaderProps {
   status: string // 'draft' | 'scheduled' | 'published'
   dirty: boolean
   loading: boolean
-  autoSaveTime: string | null
+  lastSavedAt: string | null
   onPreview: () => void
   onSaveDraft: () => void
   onPublish: () => Promise<void>
@@ -31,7 +31,7 @@ export function EditorHeader({
   status,
   dirty,
   loading,
-  autoSaveTime,
+  lastSavedAt,
   onPreview,
   onSaveDraft,
   onPublish,
@@ -133,9 +133,9 @@ export function EditorHeader({
             )}
           </Group>
         )}
-        {autoSaveTime && (
+        {lastSavedAt && (
           <Text size="sm" c="dimmed" data-role="editor-autosave-time">
-            {t('autosaveAt', { time: dayjs(autoSaveTime).format('YYYY-MM-DD HH:mm:ss') })}
+            {t('lastSavedAt', { time: dayjs(lastSavedAt).format('YYYY-MM-DD HH:mm:ss') })}
           </Text>
         )}
       </Group>

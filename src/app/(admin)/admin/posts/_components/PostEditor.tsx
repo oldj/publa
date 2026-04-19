@@ -152,7 +152,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
   const [publishTab, setPublishTab] = useState<string>('draft')
 
   // 自动保存状态
-  const [autoSaveTime, setAutoSaveTime] = useState<string | null>(null)
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null)
   const lastAutoSaveContent = useRef<string>('')
   const lastAutoSaveMetaRef = useRef<string>('')
   const autoSavingRef = useRef(false)
@@ -277,7 +277,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
       skipInitialLoadForCreatedPostIdRef.current = null
       creatingRef.current = false
       setDirty(false)
-      setAutoSaveTime(null)
+      setLastSavedAt(null)
       setScheduledTime(null)
       setPublishTab('draft')
       setHistoryOpen(false)
@@ -474,7 +474,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
         }
 
         if (draft) {
-          setAutoSaveTime(draft.updatedAt)
+          setLastSavedAt(draft.updatedAt)
         }
 
         // 保存初始快照
@@ -655,7 +655,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
         textContentRef.current = content.contentRaw
         setTextContent(content.contentRaw)
         savedSnapshot.current = makeSnapshot(formState, content.contentRaw)
-        setAutoSaveTime(draftSave.json.data.updatedAt)
+        setLastSavedAt(draftSave.json.data.updatedAt)
         setDirty(true)
         skipInitialLoadForCreatedPostIdRef.current = newId
         router.replace(adminUrl(`/posts/${newId}`))
@@ -742,7 +742,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
             clearAutoSaveFail()
             lastAutoSaveContent.current = content.contentRaw
             lastAutoSaveMetaRef.current = currentMeta
-            setAutoSaveTime(json.data.updatedAt)
+            setLastSavedAt(json.data.updatedAt)
             // 云端已吸收最新内容，清掉本地兜底备份
             discardBackup()
           } else {
@@ -832,7 +832,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
       if (draftSave.json.success) {
         lastAutoSaveContent.current = draftSave.content.contentRaw
         lastAutoSaveMetaRef.current = getMetaSnapshot(formState)
-        setAutoSaveTime(draftSave.json.data.updatedAt)
+        setLastSavedAt(draftSave.json.data.updatedAt)
         discardBackup()
         window.open(`/posts/--preview-${targetPostId}`, '_blank')
       } else {
@@ -861,7 +861,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
         clearAutoSaveFail()
         lastAutoSaveContent.current = draftSave.content.contentRaw
         lastAutoSaveMetaRef.current = getMetaSnapshot(formState)
-        setAutoSaveTime(draftSave.json.data.updatedAt)
+        setLastSavedAt(draftSave.json.data.updatedAt)
         discardBackup()
         notify({ color: 'green', message: t('draftSaved') })
       } else {
@@ -936,7 +936,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
           status,
           publishedAt: newPublishedAt,
         })
-        setAutoSaveTime(null)
+        setLastSavedAt(null)
         discardBackup()
         if (!postId) {
           const nextId = targetPostId ?? json.data.id
@@ -971,7 +971,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
         status={form.status}
         dirty={dirty}
         loading={loading}
-        autoSaveTime={autoSaveTime}
+        lastSavedAt={lastSavedAt}
         onPreview={handlePreview}
         onSaveDraft={handleSaveDraft}
         onPublish={handleSave}
@@ -1025,7 +1025,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
           savedSnapshot.current = makeSnapshot(restoredForm, postData.contentRaw)
           editorDirty.current = false
           setDirty(false)
-          setAutoSaveTime(null)
+          setLastSavedAt(null)
           discardBackup()
         }}
       />
@@ -1142,7 +1142,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
 
                   // 标记为已修改并立即保存草稿
                   setDirty(true)
-                  setAutoSaveTime(null)
+                  setLastSavedAt(null)
                   const targetPostId = getTargetPostId()
                   if (targetPostId) {
                     const formState = form
@@ -1158,7 +1158,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
                         if (json.success) {
                           lastAutoSaveContent.current = contentRaw
                           lastAutoSaveMetaRef.current = getMetaSnapshot(formState)
-                          setAutoSaveTime(json.data.updatedAt)
+                          setLastSavedAt(json.data.updatedAt)
                         }
                       })
                       .catch(() => {})
@@ -1176,7 +1176,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
               onUpdate={() => {
                 editorDirty.current = true
                 setDirty(true)
-                setAutoSaveTime(null)
+                setLastSavedAt(null)
               }}
               onReady={(editor) => {
                 if (pendingEditorContent.current) {
@@ -1204,7 +1204,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
                 onChange={(e) => {
                   setTextContent(e.target.value)
                   setDirty(checkDirty(form, e.target.value))
-                  setAutoSaveTime(null)
+                  setLastSavedAt(null)
                 }}
                 styles={{ input: { fontFamily: 'monospace', maxHeight: 600, overflowY: 'auto' } }}
               />

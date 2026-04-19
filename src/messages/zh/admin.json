@@ -1050,7 +1050,7 @@
       "edit": "编辑",
       "new": "新建",
       "modified": "已修改",
-      "autosaveAt": "自动保存：{time}",
+      "lastSavedAt": "已保存：{time}",
       "publishConfirm": "确定要发布此{entityLabel}吗？",
       "discardDraftConfirm": "是否要放弃所有未发布的修改？"
     },
