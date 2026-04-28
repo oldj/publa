@@ -3,7 +3,8 @@ import { maybeFirst } from '@/server/db/query'
 import { contents } from '@/server/db/schema'
 import { jsonError, jsonSuccess } from '@/server/lib/api-response'
 import { safeParseJson } from '@/server/lib/request'
-import { and, eq, isNull, sql } from 'drizzle-orm'
+import { recordPostView } from '@/server/services/content-views'
+import { and, eq, isNull } from 'drizzle-orm'
 import { NextRequest } from 'next/server'
 
 /** 递增文章浏览数 */
@@ -47,10 +48,7 @@ export async function POST(request: NextRequest) {
     })
   }
 
-  await db
-    .update(contents)
-    .set({ viewCount: sql`${contents.viewCount} + 1` })
-    .where(eq(contents.id, row.id))
+  await recordPostView(row.id)
 
   return jsonSuccess()
 }

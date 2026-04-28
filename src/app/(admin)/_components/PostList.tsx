@@ -12,7 +12,14 @@ import {
   Text,
   TextInput,
 } from '@mantine/core'
-import { IconCheck, IconEye, IconPencil, IconSearch, IconTrash } from '@tabler/icons-react'
+import {
+  IconChartLine,
+  IconCheck,
+  IconEye,
+  IconPencil,
+  IconSearch,
+  IconTrash,
+} from '@tabler/icons-react'
 import clsx from 'clsx'
 import dayjs from 'dayjs'
 import Link from 'next/link'
@@ -22,6 +29,7 @@ import { useAdminUrl } from './AdminPathContext'
 import adminStyles from './AdminShell.module.scss'
 import myModal from './myModals'
 import { NowrapBadge } from './NowrapBadge'
+import PostTrendModal from './PostTrendModal'
 
 interface PostItem {
   id: number
@@ -77,6 +85,7 @@ export function PostList({
   const [search, setSearch] = useState('')
   const [categoryId, setCategoryId] = useState(initialCategoryId)
   const [tagId, setTagId] = useState(initialTagId)
+  const [trendPost, setTrendPost] = useState<{ id: number; title: string } | null>(null)
 
   const commitSearch = () => {
     setSearch(searchInput)
@@ -264,6 +273,9 @@ export function PostList({
                 {t('columns.views')}
               </Table.Th>
               <Table.Th className={clsx(adminStyles.cellFit, adminStyles.cellCenter)}>
+                {t('columns.trend')}
+              </Table.Th>
+              <Table.Th className={clsx(adminStyles.cellFit, adminStyles.cellCenter)}>
                 {t('columns.comments')}
               </Table.Th>
               <Table.Th className={clsx(adminStyles.cellFit, adminStyles.cellCenter)}>
@@ -283,6 +295,7 @@ export function PostList({
                   ? tCommon(`status.${post.status}`)
                   : post.status
               const stColor = statusColorMap[post.status] || 'gray'
+              const effectiveTitle = post.title || t('untitled')
               return (
                 <Table.Tr key={post.id}>
                   <Table.Td>
@@ -328,6 +341,15 @@ export function PostList({
                     <Text size="sm">{post.viewCount}</Text>
                   </Table.Td>
                   <Table.Td className={clsx(adminStyles.cellFit, adminStyles.cellCenter)}>
+                    <ActionIcon
+                      variant="subtle"
+                      onClick={() => setTrendPost({ id: post.id, title: effectiveTitle })}
+                      aria-label={t('trendAria', { title: effectiveTitle })}
+                    >
+                      <IconChartLine size={16} />
+                    </ActionIcon>
+                  </Table.Td>
+                  <Table.Td className={clsx(adminStyles.cellFit, adminStyles.cellCenter)}>
                     <Text size="sm">{post.commentCount}</Text>
                   </Table.Td>
                   <Table.Td className={clsx(adminStyles.cellFit, adminStyles.cellCenter)}>
@@ -368,7 +390,7 @@ export function PostList({
             })}
             {data?.items.length === 0 && (
               <Table.Tr>
-                <Table.Td colSpan={7}>
+                <Table.Td colSpan={8}>
                   <Text ta="center" c="dimmed" py="md">
                     {t('empty')}
                   </Text>
@@ -384,6 +406,8 @@ export function PostList({
           <Pagination total={data.pageCount} value={page} onChange={setPage} />
         </Group>
       )}
+
+      <PostTrendModal post={trendPost} onClose={() => setTrendPost(null)} />
     </>
   )
 }

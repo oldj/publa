@@ -18,6 +18,7 @@ export const {
   categories,
   comments,
   contents,
+  contentDailyViews,
   contentRevisions,
   contentTags,
   customStyles,

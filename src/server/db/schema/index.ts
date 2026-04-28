@@ -13,6 +13,8 @@ export const emailLogs = runtimeSchema.emailLogs as typeof sqliteSchema.emailLog
 export const categories = runtimeSchema.categories as typeof sqliteSchema.categories
 export const comments = runtimeSchema.comments as typeof sqliteSchema.comments
 export const contents = runtimeSchema.contents as typeof sqliteSchema.contents
+export const contentDailyViews =
+  runtimeSchema.contentDailyViews as typeof sqliteSchema.contentDailyViews
 export const contentRevisions =
   runtimeSchema.contentRevisions as typeof sqliteSchema.contentRevisions
 export const contentTags = runtimeSchema.contentTags as typeof sqliteSchema.contentTags

@@ -92,6 +92,13 @@
       "when": 1776430193421,
       "tag": "0012_parallel_scarlet_spider",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1777350910933,
+      "tag": "0013_chemical_whiplash",
+      "breakpoints": true
     }
   ]
 }

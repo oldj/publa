@@ -207,6 +207,22 @@ export function defineSchema(kit: DialectKit) {
     ],
   )
 
+  // 内容每日访问量。schema 是 type-agnostic 的（只是 date + content id + 计数），
+  // 当前调用方仅在 type='post' 时写入，是行为约束，不是表结构限制。
+  // 需要全站当日合计时通过 SUM(view_count) WHERE date=? 聚合得到。
+  const contentDailyViews = table(
+    'content_daily_views',
+    {
+      date: text('date').notNull(),
+      contentId: integer('content_id').notNull(),
+      viewCount: integer('view_count').notNull().default(0),
+    },
+    (t: any) => [
+      primaryKey({ columns: [t.date, t.contentId] }),
+      index('content_daily_views_content_date_idx').on(t.contentId, desc(t.date)),
+    ],
+  )
+
   const contentRevisions = table(
     'content_revisions',
     {
@@ -371,6 +387,7 @@ export function defineSchema(kit: DialectKit) {
     categories,
     comments,
     contents,
+    contentDailyViews,
     contentRevisions,
     contentTags,
     customStyles,
