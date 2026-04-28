@@ -72,6 +72,18 @@
       "pendingComments": "待审评论",
       "guestbook": "留言",
       "users": "用户"
+    },
+    "activityLogs": {
+      "title": "最近活动",
+      "empty": "暂无活动记录",
+      "unknownUser": "未知用户",
+      "columns": {
+        "user": "用户",
+        "action": "操作",
+        "ip": "IP",
+        "userAgent": "User-Agent",
+        "time": "时间"
+      }
     }
   },
   "settings": {

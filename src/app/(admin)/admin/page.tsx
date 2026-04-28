@@ -1,6 +1,6 @@
 import { db } from '@/server/db'
 import { comments, contents, guestbookMessages, users } from '@/server/db/schema'
-import { Box, Group, Paper, SimpleGrid, Text, ThemeIcon, Title } from '@mantine/core'
+import { Box, Group, Paper, SimpleGrid, Stack, Text, ThemeIcon, Title } from '@mantine/core'
 import {
   IconAlertCircle,
   IconFileText,
@@ -10,6 +10,7 @@ import {
 } from '@tabler/icons-react'
 import { and, count, eq, isNull } from 'drizzle-orm'
 import { getTranslations } from 'next-intl/server'
+import DashboardActivityLogs from './_components/DashboardActivityLogs'
 
 async function getStats() {
   const [postCount] = await db
@@ -81,25 +82,29 @@ export default async function AdminDashboard() {
         {t('title')}
       </Title>
 
-      <SimpleGrid cols={{ base: 1, xs: 2, md: 3, lg: 5 }}>
-        {statCards.map((stat) => (
-          <Paper key={stat.key} withBorder p="md" radius="md">
-            <Group justify="space-between">
-              <div>
-                <Text c="dimmed" tt="uppercase" fw={700} fz="xs">
-                  {stat.title}
-                </Text>
-                <Text fw={700} fz="xl">
-                  {stat.value}
-                </Text>
-              </div>
-              <ThemeIcon color={stat.color} variant="light" size={38} radius="md">
-                <stat.icon size={22} stroke={1.5} />
-              </ThemeIcon>
-            </Group>
-          </Paper>
-        ))}
-      </SimpleGrid>
+      <Stack gap="lg">
+        <SimpleGrid cols={{ base: 1, xs: 2, md: 3, lg: 5 }}>
+          {statCards.map((stat) => (
+            <Paper key={stat.key} withBorder p="md" radius="md">
+              <Group justify="space-between">
+                <div>
+                  <Text c="dimmed" tt="uppercase" fw={700} fz="xs">
+                    {stat.title}
+                  </Text>
+                  <Text fw={700} fz="xl">
+                    {stat.value}
+                  </Text>
+                </div>
+                <ThemeIcon color={stat.color} variant="light" size={38} radius="md">
+                  <stat.icon size={22} stroke={1.5} />
+                </ThemeIcon>
+              </Group>
+            </Paper>
+          ))}
+        </SimpleGrid>
+
+        <DashboardActivityLogs />
+      </Stack>
     </Box>
   )
 }

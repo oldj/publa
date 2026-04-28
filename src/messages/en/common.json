@@ -66,7 +66,8 @@
   "messages": {
     "deleteSuccess": "Deleted",
     "createSuccess": "Created",
-    "updateSuccess": "Updated"
+    "updateSuccess": "Updated",
+    "copySuccess": "Copied"
   },
   "loading": "Loading...",
   "api": {

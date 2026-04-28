@@ -1,5 +1,5 @@
 import { db } from '@/server/db'
-import { activityLogs } from '@/server/db/schema'
+import { activityLogs, users } from '@/server/db/schema'
 import { activityAction } from '@/server/db/schema/shared'
 import { getRequestInfo } from '@/server/lib/request-info'
 import { count, desc, eq, lt, max } from 'drizzle-orm'
@@ -50,6 +50,36 @@ export async function listUserActivityLogs({
     .select()
     .from(activityLogs)
     .where(eq(activityLogs.userId, userId))
+    .orderBy(desc(activityLogs.createdAt))
+    .limit(pageSize)
+    .offset((page - 1) * pageSize)
+
+  return { total, page, pageSize, items }
+}
+
+/** 分页查询全站活动日志，附带用户名 */
+export async function listActivityLogs({
+  page = 1,
+  pageSize = 20,
+}: {
+  page?: number
+  pageSize?: number
+} = {}) {
+  const [{ total }] = await db.select({ total: count() }).from(activityLogs)
+
+  const items = await db
+    .select({
+      id: activityLogs.id,
+      userId: activityLogs.userId,
+      username: users.username,
+      role: users.role,
+      action: activityLogs.action,
+      ipAddress: activityLogs.ipAddress,
+      userAgent: activityLogs.userAgent,
+      createdAt: activityLogs.createdAt,
+    })
+    .from(activityLogs)
+    .leftJoin(users, eq(activityLogs.userId, users.id))
     .orderBy(desc(activityLogs.createdAt))
     .limit(pageSize)
     .offset((page - 1) * pageSize)

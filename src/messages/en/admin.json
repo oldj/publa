@@ -72,6 +72,18 @@
       "pendingComments": "Pending comments",
       "guestbook": "Guestbook",
       "users": "Users"
+    },
+    "activityLogs": {
+      "title": "Recent activity",
+      "empty": "No activity yet",
+      "unknownUser": "Unknown user",
+      "columns": {
+        "user": "User",
+        "action": "Action",
+        "ip": "IP",
+        "userAgent": "User-Agent",
+        "time": "Time"
+      }
     }
   },
   "settings": {
