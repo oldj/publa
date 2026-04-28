@@ -5,6 +5,7 @@ import {
   attachments,
   categories,
   comments,
+  contentDailyViews,
   contentRevisions,
   contents,
   contentTags,
@@ -91,6 +92,12 @@ export async function exportContentData() {
     contents: await db.select().from(contents),
     contentTags: await db.select().from(contentTags),
     contentRevisions: await db.select().from(contentRevisions),
+    // daily 行随时间线性增长，量级远大于其他无 sortOrder 表；显式按 PK 排序，
+    // 让同一份数据的导出结果二进制稳定，便于 diff 备份与人工核对
+    contentDailyViews: await db
+      .select()
+      .from(contentDailyViews)
+      .orderBy(asc(contentDailyViews.date), asc(contentDailyViews.contentId)),
     slugHistories: await db.select().from(slugHistories),
     comments: await db.select().from(comments),
     guestbookMessages: await db.select().from(guestbookMessages),
@@ -167,6 +174,7 @@ export interface ImportResultItem {
     | 'contentTagRelations'
     | 'contentSlugHistories'
     | 'contentRevisions'
+    | 'contentDailyViews'
     | 'contentComments'
     | 'contentGuestbook'
     | 'settingsThemes'
@@ -195,6 +203,14 @@ export function validateImportData(data: any): ImportValidationResult {
     for (const key of ['categories', 'tags', 'contents']) {
       if (!Array.isArray(data[key])) {
         return { valid: false, code: 'MISSING_FIELD', values: { field: key } }
+      }
+    }
+    // contentDailyViews 是后补的字段，兼容旧导出文件允许缺失，但出现时必须是数组
+    if (data.contentDailyViews !== undefined && !Array.isArray(data.contentDailyViews)) {
+      return {
+        valid: false,
+        code: 'INVALID_FIELD_FORMAT',
+        values: { field: 'contentDailyViews' },
       }
     }
     return { valid: true, type: 'content' }
@@ -353,6 +369,7 @@ export async function importContentData(data: any, currentUserId: number) {
     await tx.delete(contentTags)
     await tx.delete(comments)
     await tx.delete(contentRevisions)
+    await tx.delete(contentDailyViews)
     await tx.delete(slugHistories)
     await tx.delete(contents)
     await tx.delete(categories)
@@ -403,6 +420,21 @@ export async function importContentData(data: any, currentUserId: number) {
         await tx.insert(slugHistories).values(item)
       }
       results.push({ key: 'contentSlugHistories', values: { count: data.slugHistories.length } })
+    }
+
+    if (Array.isArray(data.contentDailyViews) && data.contentDailyViews.length > 0) {
+      // daily 行没有 FK 约束，但语义上依赖 contents 已写入；放在 contents 之后即可
+      for (const item of data.contentDailyViews) {
+        await tx.insert(contentDailyViews).values({
+          date: item.date,
+          contentId: item.contentId,
+          viewCount: Number.isInteger(item.viewCount) ? item.viewCount : 0,
+        })
+      }
+      results.push({
+        key: 'contentDailyViews',
+        values: { count: data.contentDailyViews.length },
+      })
     }
 
     if (normalizedRevisions.length > 0) {

@@ -73,6 +73,10 @@ async function seedContentData() {
   await testDb
     .insert(schema.slugHistories)
     .values([{ id: 500, contentId: 100, slug: 'old-test-post' }])
+  await testDb.insert(schema.contentDailyViews).values([
+    { date: '2026-04-26', contentId: 100, viewCount: 5 },
+    { date: '2026-04-27', contentId: 100, viewCount: 3 },
+  ])
 }
 
 // 辅助：插入测试设置数据
@@ -142,6 +146,33 @@ describe('validateImportData', () => {
     expect(result).toEqual({ valid: true, type: 'content' })
   })
 
+  it('内容数据中 contentDailyViews 出现时必须是数组', () => {
+    expect(
+      validateImportData({
+        meta: { type: 'content', version: '2.0' },
+        categories: [],
+        tags: [],
+        contents: [],
+        contentDailyViews: 'not-array',
+      }),
+    ).toEqual({
+      valid: false,
+      code: 'INVALID_FIELD_FORMAT',
+      values: { field: 'contentDailyViews' },
+    })
+  })
+
+  it('内容数据中 contentDailyViews 缺失时仍可通过（兼容旧导出文件）', () => {
+    expect(
+      validateImportData({
+        meta: { type: 'content', version: '2.0' },
+        categories: [],
+        tags: [],
+        contents: [],
+      }),
+    ).toEqual({ valid: true, type: 'content' })
+  })
+
   it('设置数据缺少必要字段', () => {
     const result = validateImportData({
       meta: { type: 'settings', version: '2.0' },
@@ -209,6 +240,7 @@ describe('exportContentData', () => {
     expect(data.guestbookMessages).toHaveLength(1)
     expect(data.contentRevisions).toHaveLength(1)
     expect(data.slugHistories).toHaveLength(1)
+    expect(data.contentDailyViews).toHaveLength(2)
   })
 
   it('导出包含文章和页面', async () => {
@@ -238,6 +270,7 @@ describe('exportContentData', () => {
     expect(data.contents).toHaveLength(0)
     expect(data.contentRevisions).toHaveLength(0)
     expect(data.slugHistories).toHaveLength(0)
+    expect(data.contentDailyViews).toHaveLength(0)
   })
 })
 
@@ -373,6 +406,10 @@ describe('importContentData', () => {
     expect(revisions).toHaveLength(0)
     const slugHist = await testDb.select().from(schema.slugHistories)
     expect(slugHist).toHaveLength(0)
+
+    // 每日访问量也应被清空（导入数据没带 contentDailyViews 字段）
+    const dailyViews = await testDb.select().from(schema.contentDailyViews)
+    expect(dailyViews).toHaveLength(0)
   })
 
   it('返回导入结果摘要', async () => {
@@ -380,15 +417,31 @@ describe('importContentData', () => {
       {
         categories: [{ id: 1, name: '分类A', slug: 'a' }],
         tags: [{ id: 1, name: '标签A', slug: 'tag-a' }],
-        contents: [],
+        contents: [
+          {
+            id: 1,
+            type: 'post',
+            title: '示例',
+            slug: 'sample',
+            authorId: 1,
+            contentRaw: '',
+            contentHtml: '',
+            contentText: '',
+            status: 'published',
+            publishedAt: new Date().toISOString(),
+          },
+        ],
+        contentDailyViews: [{ date: '2026-04-26', contentId: 1, viewCount: 7 }],
       },
       1,
     )
 
     expect(results).toContainEqual({ key: 'contentCategories', values: { count: 1 } })
     expect(results).toContainEqual({ key: 'contentTags', values: { count: 1 } })
+    expect(results).toContainEqual({ key: 'contentItems', values: { count: 1 } })
+    expect(results).toContainEqual({ key: 'contentDailyViews', values: { count: 1 } })
     // 空数组不出现在结果中
-    expect(results.find((r) => r.key === 'contentItems')).toBeUndefined()
+    expect(results.find((r) => r.key === 'contentComments')).toBeUndefined()
   })
 
   it('导出后再导入数据一致', async () => {
@@ -412,6 +465,23 @@ describe('importContentData', () => {
     const slugHist = await testDb.select().from(schema.slugHistories)
     expect(slugHist).toHaveLength(1)
     expect(slugHist[0].slug).toBe('old-test-post')
+
+    // 每日访问量也应恢复
+    const dailyViews = await testDb
+      .select()
+      .from(schema.contentDailyViews)
+      .orderBy(asc(schema.contentDailyViews.date))
+    expect(dailyViews).toHaveLength(2)
+    expect(dailyViews[0]).toMatchObject({
+      date: '2026-04-26',
+      contentId: 100,
+      viewCount: 5,
+    })
+    expect(dailyViews[1]).toMatchObject({
+      date: '2026-04-27',
+      contentId: 100,
+      viewCount: 3,
+    })
   })
 
   it('导入后自动重算分类/标签的 postCount', async () => {

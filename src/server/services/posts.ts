@@ -10,6 +10,7 @@ import {
   tags,
 } from '@/server/db/schema'
 import { and, asc, count, desc, eq, exists, isNull, like, lte, ne, or, sql } from 'drizzle-orm'
+import { recordPostView } from './content-views'
 import { recountCategoriesAndTags } from './post-count'
 import { listDraftsByTargetIds } from './revisions'
 
@@ -343,11 +344,8 @@ export async function getPostBySlug(slug: string) {
     )
     .orderBy(asc(comments.createdAt))
 
-  // 增加阅读量
-  await db
-    .update(contents)
-    .set({ viewCount: sql`${contents.viewCount} + 1` })
-    .where(eq(contents.id, post.id))
+  // 增加阅读量（累计 + 当日）
+  await recordPostView(post.id)
 
   return {
     post,

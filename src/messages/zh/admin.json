@@ -885,6 +885,7 @@
       "contentTagRelations": "内容标签: {count} 条",
       "contentSlugHistories": "Slug 历史: {count} 条",
       "contentRevisions": "历史记录: {count} 条",
+      "contentDailyViews": "每日访问量: {count} 条",
       "contentComments": "评论: {count} 条",
       "contentGuestbook": "留言: {count} 条",
       "settingsThemes": "主题: {count} 条",

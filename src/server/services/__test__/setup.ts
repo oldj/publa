@@ -24,6 +24,7 @@ const resetTableNames = [
   'contents',
   'categories',
   'tags',
+  'content_daily_views',
   'menus',
   'redirect_rules',
   'settings',

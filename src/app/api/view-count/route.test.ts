@@ -6,6 +6,16 @@ import { beforeEach, describe, expect, it } from 'vitest'
 
 const { POST } = await import('./route')
 
+async function getDailyView(contentId: number) {
+  return maybeFirst(
+    testDb
+      .select()
+      .from(schema.contentDailyViews)
+      .where(eq(schema.contentDailyViews.contentId, contentId))
+      .limit(1),
+  )
+}
+
 beforeEach(async () => {
   await setupTestDb()
 })
@@ -58,6 +68,37 @@ describe('/api/view-count', () => {
         .limit(1),
     )
     expect(saved?.viewCount).toBe(2)
+
+    // 当日 (date, contentId) 行也累加 2
+    const daily = await getDailyView(saved!.id)
+    expect(daily?.viewCount).toBe(2)
+  })
+
+  it('用 page 路径调 view-count 返回 NOT_FOUND 且不写入 daily 表', async () => {
+    // 直接以 page 形态写一条 content
+    await testDb.insert(schema.contents).values({
+      type: 'page',
+      title: '关于',
+      path: '/about',
+      contentRaw: '',
+      contentHtml: '',
+      contentText: '',
+      status: 'published',
+      allowComment: false,
+      showComments: false,
+      viewCount: 0,
+      pinned: false,
+      publishedAt: new Date(Date.now() - 60_000).toISOString(),
+    })
+
+    // view-count API 在 SELECT 阶段就用 type='post' 过滤掉 page，
+    // 这是阻止 page 进入 daily 表的关键防线
+    const res = await postRequest({ slug: '/about' })
+    expect(res.status).toBe(404)
+
+    // content_daily_views 不应有任何写入
+    const all = await testDb.select().from(schema.contentDailyViews)
+    expect(all.length).toBe(0)
   })
 
   it('缺少 slug 返回 VALIDATION_ERROR', async () => {
@@ -86,11 +127,7 @@ describe('/api/view-count', () => {
     expect(json.code).toBe('NOT_FOUND')
 
     const saved = await maybeFirst(
-      testDb
-        .select()
-        .from(schema.contents)
-        .where(eq(schema.contents.slug, 'draft-post'))
-        .limit(1),
+      testDb.select().from(schema.contents).where(eq(schema.contents.slug, 'draft-post')).limit(1),
     )
     expect(saved?.viewCount).toBe(0)
   })

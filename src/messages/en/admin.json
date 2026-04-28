@@ -885,6 +885,7 @@
       "contentTagRelations": "Content-tag relations: {count}",
       "contentSlugHistories": "Slug histories: {count}",
       "contentRevisions": "Revisions: {count}",
+      "contentDailyViews": "Daily views: {count}",
       "contentComments": "Comments: {count}",
       "contentGuestbook": "Guestbook messages: {count}",
       "settingsThemes": "Themes: {count}",
