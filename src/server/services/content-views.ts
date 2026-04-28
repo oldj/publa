@@ -1,7 +1,7 @@
 import { db } from '@/server/db'
 import { contentDailyViews, contents } from '@/server/db/schema'
 import { getSiteDateString } from '@/server/lib/site-date'
-import { eq, sql } from 'drizzle-orm'
+import { and, asc, between, eq, sql } from 'drizzle-orm'
 
 /**
  * 记录一次 post 访问：累计 contents.viewCount，并 UPSERT 当日 (date, contentId) 行。
@@ -26,4 +26,30 @@ export async function recordPostView(postId: number): Promise<void> {
         set: { viewCount: sql`${contentDailyViews.viewCount} + 1` },
       })
   })
+}
+
+/**
+ * 查询某篇内容在 [from, to] 闭区间（'YYYY-MM-DD'）内的每日访问量。
+ * 返回 DB 原始行（缺失日不会补 0），按日期升序，由调用方决定是否零填充。
+ */
+export async function getPostDailyViews(
+  postId: number,
+  from: string,
+  to: string,
+): Promise<Array<{ date: string; viewCount: number }>> {
+  const rows = await db
+    .select({
+      date: contentDailyViews.date,
+      viewCount: contentDailyViews.viewCount,
+    })
+    .from(contentDailyViews)
+    .where(
+      and(
+        eq(contentDailyViews.contentId, postId),
+        between(contentDailyViews.date, from, to),
+      ),
+    )
+    .orderBy(asc(contentDailyViews.date))
+
+  return rows
 }

@@ -4,7 +4,7 @@ import { and, eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { setupTestDb, testDb } from './__test__/setup'
 
-const { recordPostView } = await import('./content-views')
+const { recordPostView, getPostDailyViews } = await import('./content-views')
 
 beforeEach(async () => {
   await setupTestDb()
@@ -102,5 +102,60 @@ describe('recordPostView', () => {
       .where(eq(schema.contentDailyViews.date, today!))
     const total = rows.reduce((s, r) => s + r.viewCount, 0)
     expect(total).toBe(3)
+  })
+})
+
+describe('getPostDailyViews', () => {
+  async function seed(postId: number, rows: Array<{ date: string; viewCount: number }>) {
+    await createPost(postId)
+    if (rows.length > 0) {
+      await testDb.insert(schema.contentDailyViews).values(
+        rows.map((r) => ({
+          date: r.date,
+          contentId: postId,
+          viewCount: r.viewCount,
+        })),
+      )
+    }
+  }
+
+  it('在闭区间内按日期升序返回原始行（不补 0）', async () => {
+    await seed(401, [
+      { date: '2026-04-25', viewCount: 1 },
+      { date: '2026-04-27', viewCount: 5 },
+      { date: '2026-04-28', viewCount: 2 },
+    ])
+
+    const rows = await getPostDailyViews(401, '2026-04-25', '2026-04-28')
+    expect(rows).toEqual([
+      { date: '2026-04-25', viewCount: 1 },
+      { date: '2026-04-27', viewCount: 5 },
+      { date: '2026-04-28', viewCount: 2 },
+    ])
+  })
+
+  it('区间端点为闭区间，包含 from 与 to 当天', async () => {
+    await seed(402, [
+      { date: '2026-04-20', viewCount: 9 },
+      { date: '2026-04-21', viewCount: 3 },
+      { date: '2026-04-22', viewCount: 4 },
+    ])
+
+    const rows = await getPostDailyViews(402, '2026-04-21', '2026-04-22')
+    expect(rows.map((r) => r.date)).toEqual(['2026-04-21', '2026-04-22'])
+  })
+
+  it('按 contentId 隔离，不会串读其它文章', async () => {
+    await seed(501, [{ date: '2026-04-28', viewCount: 11 }])
+    await seed(502, [{ date: '2026-04-28', viewCount: 22 }])
+
+    const rows = await getPostDailyViews(501, '2026-04-01', '2026-04-30')
+    expect(rows).toEqual([{ date: '2026-04-28', viewCount: 11 }])
+  })
+
+  it('区间内无数据返回空数组', async () => {
+    await createPost(601)
+    const rows = await getPostDailyViews(601, '2026-04-01', '2026-04-30')
+    expect(rows).toEqual([])
   })
 })

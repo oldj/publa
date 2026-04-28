@@ -198,6 +198,7 @@
       "category": "分类",
       "status": "状态",
       "views": "浏览",
+      "trend": "趋势",
       "comments": "评论",
       "publishedAt": "发布时间",
       "actions": "操作"
@@ -206,7 +207,21 @@
     "untitled": "(无标题)",
     "modified": "已修改",
     "previewAria": "查看文章《{title}》",
+    "trendAria": "查看文章《{title}》的访问趋势",
     "empty": "暂无文章"
+  },
+  "postTrend": {
+    "title": "「{title}」的访问趋势",
+    "rangeLabel": "日期区间",
+    "seriesLabel": "访问量",
+    "empty": "该区间内暂无访问数据",
+    "loadFailed": "加载失败",
+    "preset": {
+      "last7d": "最近 7 天",
+      "last30d": "最近 30 天",
+      "last90d": "最近 90 天",
+      "last365d": "最近 365 天"
+    }
   },
   "revisionHistory": {
     "title": "历史版本",
@@ -922,7 +937,8 @@
       "slugStartsWithHyphen": "Slug 不能以 - 开头",
       "slugEndsWithHyphen": "Slug 不能以 - 结尾",
       "duplicateSlug": "slug 已存在",
-      "notFound": "文章不存在"
+      "notFound": "文章不存在",
+      "viewsRangeInvalid": "访问量查询区间无效"
     },
     "pages": {
       "titleAndPathRequired": "标题和路径不能为空",
