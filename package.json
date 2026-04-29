@@ -2,6 +2,9 @@
   "name": "publa",
   "version": "0.1.33",
   "private": true,
+  "config": {
+    "tag-version-prefix": "release-v"
+  },
   "scripts": {
     "test:unit": "npm run db:check-migrations && vitest --watch=false",
     "test:pg": "npm run db:check-migrations && vitest run src/server/services/postgres.contract.test.ts",
