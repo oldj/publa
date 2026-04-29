@@ -49,6 +49,10 @@ function Tip({ label, children }: { label: string; children: React.ReactElement 
   )
 }
 
+// 用户主动点击「最小化」后写入这条记录，下次进入最大化就不再自动弹出引导提示
+const MAXIMIZE_HINT_STORAGE_KEY = 'publa.editor.maximizeHintSeen'
+const MAXIMIZE_HINT_DURATION_MS = 5000
+
 interface RichTextEditorWrapperProps {
   initialContent?: string
   placeholder?: string
@@ -112,7 +116,7 @@ export default function RichTextEditorWrapper({
     tipTimerRef.current = setTimeout(() => {
       if (!tipHoverRef.current) setMaximizeTipOpen(false)
       tipTimerRef.current = null
-    }, 3000)
+    }, MAXIMIZE_HINT_DURATION_MS)
   }
 
   // 公式编辑状态
@@ -215,7 +219,7 @@ export default function RichTextEditorWrapper({
   }))
 
   // 最大化时锁定页面滚动 + 给 body 加 data-rich-editor-maximized，配合 CSS 隐藏 AppShell 的 Navbar / Header；
-  // 同时弹出最大化按钮的 Tooltip 提示用户如何退出，3 秒后自动收起
+  // 首次进入时弹出最大化按钮的 Tooltip 提示用户如何退出，到时自动收起
   useEffect(() => {
     if (!isMaximized) {
       clearTipTimer()
@@ -225,15 +229,26 @@ export default function RichTextEditorWrapper({
     const prevOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     document.body.dataset.richEditorMaximized = 'true'
+    // 用户已经点过最小化按钮，认为已经知道如何退出，跳过引导提示
+    let hintSeen = false
+    try {
+      hintSeen = localStorage.getItem(MAXIMIZE_HINT_STORAGE_KEY) === '1'
+    } catch {
+      // localStorage 不可用（隐私模式等）时按未看过处理，正常引导
+    }
     // 等到最大化的样式应用、布局稳定（fixed inset:0 应用后）再开 Tooltip，
     // 否则 Mantine Tooltip 内部会用旧位置计算气泡坐标，导致看似没显示
-    requestAnimationFrame(() => {
-      setMaximizeTipOpen(true)
-      startTipAutoHide()
-    })
+    let rafId = 0
+    if (!hintSeen) {
+      rafId = requestAnimationFrame(() => {
+        setMaximizeTipOpen(true)
+        startTipAutoHide()
+      })
+    }
     return () => {
       document.body.style.overflow = prevOverflow
       delete document.body.dataset.richEditorMaximized
+      if (rafId) cancelAnimationFrame(rafId)
       clearTipTimer()
     }
   }, [isMaximized])
@@ -593,7 +608,17 @@ export default function RichTextEditorWrapper({
                   style={{ display: 'inline-flex' }}
                 >
                   <RichTextEditor.Control
-                    onClick={() => setIsMaximized((v) => !v)}
+                    onClick={() => {
+                      // 用户主动点最小化按钮 -> 已学会如何退出，下次不再自动弹出引导
+                      if (isMaximized) {
+                        try {
+                          localStorage.setItem(MAXIMIZE_HINT_STORAGE_KEY, '1')
+                        } catch {
+                          // localStorage 不可用时静默忽略
+                        }
+                      }
+                      setIsMaximized((v) => !v)
+                    }}
                     aria-label={isMaximized ? t('exitMaximize') : t('maximize')}
                   >
                     {isMaximized ? <IconMinimize size={16} /> : <IconMaximize size={16} />}
