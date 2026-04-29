@@ -2,6 +2,10 @@
   "name": "publa",
   "version": "0.1.34-rc.1",
   "private": true,
+  "license": "MIT",
+  "engines": {
+    "node": ">=24"
+  },
   "config": {
     "tag-version-prefix": "release-v"
   },
