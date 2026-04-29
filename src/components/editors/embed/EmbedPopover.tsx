@@ -173,13 +173,15 @@ export default function EmbedPopoverControl({ editor }: { editor: Editor | null 
       position="bottom"
     >
       <Popover.Target>
-        <RichTextEditor.Control
-          onClick={handleClick}
-          active={isOpen || isActive}
-          title={t('insertEmbed')}
-        >
-          <IconBrandYoutube size={16} />
-        </RichTextEditor.Control>
+        <Tooltip label={t('insertEmbed')} position="bottom" withArrow withinPortal>
+          <RichTextEditor.Control
+            onClick={handleClick}
+            active={isOpen || isActive}
+            aria-label={t('insertEmbed')}
+          >
+            <IconBrandYoutube size={16} />
+          </RichTextEditor.Control>
+        </Tooltip>
       </Popover.Target>
       <Popover.Dropdown style={{ padding: 8 }}>
         <div style={{ display: 'flex', gap: 8, minWidth: 420, alignItems: 'center' }}>
