@@ -30,10 +30,15 @@
   justify-content: flex-end;
 }
 
-/* 编辑器内容区最大高度限制 */
+/* 编辑器内容区最大高度限制：随视口缩放，但不超过 600px */
 .mantine-RichTextEditor-content {
-  max-height: 600px;
+  max-height: min(600px, calc(100vh - 100px));
   overflow-y: auto;
+}
+
+/* 编辑器内容区最小高度，避免新建文章时只有一行高；小屏上自动收缩 */
+.ProseMirror {
+  min-height: min(360px, calc(100vh - 200px));
 }
 
 /* 编辑器工具栏在图片容器之上 */
