@@ -406,6 +406,15 @@ export default function RichTextEditorWrapper({
         data-role="rich-text-editor-container"
         className={isMaximized ? 'rich-editor-maximized' : undefined}
         style={{ position: 'relative', display: hidden ? 'none' : undefined }}
+        onKeyDown={(e) => {
+          // Cmd/Ctrl + S：触发保存（与右上角"保存"等价）；
+          // 排除 Shift/Alt 组合，避免误捕获"另存为"等扩展快捷键
+          if (!onSave) return
+          if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.code === 'KeyS') {
+            e.preventDefault()
+            if (!saveLoading) void onSave()
+          }
+        }}
       >
         {!isMaximized && (
           <Text size="sm" fw={500} mb={4}>
