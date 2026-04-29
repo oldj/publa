@@ -163,13 +163,15 @@ export default function LinkPopoverControl({ editor }: { editor: Editor | null }
       position="bottom"
     >
       <Popover.Target>
-        <RichTextEditor.Control
-          onClick={handleClick}
-          active={isOpen || isActive}
-          title={t('insertLink')}
-        >
-          <IconLink size={16} />
-        </RichTextEditor.Control>
+        <Tooltip label={t('insertLink')} position="bottom" withArrow withinPortal>
+          <RichTextEditor.Control
+            onClick={handleClick}
+            active={isOpen || isActive}
+            aria-label={t('insertLink')}
+          >
+            <IconLink size={16} />
+          </RichTextEditor.Control>
+        </Tooltip>
       </Popover.Target>
       <Popover.Dropdown style={{ padding: 8 }}>
         <div style={{ display: 'flex', gap: 8, minWidth: 360, alignItems: 'center' }}>

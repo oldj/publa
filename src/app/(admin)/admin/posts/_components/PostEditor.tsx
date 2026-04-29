@@ -1173,6 +1173,8 @@ export default function PostEditor({ postId }: { postId?: number }) {
               placeholder={t('fields.contentPlaceholder')}
               onImageUpload={uploadImage}
               checkStorageConfig={checkStorageConfig}
+              onSave={handleSaveDraft}
+              saveLoading={loading}
               onUpdate={() => {
                 editorDirty.current = true
                 setDirty(true)
