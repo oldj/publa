@@ -72,6 +72,13 @@ body[data-rich-editor-maximized] .mantine-AppShell-header {
   .ProseMirror {
     min-height: calc(100vh - 100px);
   }
+
+  /* 限宽阅读：固定编辑内容区宽度并居中，宽屏长段落不再左右扫视 */
+  &[data-narrow-mode="true"] .ProseMirror {
+    max-width: 720px;
+    margin-left: auto;
+    margin-right: auto;
+  }
 }
 
 /* 编辑器工具栏在图片容器之上 */

@@ -1126,6 +1126,7 @@
       "blockMath": "Math block",
       "maximize": "Maximize",
       "exitMaximize": "Exit maximize",
+      "narrowMode": "Narrow reading width",
       "bold": "Bold",
       "italic": "Italic",
       "strikethrough": "Strikethrough",

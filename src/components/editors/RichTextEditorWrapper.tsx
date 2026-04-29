@@ -5,6 +5,7 @@ import { Loader, Text, Tooltip } from '@mantine/core'
 import { RichTextEditor } from '@mantine/tiptap'
 import '@mantine/tiptap/styles.css'
 import {
+  IconArticle,
   IconDeviceFloppy,
   IconMath,
   IconMathFunction,
@@ -26,6 +27,7 @@ import 'katex/dist/katex.min.css'
 import { useTranslations } from 'next-intl'
 import { useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import CodeBlockView, { lowlight } from './CodeBlockView'
+import './editor.scss'
 import { Embed } from './embed/EmbedNode'
 import EmbedPopoverControl from './embed/EmbedPopover'
 import ImagePickerModal from './ImagePickerModal'
@@ -33,7 +35,6 @@ import ImageToolbar from './ImageToolbar'
 import LinkPopoverControl from './LinkPopover'
 import MathModal from './MathModal'
 import TableToolbar from './TableToolbar'
-import './editor.scss'
 
 export interface RichTextEditorHandle {
   getEditor: () => Editor | null
@@ -52,6 +53,10 @@ function Tip({ label, children }: { label: string; children: React.ReactElement 
 // 用户主动点击「最小化」后写入这条记录，下次进入最大化就不再自动弹出引导提示
 const MAXIMIZE_HINT_STORAGE_KEY = 'publa.editor.maximizeHintSeen'
 const MAXIMIZE_HINT_DURATION_MS = 5000
+// 最大化时的「限宽阅读」开关持久化
+const NARROW_MODE_STORAGE_KEY = 'publa.editor.narrowMode'
+// 视口宽度大于此值才显示限宽切换按钮（窄屏视口本身就不需要限宽）
+const NARROW_MODE_MIN_VIEWPORT_PX = 720
 
 interface RichTextEditorWrapperProps {
   initialContent?: string
@@ -100,6 +105,29 @@ export default function RichTextEditorWrapper({
 
   // 最大化状态
   const [isMaximized, setIsMaximized] = useState(false)
+
+  // 限宽阅读开关：从 localStorage 恢复用户偏好
+  const [narrowMode, setNarrowMode] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(NARROW_MODE_STORAGE_KEY) === '1'
+    } catch {
+      return false
+    }
+  })
+
+  // 视口宽度是否够大（达不到时隐藏限宽切换按钮，但保留 narrowMode state）
+  // lazy init：客户端首次渲染就给出准确值，避免一次无谓的 setState 重渲染
+  const [isWideScreen, setIsWideScreen] = useState<boolean>(
+    () =>
+      typeof window !== 'undefined' &&
+      window.matchMedia(`(min-width: ${NARROW_MODE_MIN_VIEWPORT_PX}px)`).matches,
+  )
+  useEffect(() => {
+    const mql = window.matchMedia(`(min-width: ${NARROW_MODE_MIN_VIEWPORT_PX}px)`)
+    const handler = () => setIsWideScreen(mql.matches)
+    mql.addEventListener('change', handler)
+    return () => mql.removeEventListener('change', handler)
+  }, [])
 
   // 最大化按钮的 Tooltip：进入最大化时自动弹出 3 秒；hover 暂停倒计时
   const [maximizeTipOpen, setMaximizeTipOpen] = useState(false)
@@ -420,6 +448,7 @@ export default function RichTextEditorWrapper({
         ref={editorContainerRef}
         data-role="rich-text-editor-container"
         className={isMaximized ? 'rich-editor-maximized' : undefined}
+        data-narrow-mode={isMaximized && narrowMode ? 'true' : undefined}
         style={{ position: 'relative', display: hidden ? 'none' : undefined }}
         onKeyDown={(e) => {
           // Cmd/Ctrl + S：触发保存（与右上角"保存"等价）；
@@ -569,6 +598,30 @@ export default function RichTextEditorWrapper({
             {/* 占位：把最大化按钮推到工具栏最右侧 */}
             <div style={{ flex: 1 }} />
 
+            {isMaximized && isWideScreen && (
+              <RichTextEditor.ControlsGroup>
+                <Tip label={t('narrowMode')}>
+                  <RichTextEditor.Control
+                    onClick={() => {
+                      setNarrowMode((v) => {
+                        const next = !v
+                        try {
+                          localStorage.setItem(NARROW_MODE_STORAGE_KEY, next ? '1' : '0')
+                        } catch {
+                          // localStorage 不可用时静默忽略，state 仍然在内存中切换
+                        }
+                        return next
+                      })
+                    }}
+                    active={narrowMode}
+                    aria-label={t('narrowMode')}
+                  >
+                    <IconArticle size={16} />
+                  </RichTextEditor.Control>
+                </Tip>
+              </RichTextEditor.ControlsGroup>
+            )}
+
             {isMaximized && onSave && (
               <RichTextEditor.ControlsGroup>
                 <Tip label={tCommon('actions.save')}>
@@ -667,7 +720,6 @@ export default function RichTextEditorWrapper({
         onClose={() => setImagePickerOpen(false)}
         onInsert={handleImageInsert}
       />
-
     </>
   )
 }

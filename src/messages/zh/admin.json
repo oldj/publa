@@ -1126,6 +1126,7 @@
       "blockMath": "公式块",
       "maximize": "最大化",
       "exitMaximize": "退出最大化",
+      "narrowMode": "限宽阅读",
       "bold": "加粗",
       "italic": "斜体",
       "strikethrough": "删除线",
