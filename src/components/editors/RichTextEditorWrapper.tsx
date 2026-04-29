@@ -162,6 +162,11 @@ export default function RichTextEditorWrapper({
 
   const editor = useEditor({
     immediatelyRender: false,
+    // Tiptap v3 把默认行为从「每次 transaction 都 rerender」改为「不 rerender」（性能优化）。
+    // 但 Mantine RichTextEditor 工具栏的 active 高亮（加粗 / H1 等）靠组件 rerender 后重新读
+    // editor.isActive(...) 刷新；不开启此项时，光标移动后按钮状态不会更新，需要 hover 误触发
+    // 才会刷新。开启后每次按键 / 选区变化都 rerender，工具栏正常响应。
+    shouldRerenderOnTransaction: true,
     extensions: [
       StarterKit.configure({ codeBlock: false, link: false }),
       Link.extend({ addPasteRules: () => [] }).configure({
