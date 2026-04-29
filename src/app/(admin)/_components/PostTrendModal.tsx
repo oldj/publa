@@ -132,7 +132,7 @@ export default function PostTrendModal({ post, onClose }: PostTrendModalProps) {
             leftSection={<IconCalendar size={16} />}
             allowSingleDateInRange
             clearable={false}
-            w={220}
+            w={280}
           />
         </Group>
 
