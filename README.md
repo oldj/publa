@@ -11,7 +11,10 @@ npm install
 npm run dev
 ```
 
-访问 `http://localhost:8084`，首次启动会自动执行数据库迁移并进入初始化引导。
+首次启动会自动执行数据库迁移。然后：
+
+- 访问 `http://localhost:8084` 打开博客首页
+- 访问 `http://localhost:8084/setup` 创建站长账号（首次使用必须完成）
 
 默认使用本地 SQLite，无需任何配置。如需使用其他数据库，在 `.env` 中配置：
 
