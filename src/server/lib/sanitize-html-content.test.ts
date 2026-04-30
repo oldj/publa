@@ -41,7 +41,8 @@ describe('sanitizeRichTextHtml', () => {
 
   // embed 相关
   it('保留白名单内 iframe（youtube-nocookie）', () => {
-    const html = '<iframe src="https://www.youtube-nocookie.com/embed/abc123" loading="lazy" allow="fullscreen"></iframe>'
+    const html =
+      '<iframe src="https://www.youtube-nocookie.com/embed/abc123" loading="lazy" allow="fullscreen"></iframe>'
     const result = sanitizeRichTextHtml(html)
     expect(result).toContain('src="https://www.youtube-nocookie.com/embed/abc123"')
     expect(result).toContain('loading="lazy"')
@@ -55,7 +56,8 @@ describe('sanitizeRichTextHtml', () => {
   })
 
   it('保留 embed 容器的 data-* 属性', () => {
-    const html = '<div data-embed="" data-provider="youtube" data-aspect-ratio="16/9" data-origin="https://youtube.com/watch?v=abc" class="embed"><iframe src="https://www.youtube-nocookie.com/embed/abc"></iframe></div>'
+    const html =
+      '<div data-embed="" data-provider="youtube" data-aspect-ratio="16/9" data-origin="https://youtube.com/watch?v=abc" class="embed"><iframe src="https://www.youtube-nocookie.com/embed/abc"></iframe></div>'
     const result = sanitizeRichTextHtml(html)
     // sanitize-html 对空值布尔属性输出 data-embed（不带 =""）
     expect(result).toMatch(/data-embed/)
@@ -85,10 +87,53 @@ describe('sanitizeRichTextHtml', () => {
   })
 
   it('幂等：净化后再净化结果不变', () => {
-    const html = '<div data-embed="" data-provider="bilibili" class="embed"><iframe src="https://player.bilibili.com/player.html?bvid=BV1xx" allow="fullscreen" loading="lazy"></iframe></div>'
+    const html =
+      '<div data-embed="" data-provider="bilibili" class="embed"><iframe src="https://player.bilibili.com/player.html?bvid=BV1xx" allow="fullscreen" loading="lazy"></iframe></div>'
     const first = sanitizeRichTextHtml(html)
     const second = sanitizeRichTextHtml(first)
     expect(second).toBe(first)
+  })
+
+  // 数学公式（TipTap @tiptap/extension-mathematics）
+  it('保留行内公式 span 的 data-type / data-latex 属性', () => {
+    const html = '<span data-type="inline-math" data-latex="x^2">x²</span>'
+    const result = sanitizeRichTextHtml(html)
+    expect(result).toContain('data-type="inline-math"')
+    expect(result).toContain('data-latex="x^2"')
+  })
+
+  it('保留块级公式 div 的 data-type / data-latex 属性', () => {
+    const html = '<div data-type="block-math" data-latex="\\sum_{i=0}^n i">…</div>'
+    const result = sanitizeRichTextHtml(html)
+    expect(result).toContain('data-type="block-math"')
+    expect(result).toContain('data-latex="\\sum_{i=0}^n i"')
+  })
+
+  it('表格单元格内嵌行内公式仍保留属性', () => {
+    const html =
+      '<table><tbody><tr><td><p>x = <span data-type="inline-math" data-latex="x^2">x²</span></p></td></tr></tbody></table>'
+    const result = sanitizeRichTextHtml(html)
+    expect(result).toContain('data-type="inline-math"')
+    expect(result).toContain('data-latex="x^2"')
+    expect(result).toContain('<td>')
+  })
+
+  it('空内容的行内/块级公式标签保留属性（TipTap atom 节点 renderHTML 不输出 children）', () => {
+    const inline = '<span data-type="inline-math" data-latex="x^2"></span>'
+    const block = '<div data-type="block-math" data-latex="\\sum"></div>'
+    const inlineOut = sanitizeRichTextHtml(inline)
+    const blockOut = sanitizeRichTextHtml(block)
+    expect(inlineOut).toContain('data-type="inline-math"')
+    expect(inlineOut).toContain('data-latex="x^2"')
+    expect(blockOut).toContain('data-type="block-math"')
+    expect(blockOut).toContain('data-latex="\\sum"')
+  })
+
+  it('未列入白名单的 data-* 属性仍被剥离', () => {
+    const html = '<span data-foo="bar" data-type="inline-math">x</span>'
+    const result = sanitizeRichTextHtml(html)
+    expect(result).not.toContain('data-foo')
+    expect(result).toContain('data-type="inline-math"')
   })
 
   it('保留 bilibili / vimeo / twitter / codepen / codesandbox 域名的 iframe', () => {

@@ -3,7 +3,7 @@ import PreviewNotice from '@/components/PreviewNotice'
 import BasicLayout from '@/layouts/basic'
 import { getAdminPath } from '@/lib/admin-path'
 import getHeadersFromHTML, { IHeader } from '@/lib/getHeadersFromHTML'
-import wrapBlockImages from '@/lib/wrapBlockImages'
+import applyRichTextPipeline from '@/lib/applyRichTextPipeline'
 import { getCurrentUser } from '@/server/auth'
 import { db } from '@/server/db'
 import { maybeFirst } from '@/server/db/query'
@@ -86,7 +86,7 @@ async function getData({ slugKey, pathname, preview, viewer }: GetDataOptions): 
     const post = await getPreviewPost(previewId)
     if (!post) notFound()
     const { html: rawHtml, headers } = getHeadersFromHTML(post.html || '')
-    return { post, html: wrapBlockImages(rawHtml), headers }
+    return { post, html: applyRichTextPipeline(rawHtml), headers }
   }
 
   const post = await getFrontendPostBySlug(slugKey, {
@@ -119,7 +119,7 @@ async function getData({ slugKey, pathname, preview, viewer }: GetDataOptions): 
 
   return {
     post,
-    html: wrapBlockImages(rawHtml),
+    html: applyRichTextPipeline(rawHtml),
     headers,
   }
 }

@@ -260,7 +260,7 @@ export default function RevisionHistory({
                 }}
               >
                 <div
-                  className="post-content"
+                  className="rich-content"
                   dangerouslySetInnerHTML={{ __html: preview.contentHtml }}
                 />
               </ScrollArea>

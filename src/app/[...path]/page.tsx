@@ -3,6 +3,7 @@ import TwitterEmbedResize from '@/components/TwitterEmbedResize'
 import { getServerTranslator } from '@/i18n/server'
 import BasicLayout from '@/layouts/basic'
 import BlankLayout from '@/layouts/blank'
+import applyRichTextPipeline from '@/lib/applyRichTextPipeline'
 import { getCurrentUser } from '@/server/auth'
 import { redirectOrNotFound } from '@/server/lib/frontend-404'
 import { getPublishedPageByPath } from '@/server/services/pages'
@@ -58,14 +59,16 @@ export default async function DynamicPage({ params }: { params: Promise<{ path: 
     const page = await getPreviewPage(previewId)
     if (!page) notFound()
 
+    const contentHtml = applyRichTextPipeline(page.contentHtml)
+
     if (page.template === 'blank') {
       // blank 模板不渲染 Nav/Footer，但仍需经过 BlankLayout 注入主题 CSS 与 custom body HTML
       return (
         <BlankLayout>
           <PreviewNotice />
           <div
-            className="dynamic-page-content"
-            dangerouslySetInnerHTML={{ __html: page.contentHtml }}
+            className="dynamic-page-content rich-content"
+            dangerouslySetInnerHTML={{ __html: contentHtml }}
           />
           <TwitterEmbedResize />
         </BlankLayout>
@@ -77,8 +80,8 @@ export default async function DynamicPage({ params }: { params: Promise<{ path: 
         <PreviewNotice />
         <div className="dynamic-page">
           <div
-            className="dynamic-page-content"
-            dangerouslySetInnerHTML={{ __html: page.contentHtml }}
+            className="dynamic-page-content rich-content"
+            dangerouslySetInnerHTML={{ __html: contentHtml }}
           />
           <TwitterEmbedResize />
         </div>
@@ -91,13 +94,15 @@ export default async function DynamicPage({ params }: { params: Promise<{ path: 
     return redirectOrNotFound(pathname)
   }
 
+  const contentHtml = applyRichTextPipeline(page.contentHtml)
+
   // blank 模板：不包含 Nav/Footer，但仍需 BlankLayout 注入主题 CSS 与 custom body HTML
   if (page.template === 'blank') {
     return (
       <BlankLayout>
         <div
-          className="dynamic-page-content"
-          dangerouslySetInnerHTML={{ __html: page.contentHtml }}
+          className="dynamic-page-content rich-content"
+          dangerouslySetInnerHTML={{ __html: contentHtml }}
         />
         <TwitterEmbedResize />
       </BlankLayout>
@@ -109,8 +114,8 @@ export default async function DynamicPage({ params }: { params: Promise<{ path: 
     <BasicLayout>
       <div className="dynamic-page">
         <div
-          className="dynamic-page-content"
-          dangerouslySetInnerHTML={{ __html: page.contentHtml }}
+          className="dynamic-page-content rich-content"
+          dangerouslySetInnerHTML={{ __html: contentHtml }}
         />
         <TwitterEmbedResize />
       </div>
