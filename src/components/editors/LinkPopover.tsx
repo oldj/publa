@@ -184,7 +184,7 @@ export default function LinkPopoverControl({ editor }: { editor: Editor | null }
           active={isOpen || isActive}
           aria-label={t('insertLink')}
         >
-          <IconLink size={16} />
+          <IconLink size={16} stroke={1.5} />
         </RichTextEditor.Control>
       </Popover.Target>
       <Popover.Dropdown style={{ padding: 8 }}>
@@ -212,7 +212,7 @@ export default function LinkPopoverControl({ editor }: { editor: Editor | null }
                   onClick={setLink}
                   disabled={!url && !isActive}
                 >
-                  <IconCornerDownLeft size={14} />
+                  <IconCornerDownLeft size={14} stroke={1.5} />
                 </ActionIcon>
               </Tooltip>
             }
@@ -228,7 +228,7 @@ export default function LinkPopoverControl({ editor }: { editor: Editor | null }
 
           <Tooltip label={t('openInNewTab')} withArrow zIndex={10001}>
             <ActionIcon variant="subtle" size="sm" onClick={openLink} disabled={!isActive}>
-              <IconExternalLink size={16} />
+              <IconExternalLink size={16} stroke={1.5} />
             </ActionIcon>
           </Tooltip>
 
@@ -240,7 +240,7 @@ export default function LinkPopoverControl({ editor }: { editor: Editor | null }
               onClick={removeLink}
               disabled={!isActive}
             >
-              <IconLinkOff size={16} />
+              <IconLinkOff size={16} stroke={1.5} />
             </ActionIcon>
           </Tooltip>
         </div>

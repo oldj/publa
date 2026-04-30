@@ -42,7 +42,7 @@ export default function TableToolbar({ editor, tableToolbar }: TableToolbarProps
             color="gray"
             onClick={() => editor.chain().focus().addColumnBefore().run()}
           >
-            <IconColumnInsertLeft size={16} />
+            <IconColumnInsertLeft size={16} stroke={1.5} />
           </Button>
         </Tooltip>
         <Tooltip label={t('addColumnAfter')} position="top" withArrow>
@@ -52,7 +52,7 @@ export default function TableToolbar({ editor, tableToolbar }: TableToolbarProps
             color="gray"
             onClick={() => editor.chain().focus().addColumnAfter().run()}
           >
-            <IconColumnInsertRight size={16} />
+            <IconColumnInsertRight size={16} stroke={1.5} />
           </Button>
         </Tooltip>
         <Tooltip label={t('deleteColumn')} position="top" withArrow>
@@ -62,7 +62,7 @@ export default function TableToolbar({ editor, tableToolbar }: TableToolbarProps
             color="red"
             onClick={() => editor.chain().focus().deleteColumn().run()}
           >
-            <IconColumnRemove size={16} />
+            <IconColumnRemove size={16} stroke={1.5} />
           </Button>
         </Tooltip>
 
@@ -75,7 +75,7 @@ export default function TableToolbar({ editor, tableToolbar }: TableToolbarProps
             color="gray"
             onClick={() => editor.chain().focus().addRowBefore().run()}
           >
-            <IconRowInsertTop size={16} />
+            <IconRowInsertTop size={16} stroke={1.5} />
           </Button>
         </Tooltip>
         <Tooltip label={t('addRowAfter')} position="top" withArrow>
@@ -85,7 +85,7 @@ export default function TableToolbar({ editor, tableToolbar }: TableToolbarProps
             color="gray"
             onClick={() => editor.chain().focus().addRowAfter().run()}
           >
-            <IconRowInsertBottom size={16} />
+            <IconRowInsertBottom size={16} stroke={1.5} />
           </Button>
         </Tooltip>
         <Tooltip label={t('deleteRow')} position="top" withArrow>
@@ -95,7 +95,7 @@ export default function TableToolbar({ editor, tableToolbar }: TableToolbarProps
             color="red"
             onClick={() => editor.chain().focus().deleteRow().run()}
           >
-            <IconRowRemove size={16} />
+            <IconRowRemove size={16} stroke={1.5} />
           </Button>
         </Tooltip>
 
@@ -109,7 +109,7 @@ export default function TableToolbar({ editor, tableToolbar }: TableToolbarProps
             disabled={!canMerge}
             onClick={() => editor.chain().focus().mergeCells().run()}
           >
-            <TableCellsMerge size={16} />
+            <TableCellsMerge size={16} strokeWidth={1.5} />
           </Button>
         </Tooltip>
         <Tooltip label={t('splitCell')} position="top" withArrow>
@@ -120,7 +120,7 @@ export default function TableToolbar({ editor, tableToolbar }: TableToolbarProps
             disabled={!canSplit}
             onClick={() => editor.chain().focus().splitCell().run()}
           >
-            <TableCellsSplit size={16} />
+            <TableCellsSplit size={16} strokeWidth={1.5} />
           </Button>
         </Tooltip>
 
@@ -133,7 +133,7 @@ export default function TableToolbar({ editor, tableToolbar }: TableToolbarProps
             color="red"
             onClick={() => editor.chain().focus().deleteTable().run()}
           >
-            <IconTableOff size={16} />
+            <IconTableOff size={16} stroke={1.5} />
           </Button>
         </Tooltip>
       </div>

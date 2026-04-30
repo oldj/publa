@@ -148,7 +148,7 @@ export default function ImageToolbar({
                 }
               }}
             >
-              <IconMaximizeOff size={14} />
+              <IconMaximizeOff size={14} stroke={1.5} />
             </Button>
           </Tooltip>
           <Tooltip label={t('originalSize')} withArrow>
@@ -170,7 +170,7 @@ export default function ImageToolbar({
                 }
               }}
             >
-              <IconArrowsMaximize size={14} />
+              <IconArrowsMaximize size={14} stroke={1.5} />
             </Button>
           </Tooltip>
           <Tooltip label={t('halfSize')} withArrow>
@@ -192,7 +192,7 @@ export default function ImageToolbar({
                 }
               }}
             >
-              <IconMath1Divide2 size={14} />
+              <IconMath1Divide2 size={14} stroke={1.5} />
             </Button>
           </Tooltip>
           <Tooltip label={t('customSize')} withArrow>
@@ -208,7 +208,7 @@ export default function ImageToolbar({
                 setCustomSizeOpen(!customSizeOpen)
               }}
             >
-              <IconRuler size={14} />
+              <IconRuler size={14} stroke={1.5} />
             </Button>
           </Tooltip>
 
@@ -234,7 +234,7 @@ export default function ImageToolbar({
                 }
               }}
             >
-              <IconAlignLeft size={14} />
+              <IconAlignLeft size={14} stroke={1.5} />
             </Button>
           </Tooltip>
           <Tooltip label={t('alignCenter')} withArrow>
@@ -251,7 +251,7 @@ export default function ImageToolbar({
                 }
               }}
             >
-              <IconAlignCenter size={14} />
+              <IconAlignCenter size={14} stroke={1.5} />
             </Button>
           </Tooltip>
           <Tooltip label={t('alignRight')} withArrow>
@@ -268,7 +268,7 @@ export default function ImageToolbar({
                 }
               }}
             >
-              <IconAlignRight size={14} />
+              <IconAlignRight size={14} stroke={1.5} />
             </Button>
           </Tooltip>
 
@@ -292,7 +292,7 @@ export default function ImageToolbar({
                 }
               }}
             >
-              <IconLink size={14} />
+              <IconLink size={14} stroke={1.5} />
             </Button>
           </Tooltip>
         </div>

@@ -194,7 +194,7 @@ export default function EmbedPopoverControl({ editor }: { editor: Editor | null 
           active={isOpen || isActive}
           aria-label={t('insertEmbed')}
         >
-          <IconBrandYoutube size={16} />
+          <IconBrandYoutube size={16} stroke={1.5} />
         </RichTextEditor.Control>
       </Popover.Target>
       <Popover.Dropdown style={{ padding: 8 }}>
@@ -221,7 +221,7 @@ export default function EmbedPopoverControl({ editor }: { editor: Editor | null 
             rightSection={
               <Tooltip label={t('apply')} withArrow zIndex={10001}>
                 <ActionIcon variant="subtle" size="sm" onClick={apply} disabled={!url}>
-                  <IconCornerDownLeft size={14} />
+                  <IconCornerDownLeft size={14} stroke={1.5} />
                 </ActionIcon>
               </Tooltip>
             }
@@ -237,7 +237,7 @@ export default function EmbedPopoverControl({ editor }: { editor: Editor | null 
 
           <Tooltip label={t('openOriginal')} withArrow zIndex={10001}>
             <ActionIcon variant="subtle" size="sm" onClick={openOriginal} disabled={!isActive}>
-              <IconExternalLink size={16} />
+              <IconExternalLink size={16} stroke={1.5} />
             </ActionIcon>
           </Tooltip>
 
@@ -249,7 +249,7 @@ export default function EmbedPopoverControl({ editor }: { editor: Editor | null 
               onClick={remove}
               disabled={!isActive}
             >
-              <IconTrash size={16} />
+              <IconTrash size={16} stroke={1.5} />
             </ActionIcon>
           </Tooltip>
         </div>

@@ -535,7 +535,7 @@ export default function RichTextEditorWrapper({
                   disabled={editor?.isActive('table')}
                   aria-label={t('insertTable')}
                 >
-                  <IconTable size={16} />
+                  <IconTable size={16} stroke={1.5} />
                 </RichTextEditor.Control>
               </Tip>
               <LinkPopoverControl editor={editor} />
@@ -555,7 +555,7 @@ export default function RichTextEditorWrapper({
                   }}
                   aria-label={t('insertImage')}
                 >
-                  <IconPhoto size={16} />
+                  <IconPhoto size={16} stroke={1.5} />
                 </RichTextEditor.Control>
               </Tip>
               <EmbedPopoverControl editor={editor} />
@@ -572,7 +572,7 @@ export default function RichTextEditorWrapper({
                   }}
                   aria-label={t('inlineMath')}
                 >
-                  <IconMath size={16} />
+                  <IconMath size={16} stroke={1.5} />
                 </RichTextEditor.Control>
               </Tip>
               <Tip label={t('blockMath')}>
@@ -585,7 +585,7 @@ export default function RichTextEditorWrapper({
                   }}
                   aria-label={t('blockMath')}
                 >
-                  <IconMathFunction size={16} />
+                  <IconMathFunction size={16} stroke={1.5} />
                 </RichTextEditor.Control>
               </Tip>
             </RichTextEditor.ControlsGroup>
@@ -620,7 +620,7 @@ export default function RichTextEditorWrapper({
                     active={narrowMode}
                     aria-label={t('narrowMode')}
                   >
-                    <IconArticle size={16} />
+                    <IconArticle size={16} stroke={1.5} />
                   </RichTextEditor.Control>
                 </Tip>
               </RichTextEditor.ControlsGroup>
@@ -636,7 +636,7 @@ export default function RichTextEditorWrapper({
                     disabled={saveLoading}
                     aria-label={tCommon('actions.save')}
                   >
-                    {saveLoading ? <Loader size={16} /> : <IconDeviceFloppy size={16} />}
+                    {saveLoading ? <Loader size={16} /> : <IconDeviceFloppy size={16} stroke={1.5} />}
                   </RichTextEditor.Control>
                 </Tip>
               </RichTextEditor.ControlsGroup>
@@ -678,7 +678,11 @@ export default function RichTextEditorWrapper({
                     }}
                     aria-label={isMaximized ? t('exitMaximize') : t('maximize')}
                   >
-                    {isMaximized ? <IconMinimize size={16} /> : <IconMaximize size={16} />}
+                    {isMaximized ? (
+                      <IconMinimize size={16} stroke={1.5} />
+                    ) : (
+                      <IconMaximize size={16} stroke={1.5} />
+                    )}
                   </RichTextEditor.Control>
                 </span>
               </Tooltip>
