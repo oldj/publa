@@ -24,6 +24,11 @@ const next_configs = {
     '@libsql/client',
     'pg',
   ],
+  // 通过 await import() 调用、nft 无法静态追踪的运行时依赖，
+  // 在此显式声明，确保进入 standalone 输出。
+  outputFileTracingIncludes: {
+    '/**/*': ['./node_modules/nodemailer/**/*', './node_modules/resend/**/*'],
+  },
   experimental: {
     serverActions: {
       bodySizeLimit: '50mb',
