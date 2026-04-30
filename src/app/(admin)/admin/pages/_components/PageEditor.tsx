@@ -208,8 +208,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
     try {
       const res = await fetch('/api/attachments/config')
       const json = await res.json()
-      const configured =
-        !!json.data?.storageProvider && ['s3', 'cos'].includes(json.data.storageProvider)
+      const configured = !!json.data?.storageProvider
       storageConfigured.current = configured
       return configured
     } catch {
