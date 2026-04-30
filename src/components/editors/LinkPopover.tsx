@@ -128,6 +128,8 @@ function useLinkPopover(editor: Editor | null) {
 // 链接 Popover 组件，参考 tiptap 官方 LinkPopover 的 UX 模式
 export default function LinkPopoverControl({ editor }: { editor: Editor | null }) {
   const t = useTranslations('admin.editor.linkPopover')
+  const controlRef = useRef<HTMLButtonElement | null>(null)
+  const [tooltipOpened, setTooltipOpened] = useState(false)
   const {
     url,
     setUrl,
@@ -142,6 +144,7 @@ export default function LinkPopoverControl({ editor }: { editor: Editor | null }
   } = useLinkPopover(editor)
 
   const handleClick = useCallback(() => {
+    setTooltipOpened(false)
     if (isOpen) {
       closePopover()
     } else {
@@ -162,16 +165,27 @@ export default function LinkPopoverControl({ editor }: { editor: Editor | null }
       zIndex={10000}
       position="bottom"
     >
+      <Tooltip
+        label={t('insertLink')}
+        position="bottom"
+        withArrow
+        withinPortal
+        target={controlRef}
+        opened={tooltipOpened && !isOpen}
+      />
       <Popover.Target>
-        <Tooltip label={t('insertLink')} position="bottom" withArrow withinPortal>
-          <RichTextEditor.Control
-            onClick={handleClick}
-            active={isOpen || isActive}
-            aria-label={t('insertLink')}
-          >
-            <IconLink size={16} />
-          </RichTextEditor.Control>
-        </Tooltip>
+        <RichTextEditor.Control
+          ref={controlRef}
+          onClick={handleClick}
+          onMouseEnter={() => setTooltipOpened(true)}
+          onMouseLeave={() => setTooltipOpened(false)}
+          onFocus={() => setTooltipOpened(true)}
+          onBlur={() => setTooltipOpened(false)}
+          active={isOpen || isActive}
+          aria-label={t('insertLink')}
+        >
+          <IconLink size={16} />
+        </RichTextEditor.Control>
       </Popover.Target>
       <Popover.Dropdown style={{ padding: 8 }}>
         <div style={{ display: 'flex', gap: 8, minWidth: 360, alignItems: 'center' }}>

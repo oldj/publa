@@ -134,6 +134,8 @@ function useEmbedPopover(editor: Editor | null) {
 // 嵌入 Popover 组件，UX 模式与 LinkPopover 保持一致
 export default function EmbedPopoverControl({ editor }: { editor: Editor | null }) {
   const t = useTranslations('admin.editor.embedPopover')
+  const controlRef = useRef<HTMLButtonElement | null>(null)
+  const [tooltipOpened, setTooltipOpened] = useState(false)
   const {
     url,
     setUrl,
@@ -153,6 +155,7 @@ export default function EmbedPopoverControl({ editor }: { editor: Editor | null 
   const providerList = useMemo(() => PROVIDERS.map((p) => t(`providers.${p.id}`)).join(', '), [t])
 
   const handleClick = useCallback(() => {
+    setTooltipOpened(false)
     if (isOpen) {
       closePopover()
     } else {
@@ -172,16 +175,27 @@ export default function EmbedPopoverControl({ editor }: { editor: Editor | null 
       zIndex={10000}
       position="bottom"
     >
+      <Tooltip
+        label={t('insertEmbed')}
+        position="bottom"
+        withArrow
+        withinPortal
+        target={controlRef}
+        opened={tooltipOpened && !isOpen}
+      />
       <Popover.Target>
-        <Tooltip label={t('insertEmbed')} position="bottom" withArrow withinPortal>
-          <RichTextEditor.Control
-            onClick={handleClick}
-            active={isOpen || isActive}
-            aria-label={t('insertEmbed')}
-          >
-            <IconBrandYoutube size={16} />
-          </RichTextEditor.Control>
-        </Tooltip>
+        <RichTextEditor.Control
+          ref={controlRef}
+          onClick={handleClick}
+          onMouseEnter={() => setTooltipOpened(true)}
+          onMouseLeave={() => setTooltipOpened(false)}
+          onFocus={() => setTooltipOpened(true)}
+          onBlur={() => setTooltipOpened(false)}
+          active={isOpen || isActive}
+          aria-label={t('insertEmbed')}
+        >
+          <IconBrandYoutube size={16} />
+        </RichTextEditor.Control>
       </Popover.Target>
       <Popover.Dropdown style={{ padding: 8 }}>
         <div style={{ display: 'flex', gap: 8, minWidth: 420, alignItems: 'center' }}>

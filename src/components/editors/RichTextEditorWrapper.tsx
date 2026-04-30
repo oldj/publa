@@ -35,6 +35,7 @@ import ImageToolbar from './ImageToolbar'
 import LinkPopoverControl from './LinkPopover'
 import MathModal from './MathModal'
 import TableToolbar from './TableToolbar'
+import { getFloatingToolbarTop } from './toolbar-position'
 
 export interface RichTextEditorHandle {
   getEditor: () => Editor | null
@@ -349,13 +350,12 @@ export default function RichTextEditorWrapper({
 
       const containerRect = container.getBoundingClientRect()
       const imgRect = imgEl.getBoundingClientRect()
-
-      const toolbarHeight = 36
-      const spaceAbove = imgRect.top - containerRect.top
-      const top =
-        spaceAbove >= toolbarHeight + 8
-          ? imgRect.top - containerRect.top - toolbarHeight - 4
-          : imgRect.bottom - containerRect.top + 4
+      const top = getFloatingToolbarTop({
+        containerTop: containerRect.top,
+        targetTop: imgRect.top,
+        targetBottom: imgRect.bottom,
+        scrollTop: container.scrollTop,
+      })
 
       setImageToolbar({
         top,
@@ -420,13 +420,12 @@ export default function RichTextEditorWrapper({
 
       const containerRect = container.getBoundingClientRect()
       const tableRect = tableDom.getBoundingClientRect()
-
-      const toolbarHeight = 36
-      const spaceAbove = tableRect.top - containerRect.top
-      const top =
-        spaceAbove >= toolbarHeight + 8
-          ? tableRect.top - containerRect.top - toolbarHeight - 4
-          : tableRect.bottom - containerRect.top + 4
+      const top = getFloatingToolbarTop({
+        containerTop: containerRect.top,
+        targetTop: tableRect.top,
+        targetBottom: tableRect.bottom,
+        scrollTop: container.scrollTop,
+      })
 
       setTableToolbar({ top })
     }
