@@ -113,12 +113,18 @@ describe('i18n requestConfig', () => {
   })
 
   it('看似带 admin 前缀但实为前台的路径不被误判', async () => {
-    // 前台用户可能创建 slug 为 "administrator" 的内容；
-    // 但 startsWith('/admin') 会把 /administrator 也命中——
-    // 这里固化当前行为：以 /admin 开头一律视作后台。
-    // 该 case 由 proxy 层保证不会出现（自定义 ADMIN_PATH 时旧 /admin 被屏蔽，
-    // 默认场景下 /admin/* 即为后台），故这里只覆盖更典型的边界。
-    mockHeaders.mockResolvedValue(makeHeaders({ 'x-pathname': '/about' }))
+    // 前台 slug 为 /administrator 的页面应仍然按前台处理，
+    // 不下发 admin 命名空间。boundary 匹配（/admin 完全相等或 /admin/ 前缀）
+    // 排除了这种误判。
+    mockHeaders.mockResolvedValue(makeHeaders({ 'x-pathname': '/administrator' }))
+
+    const cfg = await requestConfig()
+
+    expect(cfg.messages).not.toHaveProperty('admin')
+  })
+
+  it('看似带 setup 前缀但实为前台的路径不被误判', async () => {
+    mockHeaders.mockResolvedValue(makeHeaders({ 'x-pathname': '/setupabc' }))
 
     const cfg = await requestConfig()
 

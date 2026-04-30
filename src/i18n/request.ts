@@ -13,7 +13,12 @@ export default getRequestConfig(async () => {
   // 所以这里判断对默认与自定义后台路径同样有效。
   const headersList = await headers()
   const pathname = headersList.get('x-pathname') || ''
-  const needsAdmin = pathname.startsWith('/admin') || pathname.startsWith('/setup')
+  // 用 boundary 匹配，避免 /administrator、/setupabc 这类前台 slug 被误判为后台
+  const needsAdmin =
+    pathname === '/admin' ||
+    pathname.startsWith('/admin/') ||
+    pathname === '/setup' ||
+    pathname.startsWith('/setup/')
 
   const messages = needsAdmin ? all : { common: all.common, frontend: all.frontend }
   return { locale, messages }
