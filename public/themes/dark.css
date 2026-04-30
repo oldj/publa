@@ -781,43 +781,43 @@ figure figcaption:empty {
 }
 
 /* link_with_under_line */
-.post-detail-content a {
+.rich-content a {
   color: var(--color-link);
   text-decoration: underline;
   text-underline-offset: 6px;
 }
 
-.post-detail-content a:hover {
+.rich-content a:hover {
   color: var(--color-link-hover);
 }
 
-.post-detail-content a:focus-visible {
+.rich-content a:focus-visible {
   text-decoration: none;
   color: var(--color-link-hover);
 }
 
 /* my_list(2em) */
-.post-detail-content ul,
-.post-detail-content ol {
+.rich-content ul,
+.rich-content ol {
   padding-left: 2em;
 }
 
-.post-detail-content ol {
+.rich-content ol {
   padding-left: 3em;
 }
 
-.post-detail-content li::marker {
+.rich-content li::marker {
   font-family: var(--font-code);
   letter-spacing: 0;
   color: var(--color-text-tertiary);
 }
 
-.post-detail-content ul li {
+.rich-content ul li {
   padding-inline-start: 1ch;
   list-style-type: "-";
 }
 
-.post-detail-content ol li {
+.rich-content ol li {
   list-style-type: decimal;
 }
 
@@ -829,66 +829,66 @@ figure figcaption:empty {
 }
 
 /* 标题间距：展开 @each 循环 */
-.post-detail-content p + h2,
-.post-detail-content figure + h2,
-.post-detail-content pre + h2,
-.post-detail-content blockquote + h2,
-.post-detail-content div + h2,
-.post-detail-content table + h2,
-.post-detail-content ul + h2,
-.post-detail-content ol + h2 {
+.rich-content p + h2,
+.rich-content figure + h2,
+.rich-content pre + h2,
+.rich-content blockquote + h2,
+.rich-content div + h2,
+.rich-content table + h2,
+.rich-content ul + h2,
+.rich-content ol + h2 {
   margin-top: 1.2em;
   margin-bottom: 0.2em;
 }
 
-.post-detail-content p + h3,
-.post-detail-content figure + h3,
-.post-detail-content pre + h3,
-.post-detail-content blockquote + h3,
-.post-detail-content div + h3,
-.post-detail-content table + h3,
-.post-detail-content ul + h3,
-.post-detail-content ol + h3,
-.post-detail-content p + h4,
-.post-detail-content figure + h4,
-.post-detail-content pre + h4,
-.post-detail-content blockquote + h4,
-.post-detail-content div + h4,
-.post-detail-content table + h4,
-.post-detail-content ul + h4,
-.post-detail-content ol + h4 {
+.rich-content p + h3,
+.rich-content figure + h3,
+.rich-content pre + h3,
+.rich-content blockquote + h3,
+.rich-content div + h3,
+.rich-content table + h3,
+.rich-content ul + h3,
+.rich-content ol + h3,
+.rich-content p + h4,
+.rich-content figure + h4,
+.rich-content pre + h4,
+.rich-content blockquote + h4,
+.rich-content div + h4,
+.rich-content table + h4,
+.rich-content ul + h4,
+.rich-content ol + h4 {
   margin-top: 1em;
 }
 
-.post-detail-content img {
+.rich-content img {
   max-width: 100%;
 }
 
-.post-detail-content figure {
+.rich-content figure {
   margin-top: 0;
 }
 
-.post-detail-content p + figure,
-.post-detail-content div + figure {
+.rich-content p + figure,
+.rich-content div + figure {
   margin-top: 2em;
 }
 
-.post-detail-content h2 + figure,
-.post-detail-content h3 + figure {
+.rich-content h2 + figure,
+.rich-content h3 + figure {
   margin-top: 0.5em;
 }
 
-.post-detail-content del {
+.rich-content del {
   opacity: 0.5;
 }
 
-.post-detail-content iframe.ifr-video {
+.rich-content iframe.ifr-video {
   width: 100%;
   aspect-ratio: 16 / 9;
 }
 
 /* 第三方站点嵌入节点：YouTube / Bilibili / Vimeo / X.com / CodePen / CodeSandbox */
-.post-detail-content .embed {
+.rich-content .embed {
   position: relative;
   width: 100%;
   aspect-ratio: 16 / 9;
@@ -898,7 +898,7 @@ figure figcaption:empty {
   overflow: hidden;
 }
 
-.post-detail-content .embed iframe {
+.rich-content .embed iframe {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -906,7 +906,7 @@ figure figcaption:empty {
   border: 0;
 }
 
-.post-detail-content .embed[data-aspect-ratio="auto"] {
+.rich-content .embed[data-aspect-ratio="auto"] {
   aspect-ratio: auto;
 }
 
@@ -1346,41 +1346,6 @@ figure figcaption:empty {
 .dynamic-page-title {
   font-size: 1.5em;
   margin-bottom: 1em;
-}
-
-.dynamic-page-content {
-  line-height: 1.8;
-}
-
-.dynamic-page-content h2 {
-  font-size: 1.2em;
-  margin-top: 2em;
-  margin-bottom: 0.5em;
-}
-
-.dynamic-page-content h3 {
-  font-size: 1.1em;
-  margin-top: 1.5em;
-  margin-bottom: 0.5em;
-}
-
-.dynamic-page-content p {
-  margin-bottom: 1em;
-}
-
-.dynamic-page-content ul,
-.dynamic-page-content ol {
-  margin-bottom: 1em;
-  padding-left: 2em;
-}
-
-.dynamic-page-content a {
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-.dynamic-page-content img {
-  max-width: 100%;
 }
 
 /* --- 表单：FeedbackForm / CommentForm --- */
