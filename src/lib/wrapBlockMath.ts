@@ -6,9 +6,6 @@ import katex from 'katex'
 /** 不应在其内识别公式分隔符的容器（保留代码示例等原文） */
 const SKIP_TAGS = new Set(['pre', 'code', 'script', 'style', 'kbd', 'samp', 'tt'])
 
-/** 匹配 \(...\) 与 \[...\] 两种 markdown-it-mathjax 输出的分隔符 */
-const DELIMITER_RE = /\\\(([\s\S]+?)\\\)|\\\[([\s\S]+?)\\\]/g
-
 function renderLatex(latex: string, displayMode: boolean): string {
   return katex.renderToString(latex, {
     displayMode,
@@ -49,13 +46,15 @@ function parseHtmlToNodes(html: string, parent: Element | null): ChildNode[] {
  * 返回新的混合节点数组；若文本中无分隔符，返回 null。
  */
 function splitTextByDelimiters(text: string, parent: Element | null): ChildNode[] | null {
-  DELIMITER_RE.lastIndex = 0
+  // 匹配 \(...\) 与 \[...\] 两种 markdown-it-mathjax 输出的分隔符
+  // 函数内局部 RegExp，避免共享 lastIndex 状态
+  const re = /\\\(([\s\S]+?)\\\)|\\\[([\s\S]+?)\\\]/g
   const segments: ChildNode[] = []
   let lastIndex = 0
   let matched = false
   let m: RegExpExecArray | null
 
-  while ((m = DELIMITER_RE.exec(text)) !== null) {
+  while ((m = re.exec(text)) !== null) {
     matched = true
     if (m.index > lastIndex) {
       const before = new Text(text.slice(lastIndex, m.index))

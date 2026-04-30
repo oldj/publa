@@ -713,14 +713,6 @@ figure figcaption:empty {
   padding-top: 0;
 }
 
-.post-detail h1,
-.post-detail h2,
-.post-detail h3,
-.post-detail h4 {
-  font-weight: 500;
-  scroll-margin: 16px;
-}
-
 .post-detail-cover {
   width: 100%;
   height: auto;
@@ -735,10 +727,6 @@ figure figcaption:empty {
 .rich-table-wrapper {
   width: 100%;
   overflow: auto;
-}
-
-.post-detail pre code {
-  padding: 20px 16px;
 }
 
 .post-detail-date {
@@ -774,6 +762,20 @@ figure figcaption:empty {
   padding: 30px 0 60px 0;
   overflow: auto;
   color: var(--color-text);
+}
+
+/* 正文标题：字重 + TOC 锚点滚动间距 */
+.rich-content h1,
+.rich-content h2,
+.rich-content h3,
+.rich-content h4 {
+  font-weight: 500;
+  scroll-margin: 16px;
+}
+
+/* 代码块内边距 */
+.rich-content pre code {
+  padding: 20px 16px;
 }
 
 /* link_with_under_line */
