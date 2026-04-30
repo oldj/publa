@@ -67,7 +67,7 @@ export default async function DynamicPage({ params }: { params: Promise<{ path: 
         <BlankLayout>
           <PreviewNotice />
           <div
-            className="dynamic-page-content"
+            className="dynamic-page-content rich-content"
             dangerouslySetInnerHTML={{ __html: contentHtml }}
           />
           <TwitterEmbedResize />
@@ -80,7 +80,7 @@ export default async function DynamicPage({ params }: { params: Promise<{ path: 
         <PreviewNotice />
         <div className="dynamic-page">
           <div
-            className="dynamic-page-content"
+            className="dynamic-page-content rich-content"
             dangerouslySetInnerHTML={{ __html: contentHtml }}
           />
           <TwitterEmbedResize />
@@ -101,7 +101,7 @@ export default async function DynamicPage({ params }: { params: Promise<{ path: 
     return (
       <BlankLayout>
         <div
-          className="dynamic-page-content"
+          className="dynamic-page-content rich-content"
           dangerouslySetInnerHTML={{ __html: contentHtml }}
         />
         <TwitterEmbedResize />
@@ -114,7 +114,7 @@ export default async function DynamicPage({ params }: { params: Promise<{ path: 
     <BasicLayout>
       <div className="dynamic-page">
         <div
-          className="dynamic-page-content"
+          className="dynamic-page-content rich-content"
           dangerouslySetInnerHTML={{ __html: contentHtml }}
         />
         <TwitterEmbedResize />

@@ -315,8 +315,8 @@ figure figcaption:empty {
 
 /* 文章内容中的图片对齐（由外层 .post-detail-img 容器控制） */
 
-/* 表格样式限定在 .post-content 内以避免影响后台 */
-.post-content table {
+/* 表格样式限定在 .rich-content 内以避免影响后台 */
+.rich-content table {
   border-spacing: 0;
   border-top: 2px solid var(--color-primary);
   border-bottom: 2px solid var(--color-primary);
@@ -326,29 +326,29 @@ figure figcaption:empty {
   table-layout: fixed;
 }
 
-.post-content table thead {
+.rich-content table thead {
   font-weight: bold;
   background: var(--bg-gray);
 }
 
-.post-content table thead th {
+.rich-content table thead th {
   text-align: center;
 }
 
-.post-content table tr {
+.rich-content table tr {
   border-bottom: 1px solid var(--color-primary);
 }
 
-.post-content table th,
-.post-content table td {
+.rich-content table th,
+.rich-content table td {
   padding: 4px 8px;
   border: 0;
   border-bottom: 1px solid var(--color-primary);
   border-right: 1px solid var(--color-primary);
 }
 
-.post-content table th:last-child,
-.post-content table td:last-child {
+.rich-content table th:last-child,
+.rich-content table td:last-child {
   border-right: 0;
 }
 

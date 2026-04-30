@@ -223,7 +223,7 @@ export default function Post(props: IProps) {
       </div>
       <TOC headers={headers || []} ref={refToc1} />
       <div
-        className="post-detail-content post-content"
+        className="post-detail-content rich-content"
         ref={refContent}
         dangerouslySetInnerHTML={{ __html: html || '' }}
       />
