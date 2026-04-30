@@ -5,13 +5,12 @@ describe('wrapBlockTables', () => {
   it('顶层 table 被包裹在 div.rich-table-wrapper 中', () => {
     const html = '<table><tr><td>1</td></tr></table>'
     const result = wrapBlockTables(html)
-    expect(result).toBe(
-      '<div class="rich-table-wrapper"><table><tr><td>1</td></tr></table></div>',
-    )
+    expect(result).toBe('<div class="rich-table-wrapper"><table><tr><td>1</td></tr></table></div>')
   })
 
   it('table 内文字与属性保持原样', () => {
-    const html = '<table class="x"><thead><tr><th>头</th></tr></thead><tbody><tr><td>体</td></tr></tbody></table>'
+    const html =
+      '<table class="x"><thead><tr><th>头</th></tr></thead><tbody><tr><td>体</td></tr></tbody></table>'
     const result = wrapBlockTables(html)
     expect(result).toContain('<table class="x">')
     expect(result).toContain('<th>头</th>')
