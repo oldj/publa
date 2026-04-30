@@ -1,3 +1,5 @@
+import { createTransport } from 'nodemailer'
+import { Resend } from 'resend'
 import { getAllSettings } from '@/server/services/settings'
 
 interface SendResult {
@@ -14,7 +16,6 @@ async function sendViaResend(
   html: string,
 ): Promise<SendResult> {
   try {
-    const { Resend } = await import('resend')
     const resend = new Resend(apiKey)
     const { error } = await resend.emails.send({ from, to, subject, html })
     if (error) {
@@ -35,8 +36,7 @@ async function sendViaSmtp(
   subject: string,
   html: string,
 ): Promise<SendResult> {
-  const nodemailer = await import('nodemailer')
-  const transporter = nodemailer.createTransport({
+  const transporter = createTransport({
     host: config.host,
     port: config.port,
     secure: config.encryption === 'ssl',
