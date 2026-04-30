@@ -172,17 +172,6 @@ export default function Post(props: IProps) {
   }, [html, showBackToTop, showToc2])
 
   useEffect(() => {
-    document.querySelectorAll('.post-detail-content table').forEach((tb) => {
-      const el = document.createElement('div')
-      el.className = 'post-detail-table-wrapper'
-      tb.parentNode?.insertBefore(el, tb)
-      el.appendChild(tb)
-    })
-
-    // 图片包裹已在服务端由 wrapBlockImages 完成，此处无需重复处理
-  }, [post.id])
-
-  useEffect(() => {
     const onScroll = () => {
       const scrollTop = document.documentElement.scrollTop || document.body.scrollTop
       setShowBackToTop(scrollTop > 300)

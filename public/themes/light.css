@@ -732,7 +732,7 @@ figure figcaption:empty {
   margin-bottom: 20px;
 }
 
-.post-detail .post-detail-table-wrapper {
+.rich-table-wrapper {
   width: 100%;
   overflow: auto;
 }
