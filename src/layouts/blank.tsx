@@ -6,6 +6,7 @@
 import PreviewStyles from '@/components/PreviewStyles'
 import { getBuiltinKeyById } from '@/server/services/builtin-themes'
 import { getAllSettings, toStr } from '@/server/services/settings'
+import 'katex/dist/katex.min.css'
 import React, { Suspense } from 'react'
 
 interface IProps {

@@ -13,9 +13,6 @@ import Spacer from '@/widgets/Spacer'
 import clsx from 'clsx'
 import dayjs from 'dayjs'
 import hljs from 'highlight.js/lib/core'
-import katex from 'katex'
-import renderMathInElement from 'katex/contrib/auto-render'
-import 'katex/dist/katex.css'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -139,36 +136,6 @@ export default function Post(props: IProps) {
       block.removeAttribute('data-highlighted')
     })
     hljs.highlightAll()
-
-    // 渲染 Tiptap 数学公式节点（data-latex 属性）
-    const el = refContent.current
-    if (el) {
-      el.querySelectorAll<HTMLElement>(
-        '[data-type="inline-math"], [data-type="block-math"]',
-      ).forEach((node) => {
-        const latex = node.getAttribute('data-latex')
-        if (!latex || node.hasAttribute('data-math-rendered')) return
-        try {
-          katex.render(latex, node, {
-            displayMode: node.getAttribute('data-type') === 'block-math',
-            throwOnError: false,
-          })
-          node.setAttribute('data-math-rendered', 'true')
-        } catch (e) {
-          console.error('KaTeX render error:', e)
-        }
-      })
-    }
-
-    // 渲染 $...$ 分隔符格式的公式（兼容 Markdown 内容）
-    renderMathInElement(document.body, {
-      delimiters: [
-        { left: '$$', right: '$$', display: true },
-        { left: '$', right: '$', display: false },
-        { left: '\\[', right: '\\]', display: true },
-        { left: '\\(', right: '\\)', display: false },
-      ],
-    })
   }, [html, showBackToTop, showToc2])
 
   useEffect(() => {
