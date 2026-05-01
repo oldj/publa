@@ -8,7 +8,7 @@ tsconfig.tsbuildinfo
 
 .next
 next-env.d.ts
-.env
+.env*
 deploy.settings.json
 e2e/tmp
 
