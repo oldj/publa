@@ -1,33 +1,33 @@
-# 安装依赖
-FROM node:24.14.1-alpine3.23 AS deps
+# 公共基础阶段
+FROM node:24.14.1-alpine3.23 AS base
 
 WORKDIR /app
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# 安装依赖
+FROM base AS deps
+
 COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
 
 # 构建（在 alpine 容器内构建，确保原生二进制是 linux-musl 平台）
-FROM node:24.14.1-alpine3.23 AS builder
+FROM base AS builder
 
-WORKDIR /app
-ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
 
 # 运行阶段
-FROM node:24.14.1-alpine3.23 AS runner
-
-WORKDIR /app
+FROM base AS runner
 
 ENV NODE_ENV=production
 ENV PORT=8084
 ENV HOSTNAME=0.0.0.0
-ENV NEXT_TELEMETRY_DISABLED=1
 
 # 先建用户与数据目录，避免后续 RUN chown -R 复制整层
 RUN addgroup -S app && adduser -S app -G app \
- && mkdir -p /app/data \
- && chown app:app /app /app/data
+  && mkdir -p /app/data \
+  && chown app:app /app /app/data
 
 # standalone 自带运行时所需 node_modules（含 nodemailer / resend，
 # 由 next.config.js 的 outputFileTracingIncludes 显式声明）。
