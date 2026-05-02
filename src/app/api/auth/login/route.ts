@@ -3,7 +3,7 @@ import { getRequestInfo } from '@/server/lib/request-info'
 import { jsonError, jsonSuccess } from '@/server/lib/api-response'
 import { logActivity } from '@/server/services/activity-logs'
 import { normalizePassword, normalizeUsername } from '@/lib/user-input'
-import { db, dbReady } from '@/server/db'
+import { db } from '@/server/db'
 import { maybeFirst } from '@/server/db/query'
 import { users } from '@/server/db/schema'
 import { isLoginLocked, recordRateEvent } from '@/server/lib/rate-limit'
@@ -23,8 +23,6 @@ dummyBcryptHashPromise.catch(() => {})
 
 export async function POST(request: NextRequest) {
   try {
-    await dbReady
-
     const body = await request.json()
     const username = normalizeUsername(body?.username)
     const password = normalizePassword(body?.password)

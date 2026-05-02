@@ -11,7 +11,7 @@ import {
 } from '@/server/services/settings'
 import { eq } from 'drizzle-orm'
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core'
-import { db, dbReady } from './index'
+import { db } from './index'
 import { contents, menus, settings, themes } from './schema'
 import { isoNow } from './schema/shared'
 
@@ -101,11 +101,6 @@ export interface SeedOptions {
 }
 
 export async function seed(tx?: BaseSQLiteDatabase<any, any, any>, options: SeedOptions = {}) {
-  // 未传入事务时，CLI 脚本和非 Next.js 入口需要等待数据库初始化完成
-  if (!tx) {
-    await dbReady
-  }
-
   const conn = tx ?? db
 
   const language = options.language ?? 'zh'

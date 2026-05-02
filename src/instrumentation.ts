@@ -2,8 +2,7 @@ export async function register() {
   // Edge Runtime 不需要数据库迁移
   if (process.env.NEXT_RUNTIME !== 'nodejs') return
 
-  const { dbReady, runMigrations } = await import('@/server/db')
-  await dbReady
+  const { runMigrations } = await import('@/server/db')
   await runMigrations()
   console.log('Database migration completed.')
 

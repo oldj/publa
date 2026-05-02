@@ -76,7 +76,6 @@ describePostgres('postgres contract', () => {
     vi.doMock('@/server/db', () => ({
       db,
       dbFamily: 'postgres',
-      dbReady: Promise.resolve(),
     }))
 
     usersService = await import('./users')

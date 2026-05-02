@@ -41,7 +41,6 @@ const resetTableNames = [
 vi.mock('@/server/db', () => ({
   db: testDb,
   dbFamily: 'sqlite',
-  dbReady: Promise.resolve(),
 }))
 
 /** 执行迁移并插入基础测试数据 */

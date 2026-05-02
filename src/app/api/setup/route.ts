@@ -2,7 +2,7 @@ import { DEFAULT_LOCALE, isLocale } from '@/i18n/locales'
 import { normalizeEmail, normalizePassword, normalizeUsername } from '@/lib/user-input'
 import { createToken, hashPassword, setAuthCookie } from '@/server/auth'
 import { jsonError, jsonSuccess } from '@/server/lib/api-response'
-import { db, dbReady } from '@/server/db'
+import { db } from '@/server/db'
 import { insertOne, maybeFirst } from '@/server/db/query'
 import { users } from '@/server/db/schema'
 import { seed } from '@/server/db/seed'
@@ -11,8 +11,6 @@ import { NextRequest } from 'next/server'
 
 export async function POST(request: NextRequest) {
   try {
-    await dbReady
-
     // 检查是否已经初始化
     const existingOwner = await maybeFirst(
       db.select().from(users).where(eq(users.role, 'owner')).limit(1),
