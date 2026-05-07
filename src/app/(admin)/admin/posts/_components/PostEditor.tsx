@@ -24,6 +24,7 @@ import {
   Group,
   Paper,
   Select,
+  Skeleton,
   Stack,
   TagsInput,
   Text,
@@ -141,6 +142,9 @@ export default function PostEditor({ postId }: { postId?: number }) {
   const [allTags, setAllTags] = useState<Tag[]>([])
   const allTagsRef = useRef<Tag[]>([])
   const [contentType, setContentType] = useState<ContentType>('richtext')
+  // 首次加载是否完成。新建模式立即就绪；编辑模式等 fetch 成功后置为 true，
+  // 避免在拿到真实 contentType 前先渲染默认的「富文本」编辑器，造成切换抖动
+  const [bootstrapped, setBootstrapped] = useState(!postId)
   const [textContent, setTextContent] = useState('') // markdown 或 html 模式下的文本内容
   const [dirty, setDirty] = useState(false)
   const [globalCommentOff, setGlobalCommentOff] = useState(false)
@@ -364,6 +368,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
       backupReadyRef.current = true
       setPendingBackup(null)
       setLoading(false)
+      setBootstrapped(true)
       return
     }
 
@@ -371,6 +376,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
       resetEditorState()
       backupReadyRef.current = true
       setPendingBackup(null)
+      setBootstrapped(true)
       return
     }
 
@@ -515,6 +521,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
       .finally(() => {
         if (active) {
           setLoading(false)
+          setBootstrapped(true)
         }
       })
 
@@ -1093,7 +1100,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
               }
             />
 
-            <Group>
+            <Group style={{ display: bootstrapped ? undefined : 'none' }}>
               <ContentTypeSelector
                 value={contentType}
                 onChange={async (newType) => {
@@ -1186,11 +1193,17 @@ export default function PostEditor({ postId }: { postId?: number }) {
                   pendingEditorContent.current = null
                 }
               }}
-              hidden={contentType !== 'richtext'}
+              hidden={!bootstrapped || contentType !== 'richtext'}
             />
 
+            {/* 首次加载未完成时，用 Skeleton 占位，避免编辑器和选择器在 contentType 切换时闪动；
+                高度对齐 CodeEditor 默认值，避免就绪后高度跳变 */}
+            {!bootstrapped && (
+              <Skeleton height="min(720px, calc(100vh - 220px))" radius="sm" />
+            )}
+
             {/* Markdown / HTML 源码编辑器（CodeMirror，带行号 + 语法高亮） */}
-            {contentType !== 'richtext' && (
+            {bootstrapped && contentType !== 'richtext' && (
               <CodeEditor
                 language={contentType === 'markdown' ? 'markdown' : 'html'}
                 label={
