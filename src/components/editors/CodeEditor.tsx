@@ -41,7 +41,8 @@ export default function CodeEditor({
       EditorView.lineWrapping,
       EditorView.theme({
         '&': {
-          fontSize: '13px',
+          // Markdown 视为正文写作，使用更大字号；HTML 视为代码，保持紧凑
+          fontSize: language === 'markdown' ? '16px' : '13px',
           backgroundColor: 'var(--mantine-color-body)',
           border: '1px solid var(--mantine-color-default-border)',
           borderRadius: 'var(--mantine-radius-default)',
@@ -81,10 +82,11 @@ export default function CodeEditor({
         placeholder={placeholder}
         theme={colorScheme === 'dark' ? githubDark : githubLight}
         basicSetup={{
-          lineNumbers: true,
+          // Markdown 视为正文写作，去掉行号 / 折叠槽更接近文本编辑器；HTML 仍按代码处理
+          lineNumbers: language === 'html',
+          foldGutter: language === 'html',
           highlightActiveLine: true,
-          highlightActiveLineGutter: true,
-          foldGutter: true,
+          highlightActiveLineGutter: language === 'html',
           bracketMatching: true,
           closeBrackets: true,
           autocompletion: false,
