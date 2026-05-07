@@ -1,4 +1,4 @@
-import { requireCurrentUser } from '@/server/auth'
+import { requireCurrentUser, requireRole } from '@/server/auth'
 import { db } from '@/server/db'
 import { jsonError, jsonSuccess } from '@/server/lib/api-response'
 import { htmlToText, renderMarkdown } from '@/server/lib/markdown'
@@ -59,7 +59,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 }
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requireCurrentUser()
+  const guard = await requireRole(['owner', 'admin', 'editor'])
   if (!guard.ok) return guard.response
 
   const { id: idStr } = await params
@@ -226,7 +226,7 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const guard = await requireCurrentUser()
+  const guard = await requireRole(['owner', 'admin', 'editor'])
   if (!guard.ok) return guard.response
 
   const { id: idStr } = await params

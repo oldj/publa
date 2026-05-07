@@ -1,4 +1,4 @@
-import { requireCurrentUser } from '@/server/auth'
+import { requireCurrentUser, requireRole } from '@/server/auth'
 import { jsonError, jsonSuccess } from '@/server/lib/api-response'
 import { parseIdParam, parseIntParam } from '@/server/lib/request'
 import { logActivity } from '@/server/services/activity-logs'
@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const guard = await requireCurrentUser()
+  const guard = await requireRole(['owner', 'admin', 'editor'])
   if (!guard.ok) return guard.response
 
   const formData = await request.formData()
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  const guard = await requireCurrentUser()
+  const guard = await requireRole(['owner', 'admin', 'editor'])
   if (!guard.ok) return guard.response
 
   const { searchParams } = new URL(request.url)

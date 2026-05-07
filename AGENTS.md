@@ -94,3 +94,10 @@ E2E 测试中 Playwright 的 `test.beforeEach` / `test.afterEach` / `test.before
 - `owner` （站长）在初始化时生成，拥有所有权限
 - `admin` （管理员）拥有所有权限，但不可添加、修改、删除 `owner` 用户
 - `editor` （编辑）可查看和编辑所有内容，包括文章、分类、标签、页面、评论、留言，但不可修改站点设置，也不可添加或修改其他用户的信息
+
+### 鉴权约定
+
+- 系统不开放公开注册，所有用户必须由 `owner` / `admin` 创建。
+- 内容写接口（文章、页面、分类、标签、附件、评论审核、留言管理、草稿、版本恢复等）一律使用 `requireRole(['owner', 'admin', 'editor'])` 显式校验，不要只用 `requireCurrentUser`。后台读接口可以保留 `requireCurrentUser`。
+- 仅 `owner` / `admin` 可调的接口（站点设置、用户管理、菜单、邮件、主题、导入导出等）使用 `requireRole(['owner', 'admin'])`。
+- **editor 默认对所有内容有写权限**（包括他人创建的草稿）。未来如需引入「per-author」限制（例如 editor 仅能编辑自己的文章），仅在路由层加守卫不够，需要在 `src/server/services/**` 的服务层函数中加 `authorId` 比对，否则会被绕过。

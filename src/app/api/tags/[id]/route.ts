@@ -1,4 +1,4 @@
-import { requireCurrentUser } from '@/server/auth'
+import { requireRole } from '@/server/auth'
 import { jsonError, jsonSuccess } from '@/server/lib/api-response'
 import { isUniqueConstraintError, parseIdParam, safeParseJson } from '@/server/lib/request'
 import { logActivity } from '@/server/services/activity-logs'
@@ -6,7 +6,7 @@ import { deleteTag, getTagBySlug, updateTag } from '@/server/services/tags'
 import { NextRequest } from 'next/server'
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const guard = await requireCurrentUser()
+  const guard = await requireRole(['owner', 'admin', 'editor'])
   if (!guard.ok) return guard.response
 
   const { id: idStr } = await params
@@ -60,7 +60,7 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const guard = await requireCurrentUser()
+  const guard = await requireRole(['owner', 'admin', 'editor'])
   if (!guard.ok) return guard.response
 
   const { id: idStr } = await params

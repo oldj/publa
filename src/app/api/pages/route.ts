@@ -1,4 +1,4 @@
-import { requireCurrentUser } from '@/server/auth'
+import { requireCurrentUser, requireRole } from '@/server/auth'
 import { db } from '@/server/db'
 import { jsonError, jsonSuccess } from '@/server/lib/api-response'
 import { renderMarkdown, htmlToText } from '@/server/lib/markdown'
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const guard = await requireCurrentUser()
+  const guard = await requireRole(['owner', 'admin', 'editor'])
   if (!guard.ok) return guard.response
 
   const { data: body, error } = await safeParseJson(request)

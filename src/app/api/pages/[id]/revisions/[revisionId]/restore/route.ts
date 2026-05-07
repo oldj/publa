@@ -1,4 +1,4 @@
-import { requireCurrentUser } from '@/server/auth'
+import { requireRole } from '@/server/auth'
 import { db } from '@/server/db'
 import { jsonError, jsonSuccess } from '@/server/lib/api-response'
 import { parseIdParam } from '@/server/lib/request'
@@ -9,7 +9,7 @@ export async function POST(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string; revisionId: string }> },
 ) {
-  const guard = await requireCurrentUser()
+  const guard = await requireRole(['owner', 'admin', 'editor'])
   if (!guard.ok) return guard.response
 
   const { id, revisionId } = await params

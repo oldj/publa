@@ -1,4 +1,4 @@
-import { requireCurrentUser } from '@/server/auth'
+import { requireCurrentUser, requireRole } from '@/server/auth'
 import { jsonError, jsonSuccess } from '@/server/lib/api-response'
 import { isUniqueConstraintError, safeParseJson } from '@/server/lib/request'
 import { recountCategoriesAndTags } from '@/server/services/post-count'
@@ -15,7 +15,7 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const guard = await requireCurrentUser()
+  const guard = await requireRole(['owner', 'admin', 'editor'])
   if (!guard.ok) return guard.response
 
   const { data: body, error } = await safeParseJson(request)
