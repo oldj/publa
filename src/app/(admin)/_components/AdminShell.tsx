@@ -207,7 +207,14 @@ export function AdminShell({
                   {siteShortTitle}
                 </Text>
               )}
-              <Code fw={700}>{version}</Code>
+              <a
+                href="https://github.com/oldj/publa"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={classes.versionLink}
+              >
+                <Code fw={700}>{version}</Code>
+              </a>
             </Group>
           </div>
 
