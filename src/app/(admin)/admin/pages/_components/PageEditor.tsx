@@ -9,6 +9,7 @@ import {
   htmlToMarkdown,
   renderMarkdownToHtml,
 } from '@/components/editors/content-convert'
+import CodeEditor from '@/components/editors/CodeEditor'
 import ContentTypeSelector from '@/components/editors/ContentTypeSelector'
 import RichTextEditorWrapper, {
   type RichTextEditorHandle,
@@ -1058,9 +1059,10 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
               hidden={contentType !== 'richtext'}
             />
 
-            {/* Markdown / HTML 文本编辑器 */}
+            {/* Markdown / HTML 源码编辑器（CodeMirror，带行号 + 语法高亮） */}
             {contentType !== 'richtext' && (
-              <Textarea
+              <CodeEditor
+                language={contentType === 'markdown' ? 'markdown' : 'html'}
                 label={
                   contentType === 'markdown' ? t('fields.markdownContent') : t('fields.htmlContent')
                 }
@@ -1069,15 +1071,12 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
                     ? t('fields.markdownPlaceholder')
                     : t('fields.htmlPlaceholder')
                 }
-                autosize
-                minRows={15}
                 value={textContent}
-                onChange={(e) => {
-                  setTextContent(e.target.value)
-                  textContentRef.current = e.target.value
-                  setDirty(checkDirty(form, e.target.value) || editorDirty.current)
+                onChange={(next) => {
+                  setTextContent(next)
+                  textContentRef.current = next
+                  setDirty(checkDirty(form, next) || editorDirty.current)
                 }}
-                styles={{ input: { fontFamily: 'monospace', maxHeight: 600, overflowY: 'auto' } }}
               />
             )}
           </Stack>
