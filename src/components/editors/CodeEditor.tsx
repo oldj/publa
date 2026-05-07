@@ -10,6 +10,7 @@ import { html } from '@codemirror/lang-html'
 import { markdown } from '@codemirror/lang-markdown'
 import { EditorView } from '@codemirror/view'
 import { Input, useComputedColorScheme } from '@mantine/core'
+import { githubDark, githubLight } from '@uiw/codemirror-theme-github'
 import CodeMirror, { type Extension } from '@uiw/react-codemirror'
 import { useMemo } from 'react'
 
@@ -78,7 +79,7 @@ export default function CodeEditor({
         onChange={onChange}
         extensions={extensions}
         placeholder={placeholder}
-        theme={colorScheme === 'dark' ? 'dark' : 'light'}
+        theme={colorScheme === 'dark' ? githubDark : githubLight}
         basicSetup={{
           lineNumbers: true,
           highlightActiveLine: true,
