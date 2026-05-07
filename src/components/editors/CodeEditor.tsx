@@ -10,7 +10,7 @@ import { html } from '@codemirror/lang-html'
 import { markdown } from '@codemirror/lang-markdown'
 import { EditorView } from '@codemirror/view'
 import { Input, useComputedColorScheme } from '@mantine/core'
-import { githubDark, githubLight } from '@uiw/codemirror-theme-github'
+import { vscodeDark, vscodeLight } from '@uiw/codemirror-theme-vscode'
 import CodeMirror, { type Extension } from '@uiw/react-codemirror'
 import { useMemo } from 'react'
 
@@ -80,7 +80,7 @@ export default function CodeEditor({
         onChange={onChange}
         extensions={extensions}
         placeholder={placeholder}
-        theme={colorScheme === 'dark' ? githubDark : githubLight}
+        theme={colorScheme === 'dark' ? vscodeDark : vscodeLight}
         basicSetup={{
           // Markdown 视为正文写作，去掉行号 / 折叠槽更接近文本编辑器；HTML 仍按代码处理
           lineNumbers: language === 'html',
