@@ -20,6 +20,16 @@ export const theme = createTheme({
         shadow: 'md',
       },
     },
+    Select: {
+      defaultProps: {
+        checkIconPosition: 'right',
+      },
+    },
+    MultiSelect: {
+      defaultProps: {
+        checkIconPosition: 'right',
+      },
+    },
     Modal: {
       defaultProps: {
         centered: true,
