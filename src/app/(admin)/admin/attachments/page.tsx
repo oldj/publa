@@ -1,5 +1,7 @@
 'use client'
 
+import { useCurrentUser } from '@/app/(admin)/_components/AdminCountsContext'
+import adminStyles from '@/app/(admin)/_components/AdminShell.module.scss'
 import myModal from '@/app/(admin)/_components/myModals'
 import { SafeDrawer } from '@/components/SafeDrawer'
 import { notify } from '@/lib/notify'
@@ -50,8 +52,6 @@ import dayjs from 'dayjs'
 import { nanoid } from 'nanoid'
 import { useTranslations } from 'next-intl'
 import { useCallback, useEffect, useState } from 'react'
-import { useCurrentUser } from '../../_components/AdminCountsContext'
-import adminStyles from '../../_components/AdminShell.module.scss'
 import styles from './page.module.scss'
 
 interface Attachment {

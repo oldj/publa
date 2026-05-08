@@ -1,22 +1,22 @@
 'use client'
+
 import myModal from '@/app/(admin)/_components/myModals'
+import { NowrapBadge } from '@/app/(admin)/_components/NowrapBadge'
 import { PostList } from '@/app/(admin)/_components/PostList'
 import { SafeDrawer } from '@/components/SafeDrawer'
-import { NowrapBadge } from '../../_components/NowrapBadge'
-
 import { notify } from '@/lib/notify'
 import {
+  closestCenter,
   DndContext,
-  type DragEndEvent,
   KeyboardSensor,
   PointerSensor,
-  closestCenter,
   useSensor,
   useSensors,
+  type DragEndEvent,
 } from '@dnd-kit/core'
 import {
-  SortableContext,
   arrayMove,
+  SortableContext,
   sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
@@ -31,8 +31,8 @@ import {
   Paper,
   Stack,
   Text,
-  TextInput,
   Textarea,
+  TextInput,
   Title,
 } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'

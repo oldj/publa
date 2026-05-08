@@ -1,5 +1,7 @@
 'use client'
 
+import { useCurrentUser } from '@/app/(admin)/_components/AdminCountsContext'
+import adminStyles from '@/app/(admin)/_components/AdminShell.module.scss'
 import { RoleLabel } from '@/app/(admin)/_components/RoleLabel'
 import { notify } from '@/lib/notify'
 import {
@@ -17,8 +19,6 @@ import { IconCopy } from '@tabler/icons-react'
 import dayjs from 'dayjs'
 import { useTranslations } from 'next-intl'
 import { useCallback, useEffect, useState } from 'react'
-import { useCurrentUser } from '../../_components/AdminCountsContext'
-import adminStyles from '../../_components/AdminShell.module.scss'
 
 interface ActivityLog {
   id: number

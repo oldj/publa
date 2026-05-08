@@ -111,6 +111,7 @@
     "turndown": "^7.2.4"
   },
   "devDependencies": {
+    "@ianvs/prettier-plugin-sort-imports": "^4.7.1",
     "@playwright/test": "^1.59.1",
     "@types/ali-oss": "^6.23.3",
     "@types/js-cookie": "^3.0.6",

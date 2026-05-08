@@ -1,10 +1,10 @@
 'use client'
 
 import { E2ERouterBridge } from '@/app/(admin)/_components/E2ERouterBridge'
+import PostEditor from '@/app/(admin)/admin/posts/_components/PostEditor'
 import { Box } from '@mantine/core'
 import { useSelectedLayoutSegment } from 'next/navigation'
 import type { ReactNode } from 'react'
-import PostEditor from '../_components/PostEditor'
 
 function parsePostId(segment: string | null): number | undefined {
   if (!segment || segment === 'new') {

@@ -1,5 +1,8 @@
 'use client'
 
+import { useCurrentUser } from '@/app/(admin)/_components/AdminCountsContext'
+import { useAdminUrl } from '@/app/(admin)/_components/AdminPathContext'
+import adminStyles from '@/app/(admin)/_components/AdminShell.module.scss'
 import myModal from '@/app/(admin)/_components/myModals'
 import { NowrapBadge } from '@/app/(admin)/_components/NowrapBadge'
 import { notify } from '@/lib/notify'
@@ -16,12 +19,9 @@ import {
 } from '@mantine/core'
 import { IconInfoCircle, IconTrash } from '@tabler/icons-react'
 import dayjs from 'dayjs'
-import { useAdminUrl } from '@/app/(admin)/_components/AdminPathContext'
 import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
-import { useCurrentUser } from '../../_components/AdminCountsContext'
-import adminStyles from '../../_components/AdminShell.module.scss'
 
 interface EmailLog {
   id: number

@@ -1,10 +1,10 @@
 'use client'
+
+import adminStyles from '@/app/(admin)/_components/AdminShell.module.scss'
 import myModal from '@/app/(admin)/_components/myModals'
+import { NowrapBadge } from '@/app/(admin)/_components/NowrapBadge'
 import { PostList } from '@/app/(admin)/_components/PostList'
 import { SafeDrawer } from '@/components/SafeDrawer'
-import adminStyles from '../../_components/AdminShell.module.scss'
-import { NowrapBadge } from '../../_components/NowrapBadge'
-
 import { notify } from '@/lib/notify'
 import {
   ActionIcon,

@@ -1,7 +1,10 @@
 'use client'
 
+import { useCurrentUser } from '@/app/(admin)/_components/AdminCountsContext'
+import { useAdminUrl } from '@/app/(admin)/_components/AdminPathContext'
+import { PageHeader } from '@/app/(admin)/_components/PageHeader'
 import CodeEditor from '@/components/editors/CodeEditor'
-import { LOCALE_LABELS, SUPPORTED_LOCALES, isLocale } from '@/i18n/locales'
+import { isLocale, LOCALE_LABELS, SUPPORTED_LOCALES } from '@/i18n/locales'
 import { notify } from '@/lib/notify'
 import {
   Box,
@@ -18,11 +21,8 @@ import {
 } from '@mantine/core'
 import { IconExclamationMark } from '@tabler/icons-react'
 import { useTranslations } from 'next-intl'
-import { useAdminUrl } from '@/app/(admin)/_components/AdminPathContext'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react'
-import { useCurrentUser } from '../../_components/AdminCountsContext'
-import { PageHeader } from '../../_components/PageHeader'
 
 interface FaviconState {
   mode: 'default' | 'url' | 'upload'

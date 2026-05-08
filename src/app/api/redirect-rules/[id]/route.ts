@@ -1,3 +1,4 @@
+import { validationErrorResponse } from '@/app/api/redirect-rules/shared'
 import { requireRole } from '@/server/auth'
 import { jsonError, jsonSuccess } from '@/server/lib/api-response'
 import { parseIdParam, safeParseJson } from '@/server/lib/request'
@@ -9,7 +10,6 @@ import {
   updateRedirectRule,
 } from '@/server/services/redirect-rules'
 import { NextRequest } from 'next/server'
-import { validationErrorResponse } from '../shared'
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const guard = await requireRole(['owner', 'admin'])
