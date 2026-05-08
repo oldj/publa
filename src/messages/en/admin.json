@@ -104,6 +104,12 @@
       "footer": "Footer copyright",
       "customHtml": "Custom HTML"
     },
+    "customHtmlTabs": {
+      "head": "Head",
+      "bodyStart": "Body start",
+      "bodyEnd": "Body end",
+      "afterPost": "After post"
+    },
     "messages": {
       "unsupportedHeadTags": "Custom Head HTML contains unsupported tags: {names}. These tags will not be rendered",
       "faviconUpdated": "Site icon updated",

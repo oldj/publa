@@ -16,6 +16,7 @@ import {
   Select,
   Stack,
   Switch,
+  Tabs,
   Text,
   TextInput,
 } from '@mantine/core'
@@ -418,42 +419,58 @@ export default function SettingsPage() {
         />
 
         <Divider label={t('sections.customHtml')} labelPosition="left" mt="md" />
-        <CodeEditor
-          language="html"
-          label={t('fields.customAfterPostHtml')}
-          description={t('fields.customAfterPostHtmlDescription')}
-          placeholder="<div>...</div>"
-          height="240px"
-          value={String(settings.customAfterPostHtml ?? '')}
-          onChange={(next) => setField('customAfterPostHtml', next)}
-        />
-        <CodeEditor
-          language="html"
-          label={t('fields.customHeadHtml')}
-          description={t('fields.customHeadHtmlDescription')}
-          placeholder="<script>...</script>"
-          height="240px"
-          value={String(settings.customHeadHtml ?? '')}
-          onChange={(next) => setField('customHeadHtml', next)}
-        />
-        <CodeEditor
-          language="html"
-          label={t('fields.customBodyStartHtml')}
-          description={t('fields.customBodyStartHtmlDescription')}
-          placeholder="<script>...</script>"
-          height="240px"
-          value={String(settings.customBodyStartHtml ?? '')}
-          onChange={(next) => setField('customBodyStartHtml', next)}
-        />
-        <CodeEditor
-          language="html"
-          label={t('fields.customBodyEndHtml')}
-          description={t('fields.customBodyEndHtmlDescription')}
-          placeholder="<script>...</script>"
-          height="240px"
-          value={String(settings.customBodyEndHtml ?? '')}
-          onChange={(next) => setField('customBodyEndHtml', next)}
-        />
+        <Tabs defaultValue="head">
+          <Tabs.List>
+            <Tabs.Tab value="head">{t('customHtmlTabs.head')}</Tabs.Tab>
+            <Tabs.Tab value="bodyStart">{t('customHtmlTabs.bodyStart')}</Tabs.Tab>
+            <Tabs.Tab value="bodyEnd">{t('customHtmlTabs.bodyEnd')}</Tabs.Tab>
+            <Tabs.Tab value="afterPost">{t('customHtmlTabs.afterPost')}</Tabs.Tab>
+          </Tabs.List>
+
+          <Tabs.Panel value="head" pt="sm">
+            <CodeEditor
+              language="html"
+              description={t('fields.customHeadHtmlDescription')}
+              placeholder="<script>...</script>"
+              height="480px"
+              value={String(settings.customHeadHtml ?? '')}
+              onChange={(next) => setField('customHeadHtml', next)}
+            />
+          </Tabs.Panel>
+
+          <Tabs.Panel value="bodyStart" pt="sm">
+            <CodeEditor
+              language="html"
+              description={t('fields.customBodyStartHtmlDescription')}
+              placeholder="<script>...</script>"
+              height="480px"
+              value={String(settings.customBodyStartHtml ?? '')}
+              onChange={(next) => setField('customBodyStartHtml', next)}
+            />
+          </Tabs.Panel>
+
+          <Tabs.Panel value="bodyEnd" pt="sm">
+            <CodeEditor
+              language="html"
+              description={t('fields.customBodyEndHtmlDescription')}
+              placeholder="<script>...</script>"
+              height="480px"
+              value={String(settings.customBodyEndHtml ?? '')}
+              onChange={(next) => setField('customBodyEndHtml', next)}
+            />
+          </Tabs.Panel>
+
+          <Tabs.Panel value="afterPost" pt="sm">
+            <CodeEditor
+              language="html"
+              description={t('fields.customAfterPostHtmlDescription')}
+              placeholder="<div>...</div>"
+              height="480px"
+              value={String(settings.customAfterPostHtml ?? '')}
+              onChange={(next) => setField('customAfterPostHtml', next)}
+            />
+          </Tabs.Panel>
+        </Tabs>
       </Stack>
     </Box>
   )
