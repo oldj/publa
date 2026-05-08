@@ -582,6 +582,7 @@ export default function ThemesPage() {
                 size="xs"
                 leftSection={<IconPlus size={14} />}
                 onClick={() => openCreate('theme')}
+                data-role="appearance-new-theme-button"
               >
                 {t('new')}
               </Button>

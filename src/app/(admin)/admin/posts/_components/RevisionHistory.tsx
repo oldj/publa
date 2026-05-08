@@ -1,7 +1,8 @@
 'use client'
 
 import myModal from '@/app/(admin)/_components/myModals'
-import { Badge, Button, Checkbox, Drawer, Group, ScrollArea, Stack, Text } from '@mantine/core'
+import { SafeDrawer } from '@/components/SafeDrawer'
+import { Badge, Button, Checkbox, Group, ScrollArea, Stack, Text } from '@mantine/core'
 import { notify } from '@/lib/notify'
 import { IconRestore, IconTrash } from '@tabler/icons-react'
 import dayjs from 'dayjs'
@@ -130,7 +131,7 @@ export default function RevisionHistory({
   }
 
   return (
-    <Drawer opened={opened} onClose={onClose} title={t('title')} position="right" size="xl">
+    <SafeDrawer opened={opened} onClose={onClose} title={t('title')} position="right" size="xl">
       <Stack h="calc(100vh - 100px)">
         {revisions.length === 0 ? (
           <Text c="dimmed" ta="center" py="xl">
@@ -268,6 +269,6 @@ export default function RevisionHistory({
           </>
         )}
       </Stack>
-    </Drawer>
+    </SafeDrawer>
   )
 }

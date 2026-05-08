@@ -1,6 +1,7 @@
 'use client'
 
 import myModal from '@/app/(admin)/_components/myModals'
+import { SafeDrawer } from '@/components/SafeDrawer'
 import { notify } from '@/lib/notify'
 import {
   ActionIcon,
@@ -11,7 +12,6 @@ import {
   Card,
   Checkbox,
   Divider,
-  Drawer,
   Group,
   Image,
   Modal,
@@ -755,7 +755,7 @@ export default function AttachmentsPage() {
       </Modal>
 
       {/* 附件详情 Drawer */}
-      <Drawer
+      <SafeDrawer
         opened={!!detailAttachment}
         onClose={() => setDetailAttachment(null)}
         title={t('detail.title')}
@@ -935,7 +935,7 @@ export default function AttachmentsPage() {
             </Button>
           </Stack>
         )}
-      </Drawer>
+      </SafeDrawer>
 
       {/* 重命名 Modal */}
       <Modal
@@ -969,7 +969,7 @@ export default function AttachmentsPage() {
       </Modal>
 
       {/* 存储配置 Drawer */}
-      <Drawer
+      <SafeDrawer
         opened={configOpened}
         onClose={() => setConfigOpened(false)}
         title={t('config.title')}
@@ -1132,7 +1132,7 @@ export default function AttachmentsPage() {
             </Group>
           </Stack>
         )}
-      </Drawer>
+      </SafeDrawer>
     </Box>
   )
 }

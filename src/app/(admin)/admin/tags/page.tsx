@@ -1,6 +1,7 @@
 'use client'
 import myModal from '@/app/(admin)/_components/myModals'
 import { PostList } from '@/app/(admin)/_components/PostList'
+import { SafeDrawer } from '@/components/SafeDrawer'
 import adminStyles from '../../_components/AdminShell.module.scss'
 import { NowrapBadge } from '../../_components/NowrapBadge'
 
@@ -9,7 +10,6 @@ import {
   ActionIcon,
   Box,
   Button,
-  Drawer,
   Group,
   Modal,
   Table,
@@ -350,7 +350,7 @@ export default function TagsPage() {
         </Group>
       </Modal>
 
-      <Drawer
+      <SafeDrawer
         opened={drawerOpened}
         onClose={handleDrawerClose}
         position="right"
@@ -358,7 +358,7 @@ export default function TagsPage() {
         title={drawerTag ? t('drawerTitle', { name: drawerTag.name }) : t('drawerFallbackTitle')}
       >
         {drawerTag && <PostList key={drawerTag.id} initialTagId={String(drawerTag.id)} />}
-      </Drawer>
+      </SafeDrawer>
     </Box>
   )
 }

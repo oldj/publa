@@ -1,6 +1,7 @@
 'use client'
 import myModal from '@/app/(admin)/_components/myModals'
 import { PostList } from '@/app/(admin)/_components/PostList'
+import { SafeDrawer } from '@/components/SafeDrawer'
 import { NowrapBadge } from '../../_components/NowrapBadge'
 
 import { notify } from '@/lib/notify'
@@ -25,7 +26,6 @@ import {
   ActionIcon,
   Box,
   Button,
-  Drawer,
   Group,
   Modal,
   Paper,
@@ -433,7 +433,7 @@ export default function CategoriesPage() {
         </Group>
       </Modal>
 
-      <Drawer
+      <SafeDrawer
         opened={drawerOpened}
         onClose={handleDrawerClose}
         position="right"
@@ -447,7 +447,7 @@ export default function CategoriesPage() {
         {drawerCategory && (
           <PostList key={drawerCategory.id} initialCategoryId={String(drawerCategory.id)} />
         )}
-      </Drawer>
+      </SafeDrawer>
     </Box>
   )
 }

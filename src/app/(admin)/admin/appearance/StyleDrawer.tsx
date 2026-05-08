@@ -1,8 +1,9 @@
 'use client'
 
 import CodeEditor from '@/components/editors/CodeEditor'
+import { SafeDrawer } from '@/components/SafeDrawer'
 import { notify } from '@/lib/notify'
-import { Button, Drawer, Group, Stack, TextInput } from '@mantine/core'
+import { Button, Group, Stack, TextInput } from '@mantine/core'
 import { useTranslations } from 'next-intl'
 import { useEffect, useState } from 'react'
 
@@ -86,8 +87,8 @@ export function StyleDrawer({ opened, onClose, kind, initial, onSaved }: StyleDr
   }
 
   return (
-    <Drawer opened={opened} onClose={onClose} position="right" size="lg" title={drawerTitle}>
-      <Stack gap="md">
+    <SafeDrawer opened={opened} onClose={onClose} position="right" size="lg" title={drawerTitle}>
+      <Stack gap="md" data-role="appearance-style-drawer">
         <TextInput
           label={t('name')}
           placeholder={
@@ -113,6 +114,6 @@ export function StyleDrawer({ opened, onClose, kind, initial, onSaved }: StyleDr
           </Button>
         </Group>
       </Stack>
-    </Drawer>
+    </SafeDrawer>
   )
 }

@@ -2,13 +2,13 @@
 
 import { useAdminUrl } from '@/app/(admin)/_components/AdminPathContext'
 import myModal from '@/app/(admin)/_components/myModals'
+import { SafeDrawer } from '@/components/SafeDrawer'
 import { notify } from '@/lib/notify'
 import {
   Badge,
   Box,
   Button,
   Divider,
-  Drawer,
   Group,
   List,
   Paper,
@@ -309,7 +309,7 @@ export default function ImportExportPage() {
       </Stack>
 
       {/* 数据格式文档 Drawer */}
-      <Drawer
+      <SafeDrawer
         opened={formatOpened}
         onClose={() => setFormatOpened(false)}
         title={t('drawerTitle')}
@@ -336,7 +336,7 @@ export default function ImportExportPage() {
             .format-doc hr { border: none; border-top: 1px solid var(--mantine-color-default-border); margin: 1.2em 0; }
           `}</style>
         </ScrollArea>
-      </Drawer>
+      </SafeDrawer>
     </Box>
   )
 }
