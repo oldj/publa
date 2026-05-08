@@ -1,18 +1,18 @@
 'use client'
+
+import { useCurrentUser } from '@/app/(admin)/_components/AdminCountsContext'
+import adminStyles from '@/app/(admin)/_components/AdminShell.module.scss'
 import myModal from '@/app/(admin)/_components/myModals'
+import { NowrapBadge } from '@/app/(admin)/_components/NowrapBadge'
+import { RoleLabel } from '@/app/(admin)/_components/RoleLabel'
+import { SafeDrawer } from '@/components/SafeDrawer'
 import { notify } from '@/lib/notify'
 import { normalizeEmail, normalizePassword, normalizeUsername } from '@/lib/user-input'
-import { useCurrentUser } from '../../_components/AdminCountsContext'
-import adminStyles from '../../_components/AdminShell.module.scss'
-import { NowrapBadge } from '../../_components/NowrapBadge'
-import { RoleLabel } from '../../_components/RoleLabel'
-
 import {
   ActionIcon,
   Box,
   Button,
   Divider,
-  Drawer,
   Group,
   Modal,
   Pagination,
@@ -356,7 +356,7 @@ export default function UsersPage() {
       </Modal>
 
       {/* 编辑用户 Drawer */}
-      <Drawer
+      <SafeDrawer
         opened={editOpened}
         onClose={() => setEditOpened(false)}
         title={t('editTitle')}
@@ -420,10 +420,10 @@ export default function UsersPage() {
             </Group>
           </Stack>
         )}
-      </Drawer>
+      </SafeDrawer>
 
       {/* 活动日志 Drawer */}
-      <Drawer
+      <SafeDrawer
         opened={logsOpened}
         onClose={() => setLogsOpened(false)}
         title={t('activityTitle', { username: logsUser?.username || '' })}
@@ -485,7 +485,7 @@ export default function UsersPage() {
             )}
           </Stack>
         )}
-      </Drawer>
+      </SafeDrawer>
     </Box>
   )
 }

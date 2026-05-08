@@ -1,21 +1,22 @@
 'use client'
-import myModal from '@/app/(admin)/_components/myModals'
-import { PostList } from '@/app/(admin)/_components/PostList'
-import { NowrapBadge } from '../../_components/NowrapBadge'
 
+import myModal from '@/app/(admin)/_components/myModals'
+import { NowrapBadge } from '@/app/(admin)/_components/NowrapBadge'
+import { PostList } from '@/app/(admin)/_components/PostList'
+import { SafeDrawer } from '@/components/SafeDrawer'
 import { notify } from '@/lib/notify'
 import {
+  closestCenter,
   DndContext,
-  type DragEndEvent,
   KeyboardSensor,
   PointerSensor,
-  closestCenter,
   useSensor,
   useSensors,
+  type DragEndEvent,
 } from '@dnd-kit/core'
 import {
-  SortableContext,
   arrayMove,
+  SortableContext,
   sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
@@ -25,14 +26,13 @@ import {
   ActionIcon,
   Box,
   Button,
-  Drawer,
   Group,
   Modal,
   Paper,
   Stack,
   Text,
-  TextInput,
   Textarea,
+  TextInput,
   Title,
 } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
@@ -433,7 +433,7 @@ export default function CategoriesPage() {
         </Group>
       </Modal>
 
-      <Drawer
+      <SafeDrawer
         opened={drawerOpened}
         onClose={handleDrawerClose}
         position="right"
@@ -447,7 +447,7 @@ export default function CategoriesPage() {
         {drawerCategory && (
           <PostList key={drawerCategory.id} initialCategoryId={String(drawerCategory.id)} />
         )}
-      </Drawer>
+      </SafeDrawer>
     </Box>
   )
 }

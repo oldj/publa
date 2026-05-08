@@ -1,16 +1,16 @@
 'use client'
-import myModal from '@/app/(admin)/_components/myModals'
-import { useAdminCounts } from '../../_components/AdminCountsContext'
-import adminStyles from '../../_components/AdminShell.module.scss'
-import { NowrapBadge } from '../../_components/NowrapBadge'
 
+import { useAdminCounts } from '@/app/(admin)/_components/AdminCountsContext'
+import adminStyles from '@/app/(admin)/_components/AdminShell.module.scss'
+import myModal from '@/app/(admin)/_components/myModals'
+import { NowrapBadge } from '@/app/(admin)/_components/NowrapBadge'
+import { SafeDrawer } from '@/components/SafeDrawer'
 import { notify } from '@/lib/notify'
 import {
   ActionIcon,
   Box,
   Button,
   Divider,
-  Drawer,
   Group,
   Pagination,
   Select,
@@ -324,7 +324,7 @@ export default function CommentsPage() {
       )}
 
       {/* 评论详情 Drawer */}
-      <Drawer
+      <SafeDrawer
         opened={drawerOpened}
         onClose={() => setDrawerOpened(false)}
         title={t('detailTitle')}
@@ -515,7 +515,7 @@ export default function CommentsPage() {
             </Group>
           </Stack>
         )}
-      </Drawer>
+      </SafeDrawer>
     </Box>
   )
 }

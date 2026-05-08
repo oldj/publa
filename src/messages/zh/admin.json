@@ -104,6 +104,12 @@
       "footer": "底部版权",
       "customHtml": "自定义 HTML"
     },
+    "customHtmlTabs": {
+      "head": "Head",
+      "bodyStart": "Body 头部",
+      "bodyEnd": "Body 底部",
+      "afterPost": "文章末尾"
+    },
     "messages": {
       "unsupportedHeadTags": "自定义 Head HTML 中包含不支持的标签：{names}，这些标签不会被渲染",
       "faviconUpdated": "站点图标已更新",

@@ -1,10 +1,10 @@
 'use client'
 
 import { E2ERouterBridge } from '@/app/(admin)/_components/E2ERouterBridge'
+import PageEditor from '@/app/(admin)/admin/pages/_components/PageEditor'
 import { Box } from '@mantine/core'
 import { useSelectedLayoutSegment } from 'next/navigation'
 import type { ReactNode } from 'react'
-import PageEditor from '../_components/PageEditor'
 
 function parsePageId(segment: string | null): number | undefined {
   if (!segment || segment === 'new') {

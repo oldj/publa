@@ -1,6 +1,9 @@
 'use client'
 
+import { useCurrentUser } from '@/app/(admin)/_components/AdminCountsContext'
+import adminStyles from '@/app/(admin)/_components/AdminShell.module.scss'
 import myModal from '@/app/(admin)/_components/myModals'
+import { SafeDrawer } from '@/components/SafeDrawer'
 import { notify } from '@/lib/notify'
 import {
   ActionIcon,
@@ -11,7 +14,6 @@ import {
   Card,
   Checkbox,
   Divider,
-  Drawer,
   Group,
   Image,
   Modal,
@@ -50,8 +52,6 @@ import dayjs from 'dayjs'
 import { nanoid } from 'nanoid'
 import { useTranslations } from 'next-intl'
 import { useCallback, useEffect, useState } from 'react'
-import { useCurrentUser } from '../../_components/AdminCountsContext'
-import adminStyles from '../../_components/AdminShell.module.scss'
 import styles from './page.module.scss'
 
 interface Attachment {
@@ -755,7 +755,7 @@ export default function AttachmentsPage() {
       </Modal>
 
       {/* 附件详情 Drawer */}
-      <Drawer
+      <SafeDrawer
         opened={!!detailAttachment}
         onClose={() => setDetailAttachment(null)}
         title={t('detail.title')}
@@ -935,7 +935,7 @@ export default function AttachmentsPage() {
             </Button>
           </Stack>
         )}
-      </Drawer>
+      </SafeDrawer>
 
       {/* 重命名 Modal */}
       <Modal
@@ -969,7 +969,7 @@ export default function AttachmentsPage() {
       </Modal>
 
       {/* 存储配置 Drawer */}
-      <Drawer
+      <SafeDrawer
         opened={configOpened}
         onClose={() => setConfigOpened(false)}
         title={t('config.title')}
@@ -1132,7 +1132,7 @@ export default function AttachmentsPage() {
             </Group>
           </Stack>
         )}
-      </Drawer>
+      </SafeDrawer>
     </Box>
   )
 }

@@ -4,12 +4,23 @@ import { useAdminUrl } from '@/app/(admin)/_components/AdminPathContext'
 import { EditorHeader } from '@/app/(admin)/_components/EditorHeader'
 import myModal from '@/app/(admin)/_components/myModals'
 import PublishSettings from '@/app/(admin)/_components/PublishSettings'
+import { shouldCreateDraftRecord } from '@/app/(admin)/admin/_lib/draft-persistence'
 import {
-  type ContentType,
+  AUTO_SAVE_INTERVAL,
+  NEW_DOC_POLL_INTERVAL_MS,
+  useAutoSavePhase,
+} from '@/app/(admin)/admin/_lib/use-auto-save-phase'
+import {
+  useLocalDraftBackup,
+  type LocalDraftBackup,
+} from '@/app/(admin)/admin/_lib/use-local-draft-backup'
+import RevisionHistory from '@/app/(admin)/admin/posts/_components/RevisionHistory'
+import CodeEditor from '@/components/editors/CodeEditor'
+import {
   htmlToMarkdown,
   renderMarkdownToHtml,
+  type ContentType,
 } from '@/components/editors/content-convert'
-import CodeEditor from '@/components/editors/CodeEditor'
 import ContentTypeSelector from '@/components/editors/ContentTypeSelector'
 import RichTextEditorWrapper, {
   type RichTextEditorHandle,
@@ -27,21 +38,13 @@ import {
   Skeleton,
   Stack,
   Text,
-  TextInput,
   Textarea,
+  TextInput,
 } from '@mantine/core'
 import { IconAlertTriangle } from '@tabler/icons-react'
 import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { shouldCreateDraftRecord } from '../../_lib/draft-persistence'
-import {
-  AUTO_SAVE_INTERVAL,
-  NEW_DOC_POLL_INTERVAL_MS,
-  useAutoSavePhase,
-} from '../../_lib/use-auto-save-phase'
-import { type LocalDraftBackup, useLocalDraftBackup } from '../../_lib/use-local-draft-backup'
-import RevisionHistory from '../../posts/_components/RevisionHistory'
 import { buildPageDraftPayload, buildPageSaveBody } from './page-save-payload'
 
 const AUTO_SAVE_FAIL_ID = 'auto-save-fail'
@@ -1070,9 +1073,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
 
             {/* 首次加载未完成时，用 Skeleton 占位，避免编辑器和选择器在 contentType 切换时闪动；
                 高度对齐 CodeEditor 默认值，避免就绪后高度跳变 */}
-            {!bootstrapped && (
-              <Skeleton height="min(720px, calc(100vh - 220px))" radius="sm" />
-            )}
+            {!bootstrapped && <Skeleton height="min(720px, calc(100vh - 220px))" radius="sm" />}
 
             {/* Markdown / HTML 源码编辑器（CodeMirror，带行号 + 语法高亮） */}
             {bootstrapped && contentType !== 'richtext' && (

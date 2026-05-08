@@ -1,8 +1,8 @@
 'use client'
-import { useAdminUrl } from '@/app/(admin)/_components/AdminPathContext'
-import myModal from '@/app/(admin)/_components/myModals'
-import adminStyles from '../../_components/AdminShell.module.scss'
 
+import { useAdminUrl } from '@/app/(admin)/_components/AdminPathContext'
+import adminStyles from '@/app/(admin)/_components/AdminShell.module.scss'
+import myModal from '@/app/(admin)/_components/myModals'
 import { NowrapBadge } from '@/app/(admin)/_components/NowrapBadge'
 import { notify } from '@/lib/notify'
 import {
@@ -19,8 +19,8 @@ import {
 } from '@mantine/core'
 import { IconEye, IconPencil, IconPlus, IconSearch, IconTrash } from '@tabler/icons-react'
 import clsx from 'clsx'
-import Link from 'next/link'
 import { useTranslations } from 'next-intl'
+import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 
 interface PageItem {

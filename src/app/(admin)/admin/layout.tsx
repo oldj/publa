@@ -1,10 +1,10 @@
+import { AdminShell } from '@/app/(admin)/_components/AdminShell'
+import { SiteShortTitleProvider } from '@/app/(admin)/_components/SiteShortTitleContext'
 import { adminUrl } from '@/lib/admin-path'
 import { getCurrentUser, isSystemInitialized } from '@/server/auth'
 import { getSetting } from '@/server/services/settings'
 import '@/styles/admin.scss'
 import { redirect } from 'next/navigation'
-import { AdminShell } from '../_components/AdminShell'
-import { SiteShortTitleProvider } from '../_components/SiteShortTitleContext'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser()

@@ -3,6 +3,7 @@
  * @homepage: https://oldj.net
  */
 
+import dialog from '@/widgets/dialog'
 import lodash from 'lodash'
 import { useTranslations } from 'next-intl'
 import { useEffect, useRef, useState } from 'react'
@@ -10,7 +11,6 @@ import { useForm } from 'react-hook-form'
 import CaptchaInput from 'src/components/captcha-input'
 import { COMMENT_MAX_LENGTH } from 'src/lib/constants'
 import Button from 'src/widgets/Button'
-import dialog from '../widgets/dialog'
 
 interface Props {
   contentId: number

@@ -1,20 +1,24 @@
 'use client'
 
+import { useCurrentUser } from '@/app/(admin)/_components/AdminCountsContext'
+import { useAdminUrl } from '@/app/(admin)/_components/AdminPathContext'
 import myModal from '@/app/(admin)/_components/myModals'
+import { PageHeader } from '@/app/(admin)/_components/PageHeader'
 import { getClientErrorMessage } from '@/lib/client-error'
 import { notify } from '@/lib/notify'
+import { isBuiltinKey } from '@/shared/builtin-themes'
 import {
+  closestCenter,
   DndContext,
-  type DragEndEvent,
   KeyboardSensor,
   PointerSensor,
-  closestCenter,
   useSensor,
   useSensors,
+  type DragEndEvent,
 } from '@dnd-kit/core'
 import {
-  SortableContext,
   arrayMove,
+  SortableContext,
   sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
@@ -43,13 +47,9 @@ import {
   IconTrash,
   IconUpload,
 } from '@tabler/icons-react'
-import { isBuiltinKey } from '@/shared/builtin-themes'
 import { useTranslations } from 'next-intl'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useAdminUrl } from '../../_components/AdminPathContext'
-import { useCurrentUser } from '../../_components/AdminCountsContext'
-import { PageHeader } from '../../_components/PageHeader'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ExportModal, type ExportKind } from './ExportModal'
 import { StyleDrawer, type StyleFormInitial, type StyleKind } from './StyleDrawer'
 
@@ -582,6 +582,7 @@ export default function ThemesPage() {
                 size="xs"
                 leftSection={<IconPlus size={14} />}
                 onClick={() => openCreate('theme')}
+                data-role="appearance-new-theme-button"
               >
                 {t('new')}
               </Button>

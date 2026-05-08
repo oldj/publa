@@ -1,6 +1,10 @@
 'use client'
 
-import { LOCALE_LABELS, SUPPORTED_LOCALES, isLocale } from '@/i18n/locales'
+import { useCurrentUser } from '@/app/(admin)/_components/AdminCountsContext'
+import { useAdminUrl } from '@/app/(admin)/_components/AdminPathContext'
+import { PageHeader } from '@/app/(admin)/_components/PageHeader'
+import CodeEditor from '@/components/editors/CodeEditor'
+import { isLocale, LOCALE_LABELS, SUPPORTED_LOCALES } from '@/i18n/locales'
 import { notify } from '@/lib/notify'
 import {
   Box,
@@ -12,17 +16,14 @@ import {
   Select,
   Stack,
   Switch,
+  Tabs,
   Text,
   TextInput,
-  Textarea,
 } from '@mantine/core'
 import { IconExclamationMark } from '@tabler/icons-react'
 import { useTranslations } from 'next-intl'
-import { useAdminUrl } from '@/app/(admin)/_components/AdminPathContext'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react'
-import { useCurrentUser } from '../../_components/AdminCountsContext'
-import { PageHeader } from '../../_components/PageHeader'
 
 interface FaviconState {
   mode: 'default' | 'url' | 'upload'
@@ -99,7 +100,23 @@ export default function SettingsPage() {
     setSettings((prev) => ({ ...prev, [key]: value }))
   }
 
+  const restoreScrollPositionSoon = (x: number, y: number) => {
+    const restore = () => window.scrollTo(x, y)
+
+    // router.refresh() 的 RSC 更新时序不完全固定，短时间多次恢复避免被后续重绘覆盖。
+    window.requestAnimationFrame(() => {
+      restore()
+      window.requestAnimationFrame(restore)
+    })
+    window.setTimeout(restore, 50)
+    window.setTimeout(restore, 150)
+  }
+
   const handleSave = async () => {
+    const previousLanguage = initialSettingsRef.current.language
+    const nextSettings = { ...settings }
+    const shouldRefreshLocale = nextSettings.language !== previousLanguage
+
     // 检查 customHeadHtml 中是否存在不支持的标签
     const headHtml = String(settings.customHeadHtml ?? '')
     if (headHtml) {
@@ -123,15 +140,20 @@ export default function SettingsPage() {
       const res = await fetch('/api/settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(settings),
+        body: JSON.stringify(nextSettings),
       })
       const json = await res.json()
       if (json.success) {
         notify({ color: 'green', message: tCommon('save.success') })
-        initialSettingsRef.current = { ...settings }
-        // 触发 RSC 重新获取，让根布局基于新设置重新解析 locale，
-        // 从而无需手动刷新即可切换界面语言
-        router.refresh()
+        initialSettingsRef.current = nextSettings
+        if (shouldRefreshLocale) {
+          const scrollX = window.scrollX
+          const scrollY = window.scrollY
+
+          // 仅语言变化时刷新 RSC，让根布局重新解析 locale；普通保存无需刷新页面。
+          router.refresh()
+          restoreScrollPositionSoon(scrollX, scrollY)
+        }
       } else {
         notify({ color: 'red', message: json.message || tCommon('save.failed') })
       }
@@ -407,58 +429,69 @@ export default function SettingsPage() {
         />
 
         <Divider label={t('sections.footer')} labelPosition="left" mt="md" />
-        <Textarea
+        <CodeEditor
+          language="html"
           label={t('fields.footerCopyright')}
-          placeholder="{SITE_NAME} &copy; {FULL_YEAR}"
           description={t('fields.footerCopyrightDescription')}
-          autosize
-          minRows={2}
+          placeholder="{SITE_NAME} &copy; {FULL_YEAR}"
+          height="120px"
           value={String(settings.footerCopyright ?? '')}
-          onChange={(e) => setField('footerCopyright', e.target.value)}
-          styles={{ input: { maxHeight: 400, overflow: 'auto' } }}
+          onChange={(next) => setField('footerCopyright', next)}
         />
 
         <Divider label={t('sections.customHtml')} labelPosition="left" mt="md" />
-        <Textarea
-          label={t('fields.customAfterPostHtml')}
-          description={t('fields.customAfterPostHtmlDescription')}
-          placeholder="<div>...</div>"
-          autosize
-          minRows={3}
-          value={String(settings.customAfterPostHtml ?? '')}
-          onChange={(e) => setField('customAfterPostHtml', e.target.value)}
-          styles={{ input: { fontFamily: 'monospace', maxHeight: 400, overflow: 'auto' } }}
-        />
-        <Textarea
-          label={t('fields.customHeadHtml')}
-          description={t('fields.customHeadHtmlDescription')}
-          placeholder="<script>...</script>"
-          autosize
-          minRows={3}
-          value={String(settings.customHeadHtml ?? '')}
-          onChange={(e) => setField('customHeadHtml', e.target.value)}
-          styles={{ input: { fontFamily: 'monospace', maxHeight: 400, overflow: 'auto' } }}
-        />
-        <Textarea
-          label={t('fields.customBodyStartHtml')}
-          description={t('fields.customBodyStartHtmlDescription')}
-          placeholder="<script>...</script>"
-          autosize
-          minRows={3}
-          value={String(settings.customBodyStartHtml ?? '')}
-          onChange={(e) => setField('customBodyStartHtml', e.target.value)}
-          styles={{ input: { fontFamily: 'monospace', maxHeight: 400, overflow: 'auto' } }}
-        />
-        <Textarea
-          label={t('fields.customBodyEndHtml')}
-          description={t('fields.customBodyEndHtmlDescription')}
-          placeholder="<script>...</script>"
-          autosize
-          minRows={3}
-          value={String(settings.customBodyEndHtml ?? '')}
-          onChange={(e) => setField('customBodyEndHtml', e.target.value)}
-          styles={{ input: { fontFamily: 'monospace', maxHeight: 400, overflow: 'auto' } }}
-        />
+        <Tabs defaultValue="head">
+          <Tabs.List>
+            <Tabs.Tab value="head">{t('customHtmlTabs.head')}</Tabs.Tab>
+            <Tabs.Tab value="bodyStart">{t('customHtmlTabs.bodyStart')}</Tabs.Tab>
+            <Tabs.Tab value="bodyEnd">{t('customHtmlTabs.bodyEnd')}</Tabs.Tab>
+            <Tabs.Tab value="afterPost">{t('customHtmlTabs.afterPost')}</Tabs.Tab>
+          </Tabs.List>
+
+          <Tabs.Panel value="head" pt="sm">
+            <CodeEditor
+              language="html"
+              description={t('fields.customHeadHtmlDescription')}
+              placeholder="<script>...</script>"
+              height="480px"
+              value={String(settings.customHeadHtml ?? '')}
+              onChange={(next) => setField('customHeadHtml', next)}
+            />
+          </Tabs.Panel>
+
+          <Tabs.Panel value="bodyStart" pt="sm">
+            <CodeEditor
+              language="html"
+              description={t('fields.customBodyStartHtmlDescription')}
+              placeholder="<script>...</script>"
+              height="480px"
+              value={String(settings.customBodyStartHtml ?? '')}
+              onChange={(next) => setField('customBodyStartHtml', next)}
+            />
+          </Tabs.Panel>
+
+          <Tabs.Panel value="bodyEnd" pt="sm">
+            <CodeEditor
+              language="html"
+              description={t('fields.customBodyEndHtmlDescription')}
+              placeholder="<script>...</script>"
+              height="480px"
+              value={String(settings.customBodyEndHtml ?? '')}
+              onChange={(next) => setField('customBodyEndHtml', next)}
+            />
+          </Tabs.Panel>
+
+          <Tabs.Panel value="afterPost" pt="sm">
+            <CodeEditor
+              language="html"
+              description={t('fields.customAfterPostHtmlDescription')}
+              placeholder="<div>...</div>"
+              height="480px"
+              value={String(settings.customAfterPostHtml ?? '')}
+              onChange={(next) => setField('customAfterPostHtml', next)}
+            />
+          </Tabs.Panel>
+        </Tabs>
       </Stack>
     </Box>
   )

@@ -1,5 +1,9 @@
 'use client'
 
+import { useCurrentUser } from '@/app/(admin)/_components/AdminCountsContext'
+import { useAdminUrl } from '@/app/(admin)/_components/AdminPathContext'
+import { PageHeader } from '@/app/(admin)/_components/PageHeader'
+import { RoleLabel } from '@/app/(admin)/_components/RoleLabel'
 import { notify } from '@/lib/notify'
 import {
   Alert,
@@ -19,13 +23,9 @@ import {
   Tooltip,
 } from '@mantine/core'
 import { IconInfoCircle, IconSend } from '@tabler/icons-react'
-import { useAdminUrl } from '@/app/(admin)/_components/AdminPathContext'
 import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useCurrentUser } from '../../_components/AdminCountsContext'
-import { PageHeader } from '../../_components/PageHeader'
-import { RoleLabel } from '../../_components/RoleLabel'
 
 interface User {
   id: number
