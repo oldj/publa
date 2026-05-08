@@ -100,7 +100,23 @@ export default function SettingsPage() {
     setSettings((prev) => ({ ...prev, [key]: value }))
   }
 
+  const restoreScrollPositionSoon = (x: number, y: number) => {
+    const restore = () => window.scrollTo(x, y)
+
+    // router.refresh() 的 RSC 更新时序不完全固定，短时间多次恢复避免被后续重绘覆盖。
+    window.requestAnimationFrame(() => {
+      restore()
+      window.requestAnimationFrame(restore)
+    })
+    window.setTimeout(restore, 50)
+    window.setTimeout(restore, 150)
+  }
+
   const handleSave = async () => {
+    const previousLanguage = initialSettingsRef.current.language
+    const nextSettings = { ...settings }
+    const shouldRefreshLocale = nextSettings.language !== previousLanguage
+
     // 检查 customHeadHtml 中是否存在不支持的标签
     const headHtml = String(settings.customHeadHtml ?? '')
     if (headHtml) {
@@ -124,15 +140,20 @@ export default function SettingsPage() {
       const res = await fetch('/api/settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(settings),
+        body: JSON.stringify(nextSettings),
       })
       const json = await res.json()
       if (json.success) {
         notify({ color: 'green', message: tCommon('save.success') })
-        initialSettingsRef.current = { ...settings }
-        // 触发 RSC 重新获取，让根布局基于新设置重新解析 locale，
-        // 从而无需手动刷新即可切换界面语言
-        router.refresh()
+        initialSettingsRef.current = nextSettings
+        if (shouldRefreshLocale) {
+          const scrollX = window.scrollX
+          const scrollY = window.scrollY
+
+          // 仅语言变化时刷新 RSC，让根布局重新解析 locale；普通保存无需刷新页面。
+          router.refresh()
+          restoreScrollPositionSoon(scrollX, scrollY)
+        }
       } else {
         notify({ color: 'red', message: json.message || tCommon('save.failed') })
       }
