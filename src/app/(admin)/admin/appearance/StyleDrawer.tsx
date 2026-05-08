@@ -1,7 +1,8 @@
 'use client'
 
+import CodeEditor from '@/components/editors/CodeEditor'
 import { notify } from '@/lib/notify'
-import { Button, Drawer, Group, Stack, Textarea, TextInput } from '@mantine/core'
+import { Button, Drawer, Group, Stack, TextInput } from '@mantine/core'
 import { useTranslations } from 'next-intl'
 import { useEffect, useState } from 'react'
 
@@ -96,22 +97,12 @@ export function StyleDrawer({ opened, onClose, kind, initial, onSaved }: StyleDr
           value={name}
           onChange={(e) => setName(e.currentTarget.value)}
         />
-        <Textarea
+        <CodeEditor
+          language="css"
           label="CSS"
           placeholder={t('cssPlaceholder')}
           value={css}
-          onChange={(e) => setCss(e.currentTarget.value)}
-          minRows={20}
-          maxRows={30}
-          autosize
-          styles={{
-            input: {
-              fontFamily:
-                'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-              fontSize: 13,
-              lineHeight: 1.5,
-            },
-          }}
+          onChange={setCss}
         />
         <Group justify="flex-end">
           <Button variant="default" onClick={onClose}>

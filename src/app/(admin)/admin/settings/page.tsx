@@ -1,5 +1,6 @@
 'use client'
 
+import CodeEditor from '@/components/editors/CodeEditor'
 import { LOCALE_LABELS, SUPPORTED_LOCALES, isLocale } from '@/i18n/locales'
 import { notify } from '@/lib/notify'
 import {
@@ -14,7 +15,6 @@ import {
   Switch,
   Text,
   TextInput,
-  Textarea,
 } from '@mantine/core'
 import { IconExclamationMark } from '@tabler/icons-react'
 import { useTranslations } from 'next-intl'
@@ -407,57 +407,52 @@ export default function SettingsPage() {
         />
 
         <Divider label={t('sections.footer')} labelPosition="left" mt="md" />
-        <Textarea
+        <CodeEditor
+          language="html"
           label={t('fields.footerCopyright')}
-          placeholder="{SITE_NAME} &copy; {FULL_YEAR}"
           description={t('fields.footerCopyrightDescription')}
-          autosize
-          minRows={2}
+          placeholder="{SITE_NAME} &copy; {FULL_YEAR}"
+          height="120px"
           value={String(settings.footerCopyright ?? '')}
-          onChange={(e) => setField('footerCopyright', e.target.value)}
-          styles={{ input: { maxHeight: 400, overflow: 'auto' } }}
+          onChange={(next) => setField('footerCopyright', next)}
         />
 
         <Divider label={t('sections.customHtml')} labelPosition="left" mt="md" />
-        <Textarea
+        <CodeEditor
+          language="html"
           label={t('fields.customAfterPostHtml')}
           description={t('fields.customAfterPostHtmlDescription')}
           placeholder="<div>...</div>"
-          autosize
-          minRows={3}
+          height="240px"
           value={String(settings.customAfterPostHtml ?? '')}
-          onChange={(e) => setField('customAfterPostHtml', e.target.value)}
-          styles={{ input: { fontFamily: 'monospace', maxHeight: 400, overflow: 'auto' } }}
+          onChange={(next) => setField('customAfterPostHtml', next)}
         />
-        <Textarea
+        <CodeEditor
+          language="html"
           label={t('fields.customHeadHtml')}
           description={t('fields.customHeadHtmlDescription')}
           placeholder="<script>...</script>"
-          autosize
-          minRows={3}
+          height="240px"
           value={String(settings.customHeadHtml ?? '')}
-          onChange={(e) => setField('customHeadHtml', e.target.value)}
-          styles={{ input: { fontFamily: 'monospace', maxHeight: 400, overflow: 'auto' } }}
+          onChange={(next) => setField('customHeadHtml', next)}
         />
-        <Textarea
+        <CodeEditor
+          language="html"
           label={t('fields.customBodyStartHtml')}
           description={t('fields.customBodyStartHtmlDescription')}
           placeholder="<script>...</script>"
-          autosize
-          minRows={3}
+          height="240px"
           value={String(settings.customBodyStartHtml ?? '')}
-          onChange={(e) => setField('customBodyStartHtml', e.target.value)}
-          styles={{ input: { fontFamily: 'monospace', maxHeight: 400, overflow: 'auto' } }}
+          onChange={(next) => setField('customBodyStartHtml', next)}
         />
-        <Textarea
+        <CodeEditor
+          language="html"
           label={t('fields.customBodyEndHtml')}
           description={t('fields.customBodyEndHtmlDescription')}
           placeholder="<script>...</script>"
-          autosize
-          minRows={3}
+          height="240px"
           value={String(settings.customBodyEndHtml ?? '')}
-          onChange={(e) => setField('customBodyEndHtml', e.target.value)}
-          styles={{ input: { fontFamily: 'monospace', maxHeight: 400, overflow: 'auto' } }}
+          onChange={(next) => setField('customBodyEndHtml', next)}
         />
       </Stack>
     </Box>
