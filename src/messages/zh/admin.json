@@ -451,6 +451,7 @@
     },
     "activityLabels": {
       "login": "登录",
+      "login_fail": "登录失败",
       "logout": "登出",
       "create_post": "创建文章",
       "update_post": "更新文章",

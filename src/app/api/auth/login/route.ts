@@ -1,12 +1,16 @@
-import { createToken, hashPassword, setAuthCookie, verifyPassword } from '@/server/auth'
-import { getRequestInfo } from '@/server/lib/request-info'
-import { jsonError, jsonSuccess } from '@/server/lib/api-response'
-import { logActivity } from '@/server/services/activity-logs'
 import { normalizePassword, normalizeUsername } from '@/lib/user-input'
+import { createToken, hashPassword, setAuthCookie, verifyPassword } from '@/server/auth'
 import { db } from '@/server/db'
 import { maybeFirst } from '@/server/db/query'
 import { users } from '@/server/db/schema'
-import { isLoginLocked, recordRateEvent } from '@/server/lib/rate-limit'
+import { jsonError, jsonSuccess } from '@/server/lib/api-response'
+import {
+  clearLoginFailures,
+  enforceLoginRateLimit,
+  recordLoginFailure,
+} from '@/server/lib/rate-limit'
+import { getRequestInfo } from '@/server/lib/request-info'
+import { logActivity } from '@/server/services/activity-logs'
 import { eq } from 'drizzle-orm'
 import { NextRequest } from 'next/server'
 
@@ -37,8 +41,10 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // 检查账号是否被锁定
-    if (await isLoginLocked(username)) {
+    const { ip } = getRequestInfo(request)
+
+    // 检查用户名和 IP 是否被锁定，任一维度命中都拒绝登录。
+    if ((await enforceLoginRateLimit(username, ip)).locked) {
       return jsonError({
         source: request,
         namespace: 'admin.login.errors',
@@ -47,8 +53,6 @@ export async function POST(request: NextRequest) {
         status: 429,
       })
     }
-
-    const { ip } = getRequestInfo(request)
 
     const user = await maybeFirst(
       db.select().from(users).where(eq(users.username, username)).limit(1),
@@ -59,7 +63,8 @@ export async function POST(request: NextRequest) {
     const valid = await verifyPassword(password, hashToCompare)
 
     if (!user || !valid) {
-      await recordRateEvent('login_fail', username, ip)
+      await recordLoginFailure(username, ip)
+      if (user) await logActivity(request, user.id, 'login_fail')
       return jsonError({
         source: request,
         namespace: 'admin.login.errors',
@@ -78,6 +83,7 @@ export async function POST(request: NextRequest) {
     await setAuthCookie(token)
 
     await logActivity(request, user.id, 'login')
+    await clearLoginFailures(username)
 
     return jsonSuccess({
       id: user.id,

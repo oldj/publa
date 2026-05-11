@@ -1,10 +1,12 @@
-import { beforeEach, describe, expect, it } from 'vitest'
 import { rateEvents } from '@/server/db/schema'
 import { setupTestDb, testDb } from '@/server/services/__test__/setup'
+import { beforeEach, describe, expect, it } from 'vitest'
 import {
   acquireSubmissionSlot,
   cleanExpiredRateEvents,
+  clearLoginFailures,
   isLoginLocked,
+  recordLoginFailure,
   recordRateEvent,
 } from './rate-limit'
 
@@ -32,16 +34,19 @@ describe('isLoginLocked', () => {
     expect(await isLoginLocked('admin')).toBe(false)
   })
 
-  it('失败达到 5 次时锁定', async () => {
+  it('同一用户名失败达到 5 次时锁定', async () => {
     for (let i = 0; i < 5; i++) {
-      await recordRateEvent('login_fail', 'admin')
+      await recordLoginFailure('admin', `127.0.0.${i}`)
     }
     expect(await isLoginLocked('admin')).toBe(true)
+
+    const rows = await testDb.select().from(rateEvents)
+    expect(rows.some((row) => row.eventType === 'login_lock_username')).toBe(true)
   })
 
   it('不同用户名互不影响', async () => {
     for (let i = 0; i < 5; i++) {
-      await recordRateEvent('login_fail', 'user-a')
+      await recordLoginFailure('user-a')
     }
     expect(await isLoginLocked('user-a')).toBe(true)
     expect(await isLoginLocked('user-b')).toBe(false)
@@ -57,6 +62,69 @@ describe('isLoginLocked', () => {
       })
     }
     expect(await isLoginLocked('admin')).toBe(false)
+  })
+
+  it('同一 IP 失败达到 30 次时锁定该 IP', async () => {
+    for (let i = 0; i < 30; i++) {
+      await recordLoginFailure(`user-${i}`, '10.0.0.1')
+    }
+
+    expect(await isLoginLocked('another-user', '10.0.0.1')).toBe(true)
+    expect(await isLoginLocked('another-user', '10.0.0.2')).toBe(false)
+
+    const rows = await testDb.select().from(rateEvents)
+    expect(rows.some((row) => row.eventType === 'login_lock_ip')).toBe(true)
+  })
+
+  it('活跃锁定事件不依赖失败窗口继续生效', async () => {
+    const oldTime = new Date(Date.now() - 6 * 60 * 1000).toISOString()
+    await testDb.insert(rateEvents).values({
+      eventType: 'login_fail',
+      identifier: 'admin',
+      createdAt: oldTime,
+    })
+    await testDb.insert(rateEvents).values({
+      eventType: 'login_lock_username',
+      identifier: 'admin',
+    })
+
+    expect(await isLoginLocked('admin')).toBe(true)
+  })
+
+  it('用户名锁定事件超过 5 分钟后释放', async () => {
+    await testDb.insert(rateEvents).values({
+      eventType: 'login_lock_username',
+      identifier: 'admin',
+      createdAt: new Date(Date.now() - 6 * 60 * 1000).toISOString(),
+    })
+
+    expect(await isLoginLocked('admin')).toBe(false)
+  })
+
+  it('IP 锁定事件超过 10 分钟后释放', async () => {
+    await testDb.insert(rateEvents).values({
+      eventType: 'login_lock_ip',
+      identifier: '10.0.0.1',
+      ipAddress: '10.0.0.1',
+      createdAt: new Date(Date.now() - 11 * 60 * 1000).toISOString(),
+    })
+
+    expect(await isLoginLocked('other-user', '10.0.0.1')).toBe(false)
+  })
+
+  it('登录成功后可清理该用户名失败记录', async () => {
+    await recordLoginFailure('admin', '127.0.0.1')
+    await recordLoginFailure('other', '127.0.0.1')
+
+    await clearLoginFailures('admin')
+
+    const rows = await testDb.select().from(rateEvents)
+    expect(rows.some((row) => row.eventType === 'login_fail' && row.identifier === 'admin')).toBe(
+      false,
+    )
+    expect(rows.some((row) => row.eventType === 'login_fail' && row.identifier === 'other')).toBe(
+      true,
+    )
   })
 })
 

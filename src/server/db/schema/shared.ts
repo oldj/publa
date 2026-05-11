@@ -8,7 +8,13 @@ export const pageTemplate = ['default', 'blank'] as const
 export const revisionStatus = ['draft', 'published', 'snapshot'] as const
 export const revisionTargetType = ['post', 'page'] as const
 export const storageProvider = ['s3', 'r2', 'oss', 'cos'] as const
-export const rateEventType = ['login_fail', 'comment', 'guestbook'] as const
+export const rateEventType = [
+  'login_fail',
+  'login_lock_username',
+  'login_lock_ip',
+  'comment',
+  'guestbook',
+] as const
 export const userRole = ['owner', 'admin', 'editor'] as const
 export const redirectType = ['301', '302', '307', '308'] as const
 export const emailLogStatus = ['success', 'fail'] as const
@@ -16,6 +22,7 @@ export const emailEventType = ['new_comment', 'new_guestbook', 'test'] as const
 
 export const activityAction = [
   'login',
+  'login_fail',
   'logout',
   'create_post',
   'update_post',
