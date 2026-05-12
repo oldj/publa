@@ -3,6 +3,7 @@
 import { useCurrentUser } from '@/app/(admin)/_components/AdminCountsContext'
 import { useAdminUrl } from '@/app/(admin)/_components/AdminPathContext'
 import { PageHeader } from '@/app/(admin)/_components/PageHeader'
+import { sensitiveFetch } from '@/app/(admin)/_lib/sensitive-fetch'
 import CodeEditor from '@/components/editors/CodeEditor'
 import { isLocale, LOCALE_LABELS, SUPPORTED_LOCALES } from '@/i18n/locales'
 import { notify } from '@/lib/notify'
@@ -137,7 +138,7 @@ export default function SettingsPage() {
 
     setLoading(true)
     try {
-      const res = await fetch('/api/settings', {
+      const res = await sensitiveFetch('/api/settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(nextSettings),

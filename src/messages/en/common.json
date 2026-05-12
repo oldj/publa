@@ -45,6 +45,14 @@
   "modal": {
     "title": "Notice"
   },
+  "reauth": {
+    "title": "Verify your password",
+    "message": "This is a sensitive operation. Enter your current password to continue.",
+    "passwordLabel": "Current password",
+    "passwordRequired": "Please enter your current password",
+    "invalidPassword": "Incorrect password",
+    "submit": "Verify and continue"
+  },
   "labels": {
     "optional": "(optional)",
     "caseInsensitive": "(case-insensitive)",
@@ -79,6 +87,8 @@
     "cronSecretNotConfigured": "Cron secret is not configured",
     "invalidCronSecret": "Invalid cron secret",
     "authenticationUnavailable": "Authentication is temporarily unavailable",
+    "reauthRequired": "Please verify your current password first",
+    "invalidPassword": "Incorrect password",
     "internalError": "Internal server error"
   }
 }

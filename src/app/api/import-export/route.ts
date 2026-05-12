@@ -1,5 +1,5 @@
 import { getServerTranslator } from '@/i18n/server'
-import { requireRole } from '@/server/auth'
+import { requireRecentReauth, requireRole } from '@/server/auth'
 import { jsonError, jsonSuccess } from '@/server/lib/api-response'
 import { logActivity } from '@/server/services/activity-logs'
 import {
@@ -41,6 +41,8 @@ export async function GET(request: NextRequest) {
     key: 'forbidden',
   })
   if (!guard.ok) return guard.response
+  const reauth = await requireRecentReauth(guard.user, request)
+  if (!reauth.ok) return reauth.response
 
   const type = request.nextUrl.searchParams.get('type') || 'content'
   const ts = formatTimestamp()
@@ -74,6 +76,8 @@ export async function POST(request: NextRequest) {
     key: 'forbidden',
   })
   if (!guard.ok) return guard.response
+  const reauth = await requireRecentReauth(guard.user, request)
+  if (!reauth.ok) return reauth.response
 
   let data: any
   try {

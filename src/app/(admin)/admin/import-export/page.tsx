@@ -3,6 +3,7 @@
 import { useAdminCounts, useCurrentUser } from '@/app/(admin)/_components/AdminCountsContext'
 import { useAdminUrl } from '@/app/(admin)/_components/AdminPathContext'
 import myModal from '@/app/(admin)/_components/myModals'
+import { ensureReauth, sensitiveFetch } from '@/app/(admin)/_lib/sensitive-fetch'
 import { SafeDrawer } from '@/components/SafeDrawer'
 import { notify } from '@/lib/notify'
 import {
@@ -160,6 +161,7 @@ export default function ImportExportPage() {
     const message = type === 'content' ? t('confirm.exportContent') : t('confirm.exportSettings')
     const confirmed = await myModal.confirm({ message })
     if (!confirmed) return
+    if (!(await ensureReauth())) return
     window.open(`/api/import-export?type=${type}`, '_blank')
   }
 
@@ -216,7 +218,7 @@ export default function ImportExportPage() {
     updateImportState(type, { importing: true, results: [] })
 
     try {
-      const res = await fetch('/api/import-export', {
+      const res = await sensitiveFetch('/api/import-export', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(file.data),

@@ -1,5 +1,5 @@
-import { requireCurrentUser, requireRole } from '@/server/auth'
 import { normalizeEmail, normalizePassword, normalizeUsername } from '@/lib/user-input'
+import { requireCurrentUser, requireRecentReauth, requireRole } from '@/server/auth'
 import { jsonError, jsonSuccess } from '@/server/lib/api-response'
 import { safeParseJson } from '@/server/lib/request'
 import { getLastActiveMap, logActivity } from '@/server/services/activity-logs'
@@ -33,6 +33,8 @@ export async function POST(request: NextRequest) {
     key: 'forbidden',
   })
   if (!guard.ok) return guard.response
+  const reauth = await requireRecentReauth(guard.user, request)
+  if (!reauth.ok) return reauth.response
 
   const { data: body, error } = await safeParseJson(request)
   if (error) return error

@@ -5,7 +5,9 @@
 import { users } from '@/server/db/schema'
 import { setupTestDb, testDb } from '@/server/services/__test__/setup'
 import { eq, sql } from 'drizzle-orm'
+import { SignJWT } from 'jose'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { getJwtSecret } from './shared'
 
 const { mockCookies } = vi.hoisted(() => ({
   mockCookies: vi.fn(),
@@ -15,7 +17,8 @@ vi.mock('next/headers', () => ({
   cookies: mockCookies,
 }))
 
-const { createToken, getCurrentUser, verifyToken } = await import('./index')
+const { createReauthToken, createToken, getCurrentUser, requireRecentReauth, verifyToken } =
+  await import('./index')
 
 beforeEach(async () => {
   await setupTestDb()
@@ -23,10 +26,15 @@ beforeEach(async () => {
 })
 
 function mockCookieValue(value: string | undefined) {
+  mockCookieValues({ _token: value })
+}
+
+function mockCookieValues(values: Record<string, string | undefined>) {
   mockCookies.mockResolvedValue({
-    get: vi.fn().mockImplementation((name: string) =>
-      name === '_token' && value !== undefined ? { value } : undefined,
-    ),
+    get: vi.fn().mockImplementation((name: string) => {
+      const value = values[name]
+      return value !== undefined ? { value } : undefined
+    }),
     set: vi.fn(),
     delete: vi.fn(),
   })
@@ -109,5 +117,69 @@ describe('tokenVersion 失效机制', () => {
   it('伪造 / 篡改的 token 被拒绝', async () => {
     mockCookieValue('not-a-valid-jwt')
     expect(await getCurrentUser()).toBeNull()
+  })
+})
+
+describe('二次验证 tokenVersion 失效机制', () => {
+  it('requireRecentReauth 接受当前用户的有效二次验证 token', async () => {
+    const token = await createReauthToken({ id: 2, username: 'editor', role: 'editor' })
+    mockCookieValues({ _reauth: token })
+
+    const result = await requireRecentReauth({ id: 2, username: 'editor', role: 'editor' })
+
+    expect(result.ok).toBe(true)
+  })
+
+  it('requireRecentReauth 拒绝缺失的二次验证 token', async () => {
+    mockCookieValues({})
+
+    const result = await requireRecentReauth({ id: 2, username: 'editor', role: 'editor' })
+
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      const json = await result.response.json()
+      expect(json.code).toBe('REAUTH_REQUIRED')
+    }
+  })
+
+  it('requireRecentReauth 拒绝用户不匹配的二次验证 token', async () => {
+    const token = await createReauthToken({ id: 2, username: 'editor', role: 'editor' })
+    mockCookieValues({ _reauth: token })
+
+    const result = await requireRecentReauth({ id: 1, username: 'admin', role: 'owner' })
+
+    expect(result.ok).toBe(false)
+  })
+
+  it('requireRecentReauth 拒绝过期的二次验证 token', async () => {
+    const now = Math.floor(Date.now() / 1000)
+    const token = await new SignJWT({
+      userId: 2,
+      purpose: 'reauth',
+      tokenVersion: 0,
+    })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuedAt(now - 120)
+      .setExpirationTime(now - 60)
+      .sign(getJwtSecret())
+    mockCookieValues({ _reauth: token })
+
+    const result = await requireRecentReauth({ id: 2, username: 'editor', role: 'editor' })
+
+    expect(result.ok).toBe(false)
+  })
+
+  it('requireRecentReauth 在 tokenVersion 变化后拒绝旧二次验证 token', async () => {
+    const token = await createReauthToken({ id: 2, username: 'editor', role: 'editor' })
+    mockCookieValues({ _reauth: token })
+
+    await testDb
+      .update(users)
+      .set({ tokenVersion: sql`${users.tokenVersion} + 1` })
+      .where(eq(users.id, 2))
+
+    const result = await requireRecentReauth({ id: 2, username: 'editor', role: 'editor' })
+
+    expect(result.ok).toBe(false)
   })
 })

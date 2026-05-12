@@ -1,15 +1,22 @@
 import { NextResponse } from 'next/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { mockRequireRole, mockGetAllSettings, mockNormalizeSettingsPayload, mockUpdateSettings } =
-  vi.hoisted(() => ({
-    mockRequireRole: vi.fn(),
-    mockGetAllSettings: vi.fn(),
-    mockNormalizeSettingsPayload: vi.fn(),
-    mockUpdateSettings: vi.fn(),
-  }))
+const {
+  mockRequireRecentReauth,
+  mockRequireRole,
+  mockGetAllSettings,
+  mockNormalizeSettingsPayload,
+  mockUpdateSettings,
+} = vi.hoisted(() => ({
+  mockRequireRecentReauth: vi.fn(),
+  mockRequireRole: vi.fn(),
+  mockGetAllSettings: vi.fn(),
+  mockNormalizeSettingsPayload: vi.fn(),
+  mockUpdateSettings: vi.fn(),
+}))
 
 vi.mock('@/server/auth', () => ({
+  requireRecentReauth: mockRequireRecentReauth,
   requireRole: mockRequireRole,
 }))
 
@@ -44,6 +51,7 @@ const { GET, PUT } = await import('./route')
 
 describe('/api/email-settings', () => {
   beforeEach(() => {
+    mockRequireRecentReauth.mockReset()
     mockRequireRole.mockReset()
     mockGetAllSettings.mockReset()
     mockNormalizeSettingsPayload.mockReset()
@@ -53,6 +61,7 @@ describe('/api/email-settings', () => {
       ok: true,
       user: { id: 1, username: 'owner', role: 'owner' },
     })
+    mockRequireRecentReauth.mockResolvedValue({ ok: true })
     mockGetAllSettings.mockResolvedValue({
       emailProvider: 'smtp',
       emailSmtpFrom: 'noreply@example.com',
@@ -98,6 +107,28 @@ describe('/api/email-settings', () => {
       emailProvider: 'smtp',
       emailNotifyNewComment: { enabled: true, userIds: [1, 2] },
     })
+  })
+
+  it('缺少二次验证时不能保存邮件设置', async () => {
+    mockRequireRecentReauth.mockResolvedValueOnce({
+      ok: false,
+      response: NextResponse.json({ success: false, code: 'REAUTH_REQUIRED' }, { status: 403 }),
+    })
+
+    const response = await PUT(
+      new Request('http://localhost/api/email-settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          emailProvider: 'smtp',
+        }),
+      }) as any,
+    )
+    const json = await response.json()
+
+    expect(response.status).toBe(403)
+    expect(json.code).toBe('REAUTH_REQUIRED')
+    expect(mockUpdateSettings).not.toHaveBeenCalled()
   })
 
   it('非法通知配置会被拒绝', async () => {
