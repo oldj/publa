@@ -130,7 +130,7 @@
       "applyUrl": "应用 URL",
       "uploadIcon": "上传图标",
       "resetDefault": "恢复默认",
-      "faviconHelp": "支持 ICO、PNG、SVG、WEBP，最大 256KB。上传或应用后立即生效。",
+      "faviconHelp": "支持 ICO、PNG、WEBP，最大 256KB。上传或应用后立即生效。",
       "showCommentsGlobally": "全局显示评论列表",
       "showCommentsGloballyDescription": "关闭后，全站所有文章都不显示已有评论列表",
       "enableComment": "全局启用评论",
@@ -1066,7 +1066,7 @@
       "saveFailed": "保存站点图标失败",
       "fileRequired": "请选择图标文件",
       "fileTooLarge": "图标文件不能超过 256KB",
-      "invalidFileType": "仅支持 ICO、PNG、SVG、WEBP 格式",
+      "invalidFileType": "仅支持 ICO、PNG、WEBP 格式",
       "invalidUrl": "图标 URL 仅支持 https:// 地址"
     }
   },

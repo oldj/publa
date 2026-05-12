@@ -3,12 +3,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const {
   mockRequireRole,
+  mockRequireRecentReauth,
   mockGetFaviconConfig,
   mockSaveUploadedFavicon,
   mockSaveFaviconUrl,
   mockResetFavicon,
 } = vi.hoisted(() => ({
   mockRequireRole: vi.fn(),
+  mockRequireRecentReauth: vi.fn(),
   mockGetFaviconConfig: vi.fn(),
   mockSaveUploadedFavicon: vi.fn(),
   mockSaveFaviconUrl: vi.fn(),
@@ -17,6 +19,7 @@ const {
 
 vi.mock('@/server/auth', () => ({
   requireRole: mockRequireRole,
+  requireRecentReauth: mockRequireRecentReauth,
 }))
 
 vi.mock('@/server/services/favicon', () => ({
@@ -41,6 +44,7 @@ const faviconResponse = {
 describe('/api/settings/favicon', () => {
   beforeEach(() => {
     mockRequireRole.mockReset()
+    mockRequireRecentReauth.mockReset()
     mockGetFaviconConfig.mockReset()
     mockSaveUploadedFavicon.mockReset()
     mockSaveFaviconUrl.mockReset()
@@ -50,6 +54,7 @@ describe('/api/settings/favicon', () => {
       ok: true,
       user: { id: 1, username: 'admin', role: 'admin' },
     })
+    mockRequireRecentReauth.mockResolvedValue({ ok: true })
     mockGetFaviconConfig.mockResolvedValue(faviconResponse)
     mockSaveUploadedFavicon.mockResolvedValue(faviconResponse)
     mockSaveFaviconUrl.mockResolvedValue({
@@ -112,6 +117,26 @@ describe('/api/settings/favicon', () => {
       originalFilename: 'icon.png',
       mimeType: 'image/png',
     })
+    expect(mockRequireRecentReauth).toHaveBeenCalled()
+  })
+
+  it('缺少二次验证时不能上传图标文件', async () => {
+    mockRequireRecentReauth.mockResolvedValueOnce({
+      ok: false,
+      response: NextResponse.json({ success: false, code: 'REAUTH_REQUIRED' }, { status: 403 }),
+    })
+
+    const response = await POST(
+      new Request('http://localhost/api/settings/favicon', {
+        method: 'POST',
+        body: new FormData(),
+      }) as any,
+    )
+    const json = await response.json()
+
+    expect(response.status).toBe(403)
+    expect(json.code).toBe('REAUTH_REQUIRED')
+    expect(mockSaveUploadedFavicon).not.toHaveBeenCalled()
   })
 
   it('未上传文件时返回校验错误', async () => {
@@ -143,12 +168,46 @@ describe('/api/settings/favicon', () => {
     expect(json.message).toBe('图标 URL 仅支持 https:// 地址')
   })
 
+  it('缺少二次验证时不能设置 favicon URL', async () => {
+    mockRequireRecentReauth.mockResolvedValueOnce({
+      ok: false,
+      response: NextResponse.json({ success: false, code: 'REAUTH_REQUIRED' }, { status: 403 }),
+    })
+
+    const response = await PUT(
+      new Request('http://localhost/api/settings/favicon', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: 'https://cdn.example.com/favicon.png' }),
+      }) as any,
+    )
+    const json = await response.json()
+
+    expect(response.status).toBe(403)
+    expect(json.code).toBe('REAUTH_REQUIRED')
+    expect(mockSaveFaviconUrl).not.toHaveBeenCalled()
+  })
+
   it('恢复默认图标', async () => {
-    const response = await DELETE()
+    const response = await DELETE(new Request('http://localhost/api/settings/favicon') as any)
     const json = await response.json()
 
     expect(response.status).toBe(200)
     expect(json.success).toBe(true)
     expect(json.data.previewUrl).toBe('/favicon.ico?v=default')
+  })
+
+  it('缺少二次验证时不能恢复默认图标', async () => {
+    mockRequireRecentReauth.mockResolvedValueOnce({
+      ok: false,
+      response: NextResponse.json({ success: false, code: 'REAUTH_REQUIRED' }, { status: 403 }),
+    })
+
+    const response = await DELETE(new Request('http://localhost/api/settings/favicon') as any)
+    const json = await response.json()
+
+    expect(response.status).toBe(403)
+    expect(json.code).toBe('REAUTH_REQUIRED')
+    expect(mockResetFavicon).not.toHaveBeenCalled()
   })
 })

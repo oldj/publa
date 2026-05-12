@@ -45,6 +45,14 @@
   "modal": {
     "title": "提示"
   },
+  "reauth": {
+    "title": "验证当前密码",
+    "message": "此操作较敏感，请输入当前账号密码后继续。",
+    "passwordLabel": "当前密码",
+    "passwordRequired": "请输入当前密码",
+    "invalidPassword": "密码不正确",
+    "submit": "验证并继续"
+  },
   "labels": {
     "optional": "（选填）",
     "caseInsensitive": "（不区分大小写）",
@@ -79,6 +87,8 @@
     "cronSecretNotConfigured": "定时任务密钥未配置",
     "invalidCronSecret": "定时任务密钥无效",
     "authenticationUnavailable": "认证服务暂不可用",
+    "reauthRequired": "请先验证当前密码",
+    "invalidPassword": "密码不正确",
     "internalError": "服务器内部错误"
   }
 }

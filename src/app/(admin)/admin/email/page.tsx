@@ -4,6 +4,7 @@ import { useCurrentUser } from '@/app/(admin)/_components/AdminCountsContext'
 import { useAdminUrl } from '@/app/(admin)/_components/AdminPathContext'
 import { PageHeader } from '@/app/(admin)/_components/PageHeader'
 import { RoleLabel } from '@/app/(admin)/_components/RoleLabel'
+import { sensitiveJsonFetch } from '@/app/(admin)/_lib/sensitive-fetch'
 import { notify } from '@/lib/notify'
 import {
   Alert,
@@ -142,7 +143,7 @@ export default function EmailSettingsPage() {
       for (const key of SENSITIVE_KEYS) {
         if (!payload[key]) delete payload[key]
       }
-      const res = await fetch('/api/email-settings', {
+      const res = await sensitiveJsonFetch('/api/email-settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -183,7 +184,7 @@ export default function EmailSettingsPage() {
     }
     setTestLoading(true)
     try {
-      const res = await fetch('/api/email-settings/test', {
+      const res = await sensitiveJsonFetch('/api/email-settings/test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ to: testTo }),

@@ -1,9 +1,9 @@
-import { requireCurrentUser } from '@/server/auth'
 import { normalizeEmail, normalizePassword, normalizeUsername } from '@/lib/user-input'
+import { requireCurrentUser, requireRecentReauth } from '@/server/auth'
 import { jsonError, jsonSuccess } from '@/server/lib/api-response'
 import { parseIdParam, safeParseJson } from '@/server/lib/request'
-import { deleteUser, getUserById, updateUser } from '@/server/services/users'
 import { logActivity } from '@/server/services/activity-logs'
+import { deleteUser, getUserById, updateUser } from '@/server/services/users'
 import { NextRequest } from 'next/server'
 
 type PermissionResult =
@@ -87,6 +87,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       status: check.status,
     })
   }
+  const reauth = await requireRecentReauth(guard.user, request)
+  if (!reauth.ok) return reauth.response
 
   const { data: body, error } = await safeParseJson(request)
   if (error) return error
@@ -163,6 +165,8 @@ export async function DELETE(
       status: check.status,
     })
   }
+  const reauth = await requireRecentReauth(guard.user, request)
+  if (!reauth.ok) return reauth.response
 
   const result = await deleteUser(targetId, guard.user.id)
   if (!result.success) {

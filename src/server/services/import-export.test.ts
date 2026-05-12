@@ -580,6 +580,68 @@ describe('importContentData', () => {
     expect(allContents.find((c) => c.type === 'page')?.title).toBe('页面')
   })
 
+  it('导入内容数据时净化内容和历史版本 HTML', async () => {
+    await importContentData(
+      {
+        categories: [],
+        tags: [],
+        contents: [
+          {
+            id: 1,
+            type: 'post',
+            title: '文章',
+            slug: 'post-1',
+            authorId: 1,
+            contentRaw: 'raw',
+            contentHtml:
+              '<p>safe</p><img src="x" onerror="alert(1)"><script>alert(2)</script><a href="javascript:alert(3)">bad</a>',
+            contentText: '',
+            status: 'published',
+            createdAt: '2025-01-01T00:00:00.000Z',
+          },
+        ],
+        contentRevisions: [
+          {
+            id: 1,
+            targetType: 'post',
+            targetId: 1,
+            title: '旧标题',
+            contentType: 'richtext',
+            contentRaw: 'old',
+            contentHtml:
+              '<div onclick="alert(1)">revision</div><script>alert(2)</script><a href="javascript:alert(3)">bad</a>',
+            contentText: '',
+            status: 'published',
+            createdBy: 1,
+            createdAt: '2025-01-01T00:00:00.000Z',
+            updatedAt: '2025-01-01T00:00:00.000Z',
+          },
+        ],
+      },
+      1,
+    )
+
+    const post = await maybeFirst(
+      testDb.select().from(schema.contents).where(eq(schema.contents.id, 1)).limit(1),
+    )
+    const revision = await maybeFirst(
+      testDb
+        .select()
+        .from(schema.contentRevisions)
+        .where(eq(schema.contentRevisions.id, 1))
+        .limit(1),
+    )
+
+    expect(post?.contentHtml).toContain('<p>safe</p>')
+    expect(post?.contentHtml).not.toContain('<script')
+    expect(post?.contentHtml).not.toContain('onerror')
+    expect(post?.contentHtml).not.toContain('javascript:')
+    expect(revision?.contentHtml).toContain('revision')
+    expect(revision?.contentHtml).not.toContain('<script')
+    expect(revision?.contentHtml).not.toContain('onclick')
+    expect(revision?.contentHtml).not.toContain('javascript:')
+  })
+
   it('评论子项排在父项前时仍可导入', async () => {
     await importContentData(
       {
@@ -1267,6 +1329,32 @@ describe('importSettingsData', () => {
     expect(admin.role).toBe('owner')
     // 邮箱已更新
     expect(admin.email).toBe('changed@example.com')
+  })
+
+  it('导入时不会把其他 owner 账号降级', async () => {
+    // 预置另一个 owner，模拟双站长场景
+    await testDb.insert(schema.users).values({
+      id: 9,
+      username: 'owner2',
+      passwordHash: 'hash',
+      role: 'owner',
+      email: 'owner2@example.com',
+    })
+
+    // 当前操作用户是 admin（id=1），导入数据试图把 owner2 改为 editor
+    await importSettingsData(
+      {
+        settings: [],
+        users: [{ username: 'owner2', email: 'updated@example.com', role: 'editor' }],
+      },
+      1,
+    )
+
+    const owner2 = (await testDb.select().from(schema.users)).find(
+      (u) => u.username === 'owner2',
+    )!
+    expect(owner2.role).toBe('owner') // 角色保持不变
+    expect(owner2.email).toBe('updated@example.com') // 其他字段允许更新
   })
 
   it('导入不存在的用户生成随机密码', async () => {

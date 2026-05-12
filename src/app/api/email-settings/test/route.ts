@@ -1,14 +1,16 @@
-import { requireRole } from '@/server/auth'
+import { getServerTranslator } from '@/i18n/server'
+import { requireRecentReauth, requireRole } from '@/server/auth'
 import { jsonError, jsonSuccess } from '@/server/lib/api-response'
 import { safeParseJson } from '@/server/lib/request'
 import { createEmailLog } from '@/server/services/email-logs'
 import { sendEmail } from '@/server/services/email-sender'
-import { getServerTranslator } from '@/i18n/server'
 import { NextRequest } from 'next/server'
 
 export async function POST(request: NextRequest) {
   const guard = await requireRole(['owner', 'admin'])
   if (!guard.ok) return guard.response
+  const reauth = await requireRecentReauth(guard.user, request)
+  if (!reauth.ok) return reauth.response
 
   const { data: body, error } = await safeParseJson(request)
   if (error) return error

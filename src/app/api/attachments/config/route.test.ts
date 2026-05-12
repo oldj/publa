@@ -2,12 +2,14 @@ import { NextResponse } from 'next/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const {
+  mockRequireRecentReauth,
   mockRequireRole,
   mockGetAllSettings,
   mockNormalizeSettingsPayload,
   mockUpdateSettings,
   mockCreateStorageProvider,
 } = vi.hoisted(() => ({
+  mockRequireRecentReauth: vi.fn(),
   mockRequireRole: vi.fn(),
   mockGetAllSettings: vi.fn(),
   mockNormalizeSettingsPayload: vi.fn(),
@@ -16,6 +18,7 @@ const {
 }))
 
 vi.mock('@/server/auth', () => ({
+  requireRecentReauth: mockRequireRecentReauth,
   requireRole: mockRequireRole,
 }))
 
@@ -56,6 +59,7 @@ const { GET, PUT, POST } = await import('./route')
 
 describe('/api/attachments/config', () => {
   beforeEach(() => {
+    mockRequireRecentReauth.mockReset()
     mockRequireRole.mockReset()
     mockGetAllSettings.mockReset()
     mockNormalizeSettingsPayload.mockReset()
@@ -66,6 +70,7 @@ describe('/api/attachments/config', () => {
       ok: true,
       user: { id: 1, username: 'owner', role: 'owner' },
     })
+    mockRequireRecentReauth.mockResolvedValue({ ok: true })
     mockGetAllSettings.mockResolvedValue({
       storageProvider: 's3',
       storageS3Endpoint: 'https://s3.example.com',
@@ -127,6 +132,26 @@ describe('/api/attachments/config', () => {
     expect(mockUpdateSettings).not.toHaveBeenCalled()
   })
 
+  it('缺少二次验证时不能修改存储配置', async () => {
+    mockRequireRecentReauth.mockResolvedValueOnce({
+      ok: false,
+      response: NextResponse.json({ success: false, code: 'REAUTH_REQUIRED' }, { status: 403 }),
+    })
+
+    const response = await PUT(
+      new Request('http://localhost/api/attachments/config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ storageProvider: 's3' }),
+      }) as any,
+    )
+    const json = await response.json()
+
+    expect(response.status).toBe(403)
+    expect(json.code).toBe('REAUTH_REQUIRED')
+    expect(mockUpdateSettings).not.toHaveBeenCalled()
+  })
+
   it('站长可以提交合法的存储配置', async () => {
     const response = await PUT(
       new Request('http://localhost/api/attachments/config', {
@@ -181,6 +206,32 @@ describe('/api/attachments/config', () => {
     expect(json.code).toBe('VALIDATION_ERROR')
     expect(json.message).toContain('attachmentBaseUrl')
     expect(mockUpdateSettings).not.toHaveBeenCalled()
+  })
+
+  it('缺少二次验证时不能测试存储连接', async () => {
+    mockRequireRecentReauth.mockResolvedValueOnce({
+      ok: false,
+      response: NextResponse.json({ success: false, code: 'REAUTH_REQUIRED' }, { status: 403 }),
+    })
+
+    const response = await POST(
+      new Request('http://localhost/api/attachments/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider: 's3',
+          endpoint: 'https://s3.example.com',
+          bucket: 'blog-assets',
+          accessKey: 'AKIA',
+          secretKey: 'SECRET',
+        }),
+      }) as any,
+    )
+    const json = await response.json()
+
+    expect(response.status).toBe(403)
+    expect(json.code).toBe('REAUTH_REQUIRED')
+    expect(mockCreateStorageProvider).not.toHaveBeenCalled()
   })
 
   it('测试连接失败时返回 CONNECTION_FAILED', async () => {

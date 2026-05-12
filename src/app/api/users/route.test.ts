@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const {
   mockRequireCurrentUser,
+  mockRequireRecentReauth,
   mockRequireRole,
   mockListUsers,
   mockCreateUser,
@@ -11,6 +12,7 @@ const {
   mockLogActivity,
 } = vi.hoisted(() => ({
   mockRequireCurrentUser: vi.fn(),
+  mockRequireRecentReauth: vi.fn(),
   mockRequireRole: vi.fn(),
   mockListUsers: vi.fn(),
   mockCreateUser: vi.fn(),
@@ -21,6 +23,7 @@ const {
 
 vi.mock('@/server/auth', () => ({
   requireCurrentUser: mockRequireCurrentUser,
+  requireRecentReauth: mockRequireRecentReauth,
   requireRole: mockRequireRole,
 }))
 
@@ -40,6 +43,7 @@ const { GET, POST } = await import('./route')
 describe('/api/users GET', () => {
   beforeEach(() => {
     mockRequireCurrentUser.mockReset()
+    mockRequireRecentReauth.mockReset()
     mockRequireRole.mockReset()
     mockListUsers.mockReset()
     mockCreateUser.mockReset()
@@ -48,6 +52,7 @@ describe('/api/users GET', () => {
     mockLogActivity.mockReset()
 
     mockGetLastActiveMap.mockResolvedValue(new Map())
+    mockRequireRecentReauth.mockResolvedValue({ ok: true })
     mockCreateUser.mockResolvedValue({
       id: 4,
       username: 'new-user',
@@ -144,6 +149,33 @@ describe('/api/users GET', () => {
       password: 'pass123',
       role: 'editor',
     })
+  })
+
+  it('创建用户缺少二次验证时返回 REAUTH_REQUIRED', async () => {
+    mockRequireRole.mockResolvedValueOnce({
+      ok: true,
+      user: { id: 1, username: 'owner', role: 'owner' },
+    })
+    mockRequireRecentReauth.mockResolvedValueOnce({
+      ok: false,
+      response: NextResponse.json({ success: false, code: 'REAUTH_REQUIRED' }, { status: 403 }),
+    })
+
+    const response = await POST(
+      new Request('http://localhost/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: 'new-user',
+          password: 'pass123',
+        }),
+      }) as any,
+    )
+    const json = await response.json()
+
+    expect(response.status).toBe(403)
+    expect(json.code).toBe('REAUTH_REQUIRED')
+    expect(mockCreateUser).not.toHaveBeenCalled()
   })
 
   it('清洗后为空时不会创建用户', async () => {

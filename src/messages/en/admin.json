@@ -130,7 +130,7 @@
       "applyUrl": "Apply URL",
       "uploadIcon": "Upload icon",
       "resetDefault": "Reset to default",
-      "faviconHelp": "Supports ICO, PNG, SVG and WEBP up to 256KB. Changes take effect immediately.",
+      "faviconHelp": "Supports ICO, PNG and WEBP up to 256KB. Changes take effect immediately.",
       "showCommentsGlobally": "Show comment lists globally",
       "showCommentsGloballyDescription": "When disabled, existing comment lists are hidden across all posts",
       "enableComment": "Enable comments globally",
@@ -1066,7 +1066,7 @@
       "saveFailed": "Failed to save site icon",
       "fileRequired": "Please choose an icon file",
       "fileTooLarge": "Icon file must be smaller than 256KB",
-      "invalidFileType": "Only ICO, PNG, SVG and WEBP are supported",
+      "invalidFileType": "Only ICO, PNG and WEBP are supported",
       "invalidUrl": "Icon URL must use https://"
     }
   },

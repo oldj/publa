@@ -3,6 +3,7 @@
 import { useAdminCounts, useCurrentUser } from '@/app/(admin)/_components/AdminCountsContext'
 import { useAdminUrl } from '@/app/(admin)/_components/AdminPathContext'
 import myModal from '@/app/(admin)/_components/myModals'
+import { ensureReauth, sensitiveJsonFetch } from '@/app/(admin)/_lib/sensitive-fetch'
 import { SafeDrawer } from '@/components/SafeDrawer'
 import { notify } from '@/lib/notify'
 import {
@@ -42,6 +43,7 @@ interface DataBlockProps {
   title: string
   description: string
   extraNote?: string
+  actionsDisabled?: boolean
   state: BlockImportState
   onExport: () => void
   onSelectFile: () => void
@@ -53,6 +55,7 @@ function DataBlock({
   title,
   description,
   extraNote,
+  actionsDisabled = false,
   state,
   onExport,
   onSelectFile,
@@ -78,10 +81,19 @@ function DataBlock({
       )}
 
       <Group>
-        <Button leftSection={<IconDownload size={16} />} onClick={onExport}>
+        <Button
+          leftSection={<IconDownload size={16} />}
+          onClick={onExport}
+          disabled={actionsDisabled}
+        >
           {tCommon('actions.export')}
         </Button>
-        <Button variant="light" leftSection={<IconUpload size={16} />} onClick={onSelectFile}>
+        <Button
+          variant="light"
+          leftSection={<IconUpload size={16} />}
+          onClick={onSelectFile}
+          disabled={actionsDisabled}
+        >
           {tCommon('actions.import')}
         </Button>
       </Group>
@@ -94,7 +106,12 @@ function DataBlock({
             <Badge variant="light">{t(`typeLabels.${state.file.type}` as never)}</Badge>
           </Group>
           <Group>
-            <Button onClick={() => onImport('overwrite')} loading={state.importing} color="orange">
+            <Button
+              onClick={() => onImport('overwrite')}
+              loading={state.importing}
+              color="orange"
+              disabled={actionsDisabled}
+            >
               {t('buttons.overwriteImport')}
             </Button>
             {type === 'content' && (
@@ -156,14 +173,22 @@ export default function ImportExportPage() {
     return null
   }
 
+  const canManageType = (type: DataType) => type === 'content' || currentUser.role === 'owner'
+
   const handleExport = async (type: 'content' | 'settings') => {
+    if (!canManageType(type)) return
+
     const message = type === 'content' ? t('confirm.exportContent') : t('confirm.exportSettings')
     const confirmed = await myModal.confirm({ message })
     if (!confirmed) return
+    // 仅 settings 导出需要二次验证，content 导出仅是后台可见内容的备份
+    if (type === 'settings' && !(await ensureReauth())) return
     window.open(`/api/import-export?type=${type}`, '_blank')
   }
 
   const handleSelectFile = (expectedType: DataType) => {
+    if (!canManageType(expectedType)) return
+
     const input = document.createElement('input')
     input.type = 'file'
     input.accept = '.json'
@@ -202,6 +227,8 @@ export default function ImportExportPage() {
   }
 
   const handleImport = async (mode: 'overwrite' | 'merge', type: DataType) => {
+    if (!canManageType(type)) return
+
     const file = importStates[type].file
     if (!file) return
 
@@ -216,7 +243,7 @@ export default function ImportExportPage() {
     updateImportState(type, { importing: true, results: [] })
 
     try {
-      const res = await fetch('/api/import-export', {
+      const res = await sensitiveJsonFetch('/api/import-export', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(file.data),
@@ -301,6 +328,7 @@ export default function ImportExportPage() {
           title={t('blocks.settings.title')}
           description={t('blocks.settings.description')}
           extraNote={t('blocks.settings.extraNote')}
+          actionsDisabled={!canManageType('settings')}
           state={importStates.settings}
           onExport={() => handleExport('settings')}
           onSelectFile={() => handleSelectFile('settings')}

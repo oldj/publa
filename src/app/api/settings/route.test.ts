@@ -1,20 +1,32 @@
 import { NextResponse } from 'next/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { mockRequireRole, mockGetAllSettings, mockNormalizeSettingsPayload, mockUpdateSettings } =
-  vi.hoisted(() => ({
-    mockRequireRole: vi.fn(),
-    mockGetAllSettings: vi.fn(),
-    mockNormalizeSettingsPayload: vi.fn(),
-    mockUpdateSettings: vi.fn(),
-  }))
+const {
+  mockRequireRecentReauth,
+  mockRequireRole,
+  mockGetAllSettings,
+  mockNormalizeSettingsPayload,
+  mockUpdateSettings,
+} = vi.hoisted(() => ({
+  mockRequireRecentReauth: vi.fn(),
+  mockRequireRole: vi.fn(),
+  mockGetAllSettings: vi.fn(),
+  mockNormalizeSettingsPayload: vi.fn(),
+  mockUpdateSettings: vi.fn(),
+}))
 
 vi.mock('@/server/auth', () => ({
+  requireRecentReauth: mockRequireRecentReauth,
   requireRole: mockRequireRole,
 }))
 
 vi.mock('@/server/services/settings', () => {
-  const ADMIN_SETTINGS_KEYS = ['siteTitle', 'enableComment', 'showCommentsGlobally'] as const
+  const ADMIN_SETTINGS_KEYS = [
+    'siteTitle',
+    'enableComment',
+    'showCommentsGlobally',
+    'customHeadHtml',
+  ] as const
 
   return {
     ADMIN_SETTINGS_KEYS,
@@ -37,6 +49,7 @@ const { GET, PUT } = await import('./route')
 
 describe('/api/settings', () => {
   beforeEach(() => {
+    mockRequireRecentReauth.mockReset()
     mockRequireRole.mockReset()
     mockGetAllSettings.mockReset()
     mockNormalizeSettingsPayload.mockReset()
@@ -50,8 +63,10 @@ describe('/api/settings', () => {
       siteTitle: 'Publa',
       enableComment: true,
       showCommentsGlobally: false,
+      customHeadHtml: '',
       storageS3SecretKey: 'SECRET_VALUE',
     })
+    mockRequireRecentReauth.mockResolvedValue({ ok: true })
     mockNormalizeSettingsPayload.mockImplementation((payload) => payload)
   })
 
@@ -97,6 +112,7 @@ describe('/api/settings', () => {
       siteTitle: 'Publa',
       enableComment: true,
       showCommentsGlobally: false,
+      customHeadHtml: '',
     })
     expect(json.data.storageS3SecretKey).toBeUndefined()
   })
@@ -121,12 +137,67 @@ describe('/api/settings', () => {
         siteTitle: 'New Title',
         enableComment: false,
       },
-      ['siteTitle', 'enableComment', 'showCommentsGlobally'],
+      ['siteTitle', 'enableComment', 'showCommentsGlobally', 'customHeadHtml'],
     )
     expect(mockUpdateSettings).toHaveBeenCalledWith({
       siteTitle: 'New Title',
       enableComment: false,
     })
+  })
+
+  it('普通设置更新不需要二次验证', async () => {
+    const response = await PUT(
+      new Request('http://localhost/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          siteTitle: 'New Title',
+        }),
+      }) as any,
+    )
+
+    expect(response.status).toBe(200)
+    expect(mockRequireRecentReauth).not.toHaveBeenCalled()
+  })
+
+  it('敏感 HTML 设置变化时需要二次验证', async () => {
+    mockRequireRecentReauth.mockResolvedValueOnce({
+      ok: false,
+      response: NextResponse.json({ success: false, code: 'REAUTH_REQUIRED' }, { status: 403 }),
+    })
+
+    const response = await PUT(
+      new Request('http://localhost/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customHeadHtml: '<script>alert(1)</script>',
+        }),
+      }) as any,
+    )
+    const json = await response.json()
+
+    expect(response.status).toBe(403)
+    expect(json.code).toBe('REAUTH_REQUIRED')
+    expect(mockUpdateSettings).not.toHaveBeenCalled()
+  })
+
+  it('敏感 HTML 设置未实际变化时不需要二次验证', async () => {
+    const response = await PUT(
+      new Request('http://localhost/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customHeadHtml: '',
+        }),
+      }) as any,
+    )
+    const json = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(json.success).toBe(true)
+    expect(mockRequireRecentReauth).not.toHaveBeenCalled()
+    expect(mockUpdateSettings).toHaveBeenCalledWith({ customHeadHtml: '' })
   })
 
   it('通过 /api/settings 写入敏感字段会被拒绝', async () => {

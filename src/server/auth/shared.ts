@@ -2,6 +2,8 @@ import crypto from 'crypto'
 
 export const AUTH_COOKIE_NAME = '_token'
 export const TOKEN_MAX_AGE = 60 * 60 * 24 * 7 // 7 天
+export const REAUTH_COOKIE_NAME = '_reauth'
+export const REAUTH_MAX_AGE = 10 * 60 // 10 分钟
 
 /** token 剩余有效期是否不足一半，需要续期 */
 export function shouldRenewToken(exp: number | undefined): boolean {

@@ -1,5 +1,5 @@
 import { getServerTranslator } from '@/i18n/server'
-import { requireRole } from '@/server/auth'
+import { requireRecentReauth, requireRole } from '@/server/auth'
 import { jsonError, jsonSuccess } from '@/server/lib/api-response'
 import { logActivity } from '@/server/services/activity-logs'
 import {
@@ -34,6 +34,24 @@ function contentDisposition(filename: string): string {
   return `attachment; filename="${encoded}"; filename*=UTF-8''${encoded}`
 }
 
+function isSettingsType(type: string) {
+  return type === 'settings'
+}
+
+function canManageSettingsData(user: { role: string }) {
+  return user.role === 'owner'
+}
+
+function forbiddenSettingsDataResponse(request: NextRequest) {
+  return jsonError({
+    source: request,
+    namespace: 'common.api',
+    key: 'forbidden',
+    code: 'FORBIDDEN',
+    status: 403,
+  })
+}
+
 /** 导出数据 */
 export async function GET(request: NextRequest) {
   const guard = await requireRole(['owner', 'admin'], {
@@ -43,10 +61,21 @@ export async function GET(request: NextRequest) {
   if (!guard.ok) return guard.response
 
   const type = request.nextUrl.searchParams.get('type') || 'content'
+  if (isSettingsType(type) && !canManageSettingsData(guard.user)) {
+    return forbiddenSettingsDataResponse(request)
+  }
+
+  // 仅 settings 导出包含用户、跳转、菜单等敏感配置，需要二次验证；
+  // content 导出仅是后台可见内容的备份，admin 在 UI 里本就能读，无需额外密码确认。
+  if (isSettingsType(type)) {
+    const reauth = await requireRecentReauth(guard.user, request)
+    if (!reauth.ok) return reauth.response
+  }
+
   const ts = formatTimestamp()
   const prefix = await getFilenamePrefix()
 
-  if (type === 'settings') {
+  if (isSettingsType(type)) {
     const data = await exportSettingsData()
     await logActivity(request, guard.user.id, 'export_data')
     return new NextResponse(JSON.stringify(data, null, 2), {
@@ -88,6 +117,10 @@ export async function POST(request: NextRequest) {
     })
   }
 
+  if (data?.meta?.type === 'settings' && !canManageSettingsData(guard.user)) {
+    return forbiddenSettingsDataResponse(request)
+  }
+
   const validation = validateImportData(data)
   if (!validation.valid) {
     const keyMap = {
@@ -107,6 +140,9 @@ export async function POST(request: NextRequest) {
       status: 400,
     })
   }
+
+  const reauth = await requireRecentReauth(guard.user, request)
+  if (!reauth.ok) return reauth.response
 
   try {
     let results

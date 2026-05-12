@@ -1,4 +1,4 @@
-import { requireRole } from '@/server/auth'
+import { requireRecentReauth, requireRole } from '@/server/auth'
 import { jsonError, jsonSuccess } from '@/server/lib/api-response'
 import { safeParseJson } from '@/server/lib/request'
 import { jsonSettingsValidationError } from '@/server/lib/settings-error'
@@ -50,6 +50,8 @@ export async function PUT(request: NextRequest) {
     key: 'forbidden',
   })
   if (!guard.ok) return guard.response
+  const reauth = await requireRecentReauth(guard.user, request)
+  if (!reauth.ok) return reauth.response
 
   const { data: body, error } = await safeParseJson(request)
   if (error) return error
@@ -93,6 +95,8 @@ export async function POST(request: NextRequest) {
     key: 'forbidden',
   })
   if (!guard.ok) return guard.response
+  const reauth = await requireRecentReauth(guard.user, request)
+  if (!reauth.ok) return reauth.response
 
   const { data: body, error } = await safeParseJson(request)
   if (error) return error

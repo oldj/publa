@@ -1,10 +1,10 @@
-import { NextRequest } from 'next/server'
-import { clearAuthCookie, getCurrentUser } from '@/server/auth'
+import { clearAuthCookie, clearReauthCookie, getCurrentUser } from '@/server/auth'
 import { db } from '@/server/db'
 import { users } from '@/server/db/schema'
 import { jsonSuccess } from '@/server/lib/api-response'
 import { logActivity } from '@/server/services/activity-logs'
 import { eq, sql } from 'drizzle-orm'
+import { NextRequest } from 'next/server'
 
 export async function POST(request: NextRequest) {
   const user = await getCurrentUser()
@@ -18,6 +18,7 @@ export async function POST(request: NextRequest) {
   }
 
   await clearAuthCookie()
+  await clearReauthCookie()
 
   if (user) {
     await logActivity(request, user.id, 'logout')

@@ -1,15 +1,15 @@
-import { requireRole } from '@/server/auth'
+import { requireRecentReauth, requireRole } from '@/server/auth'
 import { jsonSuccess } from '@/server/lib/api-response'
 import { safeParseJson } from '@/server/lib/request'
 import { jsonSettingsValidationError } from '@/server/lib/settings-error'
 import {
   EMAIL_SETTINGS_KEYS,
-  type EmailSettingType,
   getAllSettings,
   isSettingsValidationError,
   normalizeSettingsPayload,
   pickSettings,
   updateSettings,
+  type EmailSettingType,
 } from '@/server/services/settings'
 import { NextRequest } from 'next/server'
 
@@ -34,6 +34,8 @@ export async function GET() {
 export async function PUT(request: NextRequest) {
   const guard = await requireRole(['owner', 'admin'])
   if (!guard.ok) return guard.response
+  const reauth = await requireRecentReauth(guard.user, request)
+  if (!reauth.ok) return reauth.response
 
   const { data: body, error } = await safeParseJson(request)
   if (error) return error

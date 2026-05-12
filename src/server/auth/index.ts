@@ -1,19 +1,21 @@
+import type { TranslationValues } from '@/i18n/core'
 import { db } from '@/server/db'
 import { maybeFirst } from '@/server/db/query'
 import { users } from '@/server/db/schema'
-import type { TranslationValues } from '@/i18n/core'
 import { jsonError } from '@/server/lib/api-response'
 import bcrypt from 'bcryptjs'
 import { eq } from 'drizzle-orm'
-import { SignJWT, jwtVerify, type JWTPayload } from 'jose'
+import { jwtVerify, SignJWT, type JWTPayload } from 'jose'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import {
   AUTH_COOKIE_NAME,
-  TOKEN_MAX_AGE,
   getJwtSecret,
   isAuthConfigError,
+  REAUTH_COOKIE_NAME,
+  REAUTH_MAX_AGE,
   shouldRenewToken,
+  TOKEN_MAX_AGE,
 } from './shared'
 
 const SALT_ROUNDS = 10
@@ -31,6 +33,12 @@ interface TokenPayload extends JWTPayload {
   username: string
   role: string
   // 与 users.token_version 对齐；登出、改密后用户侧自增，旧 token 校验失败
+  tokenVersion: number
+}
+
+interface ReauthTokenPayload extends JWTPayload {
+  userId: number
+  purpose: 'reauth'
   tokenVersion: number
 }
 
@@ -73,6 +81,29 @@ export async function createToken(user: AuthUser): Promise<string> {
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime(`${TOKEN_MAX_AGE}s`)
+    .sign(jwtSecret)
+}
+
+export async function createReauthToken(user: AuthUser): Promise<string> {
+  const jwtSecret = getJwtSecret()
+
+  const row = await maybeFirst(
+    db
+      .select({ tokenVersion: users.tokenVersion })
+      .from(users)
+      .where(eq(users.id, user.id))
+      .limit(1),
+  )
+  const tokenVersion = row?.tokenVersion ?? 0
+
+  return new SignJWT({
+    userId: user.id,
+    purpose: 'reauth',
+    tokenVersion,
+  })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime(`${REAUTH_MAX_AGE}s`)
     .sign(jwtSecret)
 }
 
@@ -135,10 +166,26 @@ export async function setAuthCookie(token: string) {
   })
 }
 
+export async function setReauthCookie(token: string) {
+  const cookieStore = await cookies()
+  cookieStore.set(REAUTH_COOKIE_NAME, token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: REAUTH_MAX_AGE,
+    path: '/',
+  })
+}
+
 /** 清除认证 cookie */
 export async function clearAuthCookie() {
   const cookieStore = await cookies()
   cookieStore.delete(AUTH_COOKIE_NAME)
+}
+
+export async function clearReauthCookie() {
+  const cookieStore = await cookies()
+  cookieStore.delete(REAUTH_COOKIE_NAME)
 }
 
 /** 检查系统是否已初始化（是否存在 owner） */
@@ -186,6 +233,16 @@ export async function forbiddenResponse(message?: TranslatedMessage) {
   return buildAuthErrorResponse('FORBIDDEN', 'forbidden', message)
 }
 
+export async function reauthRequiredResponse(source?: Request) {
+  return jsonError({
+    source,
+    namespace: 'common.api',
+    key: 'reauthRequired',
+    code: 'REAUTH_REQUIRED',
+    status: 403,
+  })
+}
+
 export async function requireCurrentUser(): Promise<AuthGuardResult> {
   try {
     const user = await getCurrentUser()
@@ -224,4 +281,68 @@ export async function requireRole(
   return guard
 }
 
-export { AUTH_COOKIE_NAME }
+export async function requireRecentReauth(
+  user: AuthUser,
+  source?: Request,
+): Promise<{ ok: true } | { ok: false; response: NextResponse }> {
+  const cookieStore = await cookies()
+  const token = cookieStore.get(REAUTH_COOKIE_NAME)?.value
+  if (!token) return { ok: false, response: await reauthRequiredResponse(source) }
+
+  let payload: JWTPayload
+  try {
+    const verified = await jwtVerify(token, getJwtSecret())
+    payload = verified.payload
+  } catch (error) {
+    if (isAuthConfigError(error)) {
+      return {
+        ok: false,
+        response: await jsonError({
+          namespace: 'common.api',
+          key: 'authenticationUnavailable',
+          code: 'CONFIGURATION_ERROR',
+          status: 503,
+        }),
+      }
+    }
+    return { ok: false, response: await reauthRequiredResponse(source) }
+  }
+
+  const reauthPayload = payload as ReauthTokenPayload
+  if (reauthPayload.purpose !== 'reauth' || reauthPayload.userId !== user.id) {
+    return { ok: false, response: await reauthRequiredResponse(source) }
+  }
+
+  let row: { tokenVersion: number } | null = null
+  try {
+    row = await maybeFirst(
+      db
+        .select({ tokenVersion: users.tokenVersion })
+        .from(users)
+        .where(eq(users.id, user.id))
+        .limit(1),
+    )
+  } catch (error) {
+    // 与 requireCurrentUser 对齐：JWT 配置缺失映射为 503，让前端能区分「需要重验证」与「服务端故障」。
+    // 其他 DB 异常仍向上抛，由全局处理或路由层兜底，避免吞掉真实错误。
+    if (isAuthConfigError(error)) {
+      return {
+        ok: false,
+        response: await jsonError({
+          namespace: 'common.api',
+          key: 'authenticationUnavailable',
+          code: 'CONFIGURATION_ERROR',
+          status: 503,
+        }),
+      }
+    }
+    throw error
+  }
+  if (!row || row.tokenVersion !== reauthPayload.tokenVersion) {
+    return { ok: false, response: await reauthRequiredResponse(source) }
+  }
+
+  return { ok: true }
+}
+
+export { AUTH_COOKIE_NAME, REAUTH_COOKIE_NAME }

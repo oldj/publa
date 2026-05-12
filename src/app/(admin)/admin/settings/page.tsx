@@ -3,6 +3,7 @@
 import { useCurrentUser } from '@/app/(admin)/_components/AdminCountsContext'
 import { useAdminUrl } from '@/app/(admin)/_components/AdminPathContext'
 import { PageHeader } from '@/app/(admin)/_components/PageHeader'
+import { sensitiveJsonFetch, sensitiveUploadFetch } from '@/app/(admin)/_lib/sensitive-fetch'
 import CodeEditor from '@/components/editors/CodeEditor'
 import { isLocale, LOCALE_LABELS, SUPPORTED_LOCALES } from '@/i18n/locales'
 import { notify } from '@/lib/notify'
@@ -137,7 +138,7 @@ export default function SettingsPage() {
 
     setLoading(true)
     try {
-      const res = await fetch('/api/settings', {
+      const res = await sensitiveJsonFetch('/api/settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(nextSettings),
@@ -167,7 +168,7 @@ export default function SettingsPage() {
   const handleApplyFaviconUrl = async () => {
     setFaviconAction('url')
     try {
-      const res = await fetch('/api/settings/favicon', {
+      const res = await sensitiveJsonFetch('/api/settings/favicon', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: faviconUrlInput }),
@@ -196,7 +197,7 @@ export default function SettingsPage() {
       const formData = new FormData()
       formData.append('file', file)
 
-      const res = await fetch('/api/settings/favicon', {
+      const res = await sensitiveUploadFetch('/api/settings/favicon', {
         method: 'POST',
         body: formData,
       })
@@ -217,7 +218,7 @@ export default function SettingsPage() {
   const handleResetFavicon = async () => {
     setFaviconAction('reset')
     try {
-      const res = await fetch('/api/settings/favicon', {
+      const res = await sensitiveJsonFetch('/api/settings/favicon', {
         method: 'DELETE',
       })
       const json = await res.json()
@@ -346,7 +347,7 @@ export default function SettingsPage() {
                 <input
                   hidden
                   type="file"
-                  accept=".ico,image/x-icon,image/vnd.microsoft.icon,image/png,image/svg+xml,image/webp"
+                  accept=".ico,image/x-icon,image/vnd.microsoft.icon,image/png,image/webp"
                   onChange={handleUploadFavicon}
                 />
               </Button>

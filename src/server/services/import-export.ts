@@ -1,3 +1,4 @@
+import crypto from 'crypto'
 import { hashPassword } from '@/server/auth'
 import { db } from '@/server/db'
 import { maybeFirst } from '@/server/db/query'
@@ -19,10 +20,11 @@ import {
   themes,
   users,
 } from '@/server/db/schema'
-import { ensureBuiltinThemes } from '@/server/db/seed'
 import { isoNow } from '@/server/db/schema/shared'
+import { ensureBuiltinThemes } from '@/server/db/seed'
 import { syncPrimaryKeySequences } from '@/server/db/sequences'
 import { htmlToText } from '@/server/lib/markdown'
+import { sanitizeRichTextHtml } from '@/server/lib/sanitize-html-content'
 import { recountCategoriesAndTags } from '@/server/services/post-count'
 import { validateRedirectRuleInput } from '@/server/services/redirect-rules'
 import {
@@ -34,7 +36,6 @@ import {
   type PartialSettingType,
 } from '@/server/services/settings'
 import ver from '@/version.json'
-import crypto from 'crypto'
 import { asc, eq } from 'drizzle-orm'
 
 const META_VERSION = '2.0'
@@ -255,6 +256,10 @@ function resolveContentText(item: any): string {
   return ''
 }
 
+function sanitizeImportedContentHtml(value: unknown): string {
+  return typeof value === 'string' ? sanitizeRichTextHtml(value) : ''
+}
+
 /** 查询当前有效的用户 ID 集合 */
 async function getValidUserIds() {
   const userRows = await db.select({ id: users.id }).from(users)
@@ -268,11 +273,15 @@ function nullifyInvalidUserRef(value: any, validUserIds: Set<number>): number | 
 
 /** 规范化导入的内容数据（文章+页面） */
 function normalizeImportedContents(items: any[], validUserIds: Set<number>, currentUserId: number) {
-  return items.map((item) => ({
-    ...item,
-    authorId: validUserIds.has(item.authorId) ? item.authorId : currentUserId,
-    contentText: resolveContentText(item),
-  }))
+  return items.map((item) => {
+    const contentHtml = sanitizeImportedContentHtml(item.contentHtml)
+    return {
+      ...item,
+      contentHtml,
+      authorId: validUserIds.has(item.authorId) ? item.authorId : currentUserId,
+      contentText: resolveContentText({ ...item, contentHtml }),
+    }
+  })
 }
 
 /** 规范化导入的历史记录 */
@@ -281,10 +290,15 @@ function normalizeImportedRevisions(
   validUserIds: Set<number>,
   currentUserId: number,
 ) {
-  return items.map((item) => ({
-    ...item,
-    createdBy: validUserIds.has(item.createdBy) ? item.createdBy : currentUserId,
-  }))
+  return items.map((item) => {
+    const contentHtml = sanitizeImportedContentHtml(item.contentHtml)
+    return {
+      ...item,
+      contentHtml,
+      contentText: resolveContentText({ ...item, contentHtml }),
+      createdBy: validUserIds.has(item.createdBy) ? item.createdBy : currentUserId,
+    }
+  })
 }
 
 /** 规范化导入的附件，清洗无效用户引用 */
@@ -642,13 +656,15 @@ export async function importSettingsData(data: any, currentUserId: number) {
         db.select().from(users).where(eq(users.username, item.username)).limit(1),
       )
       if (existing) {
-        // 更新除密码外的字段；当前操作用户不修改角色，防止自己失去权限
+        // 更新除密码外的字段；以下两类账号一律不改 role：
+        // - 当前操作用户：避免自己失去权限
+        // - 已是 owner 的账号：避免被静默降权（导入数据若改写 owner.role，会丢失站长权限）
         const updateFields: Record<string, any> = {
           email: item.email ?? existing.email,
           avatarUrl: item.avatarUrl ?? existing.avatarUrl,
           updatedAt: new Date().toISOString(),
         }
-        if (existing.id !== currentUserId) {
+        if (existing.id !== currentUserId && existing.role !== 'owner') {
           updateFields.role = item.role ?? existing.role
         }
         await db.update(users).set(updateFields).where(eq(users.id, existing.id))

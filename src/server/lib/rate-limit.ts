@@ -6,6 +6,9 @@ type RateEventType =
   | 'login_fail'
   | 'login_lock_username'
   | 'login_lock_ip'
+  | 'reauth_fail'
+  | 'reauth_lock_username'
+  | 'reauth_lock_ip'
   | 'comment'
   | 'guestbook'
 type LoginLockReason = 'username' | 'ip'
@@ -15,12 +18,50 @@ export interface LoginRateState {
   reason?: LoginLockReason
 }
 
+// reauth 与 login 阈值刻意一致：用户在两个表单输错密码的判定标准应当对齐，
+// 但事件类型独立，避免「reauth 输错把 login 锁了」或反向干扰。
 const LOGIN_USERNAME_WINDOW_MS = 5 * 60 * 1000
 const LOGIN_USERNAME_LIMIT = 5
 const LOGIN_USERNAME_LOCK_MS = 5 * 60 * 1000
 const LOGIN_IP_WINDOW_MS = 10 * 60 * 1000
 const LOGIN_IP_LIMIT = 30
 const LOGIN_IP_LOCK_MS = 10 * 60 * 1000
+
+interface CredentialLimitConfig {
+  failType: RateEventType
+  usernameLockType: RateEventType
+  ipLockType: RateEventType
+  usernameWindowMs: number
+  usernameLimit: number
+  usernameLockMs: number
+  ipWindowMs: number
+  ipLimit: number
+  ipLockMs: number
+}
+
+const LOGIN_LIMIT_CONFIG: CredentialLimitConfig = {
+  failType: 'login_fail',
+  usernameLockType: 'login_lock_username',
+  ipLockType: 'login_lock_ip',
+  usernameWindowMs: LOGIN_USERNAME_WINDOW_MS,
+  usernameLimit: LOGIN_USERNAME_LIMIT,
+  usernameLockMs: LOGIN_USERNAME_LOCK_MS,
+  ipWindowMs: LOGIN_IP_WINDOW_MS,
+  ipLimit: LOGIN_IP_LIMIT,
+  ipLockMs: LOGIN_IP_LOCK_MS,
+}
+
+const REAUTH_LIMIT_CONFIG: CredentialLimitConfig = {
+  failType: 'reauth_fail',
+  usernameLockType: 'reauth_lock_username',
+  ipLockType: 'reauth_lock_ip',
+  usernameWindowMs: LOGIN_USERNAME_WINDOW_MS,
+  usernameLimit: LOGIN_USERNAME_LIMIT,
+  usernameLockMs: LOGIN_USERNAME_LOCK_MS,
+  ipWindowMs: LOGIN_IP_WINDOW_MS,
+  ipLimit: LOGIN_IP_LIMIT,
+  ipLockMs: LOGIN_IP_LOCK_MS,
+}
 
 // 同 IP 提交节流阈值（评论/留言共用）
 // 取值经验：在挡住自动化批量提交的同时，允许 NAT/移动出口下多个真人共用一个出口 IP。
@@ -38,14 +79,17 @@ export async function recordRateEvent(
   await db.insert(rateEvents).values({ eventType, identifier, ipAddress })
 }
 
-async function countRecentLoginFailuresByUsername(username: string): Promise<number> {
-  const threshold = new Date(Date.now() - LOGIN_USERNAME_WINDOW_MS).toISOString()
+async function countRecentFailuresByUsername(
+  config: CredentialLimitConfig,
+  username: string,
+): Promise<number> {
+  const threshold = new Date(Date.now() - config.usernameWindowMs).toISOString()
   const [row] = await db
     .select({ total: count() })
     .from(rateEvents)
     .where(
       and(
-        eq(rateEvents.eventType, 'login_fail'),
+        eq(rateEvents.eventType, config.failType),
         eq(rateEvents.identifier, username),
         gte(rateEvents.createdAt, threshold),
       ),
@@ -53,14 +97,17 @@ async function countRecentLoginFailuresByUsername(username: string): Promise<num
   return row?.total ?? 0
 }
 
-async function countRecentLoginFailuresByIp(ipAddress: string): Promise<number> {
-  const threshold = new Date(Date.now() - LOGIN_IP_WINDOW_MS).toISOString()
+async function countRecentFailuresByIp(
+  config: CredentialLimitConfig,
+  ipAddress: string,
+): Promise<number> {
+  const threshold = new Date(Date.now() - config.ipWindowMs).toISOString()
   const [row] = await db
     .select({ total: count() })
     .from(rateEvents)
     .where(
       and(
-        eq(rateEvents.eventType, 'login_fail'),
+        eq(rateEvents.eventType, config.failType),
         eq(rateEvents.ipAddress, ipAddress),
         gte(rateEvents.createdAt, threshold),
       ),
@@ -68,14 +115,17 @@ async function countRecentLoginFailuresByIp(ipAddress: string): Promise<number> 
   return row?.total ?? 0
 }
 
-async function hasActiveUsernameLock(username: string): Promise<boolean> {
-  const threshold = new Date(Date.now() - LOGIN_USERNAME_LOCK_MS).toISOString()
+async function hasActiveUsernameLock(
+  config: CredentialLimitConfig,
+  username: string,
+): Promise<boolean> {
+  const threshold = new Date(Date.now() - config.usernameLockMs).toISOString()
   const [row] = await db
     .select({ total: count() })
     .from(rateEvents)
     .where(
       and(
-        eq(rateEvents.eventType, 'login_lock_username'),
+        eq(rateEvents.eventType, config.usernameLockType),
         eq(rateEvents.identifier, username),
         gte(rateEvents.createdAt, threshold),
       ),
@@ -83,14 +133,17 @@ async function hasActiveUsernameLock(username: string): Promise<boolean> {
   return (row?.total ?? 0) > 0
 }
 
-async function hasActiveIpLock(ipAddress: string): Promise<boolean> {
-  const threshold = new Date(Date.now() - LOGIN_IP_LOCK_MS).toISOString()
+async function hasActiveIpLock(
+  config: CredentialLimitConfig,
+  ipAddress: string,
+): Promise<boolean> {
+  const threshold = new Date(Date.now() - config.ipLockMs).toISOString()
   const [row] = await db
     .select({ total: count() })
     .from(rateEvents)
     .where(
       and(
-        eq(rateEvents.eventType, 'login_lock_ip'),
+        eq(rateEvents.eventType, config.ipLockType),
         eq(rateEvents.ipAddress, ipAddress),
         gte(rateEvents.createdAt, threshold),
       ),
@@ -98,14 +151,73 @@ async function hasActiveIpLock(ipAddress: string): Promise<boolean> {
   return (row?.total ?? 0) > 0
 }
 
-async function createUsernameLockIfMissing(username: string) {
-  if (await hasActiveUsernameLock(username)) return
-  await recordRateEvent('login_lock_username', username)
+async function createUsernameLockIfMissing(config: CredentialLimitConfig, username: string) {
+  if (await hasActiveUsernameLock(config, username)) return
+  await recordRateEvent(config.usernameLockType, username)
 }
 
-async function createIpLockIfMissing(ipAddress: string) {
-  if (await hasActiveIpLock(ipAddress)) return
-  await recordRateEvent('login_lock_ip', ipAddress, ipAddress)
+async function createIpLockIfMissing(config: CredentialLimitConfig, ipAddress: string) {
+  if (await hasActiveIpLock(config, ipAddress)) return
+  await recordRateEvent(config.ipLockType, ipAddress, ipAddress)
+}
+
+async function getCredentialRateState(
+  config: CredentialLimitConfig,
+  username: string,
+  ipAddress?: string,
+): Promise<LoginRateState> {
+  if (await hasActiveUsernameLock(config, username)) {
+    return { locked: true, reason: 'username' }
+  }
+
+  if (ipAddress && (await hasActiveIpLock(config, ipAddress))) {
+    return { locked: true, reason: 'ip' }
+  }
+
+  return { locked: false }
+}
+
+async function enforceCredentialRateLimit(
+  config: CredentialLimitConfig,
+  username: string,
+  ipAddress?: string,
+): Promise<LoginRateState> {
+  const activeState = await getCredentialRateState(config, username, ipAddress)
+  if (activeState.locked) return activeState
+
+  if ((await countRecentFailuresByUsername(config, username)) >= config.usernameLimit) {
+    await createUsernameLockIfMissing(config, username)
+    return { locked: true, reason: 'username' }
+  }
+
+  if (ipAddress && (await countRecentFailuresByIp(config, ipAddress)) >= config.ipLimit) {
+    await createIpLockIfMissing(config, ipAddress)
+    return { locked: true, reason: 'ip' }
+  }
+
+  return { locked: false }
+}
+
+async function recordCredentialFailure(
+  config: CredentialLimitConfig,
+  username: string,
+  ipAddress?: string,
+) {
+  await recordRateEvent(config.failType, username, ipAddress)
+
+  if ((await countRecentFailuresByUsername(config, username)) >= config.usernameLimit) {
+    await createUsernameLockIfMissing(config, username)
+  }
+
+  if (ipAddress && (await countRecentFailuresByIp(config, ipAddress)) >= config.ipLimit) {
+    await createIpLockIfMissing(config, ipAddress)
+  }
+}
+
+async function clearCredentialFailures(config: CredentialLimitConfig, username: string) {
+  await db
+    .delete(rateEvents)
+    .where(and(eq(rateEvents.eventType, config.failType), eq(rateEvents.identifier, username)))
 }
 
 /** 检查登录是否处于显式锁定期。 */
@@ -113,15 +225,7 @@ export async function getLoginRateState(
   username: string,
   ipAddress?: string,
 ): Promise<LoginRateState> {
-  if (await hasActiveUsernameLock(username)) {
-    return { locked: true, reason: 'username' }
-  }
-
-  if (ipAddress && (await hasActiveIpLock(ipAddress))) {
-    return { locked: true, reason: 'ip' }
-  }
-
-  return { locked: false }
+  return getCredentialRateState(LOGIN_LIMIT_CONFIG, username, ipAddress)
 }
 
 /**
@@ -132,45 +236,40 @@ export async function enforceLoginRateLimit(
   username: string,
   ipAddress?: string,
 ): Promise<LoginRateState> {
-  const activeState = await getLoginRateState(username, ipAddress)
-  if (activeState.locked) return activeState
-
-  if ((await countRecentLoginFailuresByUsername(username)) >= LOGIN_USERNAME_LIMIT) {
-    await createUsernameLockIfMissing(username)
-    return { locked: true, reason: 'username' }
-  }
-
-  if (ipAddress && (await countRecentLoginFailuresByIp(ipAddress)) >= LOGIN_IP_LIMIT) {
-    await createIpLockIfMissing(ipAddress)
-    return { locked: true, reason: 'ip' }
-  }
-
-  return { locked: false }
+  return enforceCredentialRateLimit(LOGIN_LIMIT_CONFIG, username, ipAddress)
 }
 
 /** 记录登录失败，并在达到阈值时创建锁定事件。 */
 export async function recordLoginFailure(username: string, ipAddress?: string) {
-  await recordRateEvent('login_fail', username, ipAddress)
-
-  if ((await countRecentLoginFailuresByUsername(username)) >= LOGIN_USERNAME_LIMIT) {
-    await createUsernameLockIfMissing(username)
-  }
-
-  if (ipAddress && (await countRecentLoginFailuresByIp(ipAddress)) >= LOGIN_IP_LIMIT) {
-    await createIpLockIfMissing(ipAddress)
-  }
+  await recordCredentialFailure(LOGIN_LIMIT_CONFIG, username, ipAddress)
 }
 
 /** 登录成功后清理该用户名的失败记录，让限流体现连续失败语义。 */
 export async function clearLoginFailures(username: string) {
-  await db
-    .delete(rateEvents)
-    .where(and(eq(rateEvents.eventType, 'login_fail'), eq(rateEvents.identifier, username)))
+  await clearCredentialFailures(LOGIN_LIMIT_CONFIG, username)
 }
 
 /** 检查登录是否被锁定。保留旧函数名，供测试和现有调用复用。 */
 export async function isLoginLocked(username: string, ipAddress?: string): Promise<boolean> {
   return (await enforceLoginRateLimit(username, ipAddress)).locked
+}
+
+/** 二次验证限流：与 login 同阈值，但用独立事件类型，避免互相串扰。 */
+export async function enforceReauthRateLimit(
+  username: string,
+  ipAddress?: string,
+): Promise<LoginRateState> {
+  return enforceCredentialRateLimit(REAUTH_LIMIT_CONFIG, username, ipAddress)
+}
+
+/** 二次验证失败计数。 */
+export async function recordReauthFailure(username: string, ipAddress?: string) {
+  await recordCredentialFailure(REAUTH_LIMIT_CONFIG, username, ipAddress)
+}
+
+/** 二次验证成功后清理失败记录，避免下次再触发同阈值锁。 */
+export async function clearReauthFailures(username: string) {
+  await clearCredentialFailures(REAUTH_LIMIT_CONFIG, username)
 }
 
 /**
