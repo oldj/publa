@@ -160,9 +160,16 @@ function ReauthModalContent({
   )
 }
 
-async function reauth(): Promise<boolean> {
+// 模块级单例：并发触发 reauth() 时复用同一弹窗，避免叠出多个密码框，
+// 也避免「用户输入一次密码却让多个独立请求都通过」的歧义状态。
+let pendingReauth: Promise<boolean> | null = null
+
+function reauth(): Promise<boolean> {
+  if (pendingReauth) return pendingReauth
   const tCommon = getClientTranslator('common')
-  return new Promise((resolve) => {
+  // 不使用 async 关键字：async 包装会返回一份新 Promise，无法把原始 Promise 引用
+  // 暴露出去，破坏并发场景下「同一个 promise 复用」的语义。
+  pendingReauth = new Promise<boolean>((resolve) => {
     let resolved = false
     const id = modals.open({
       title: tCommon('reauth.title'),
@@ -187,7 +194,10 @@ async function reauth(): Promise<boolean> {
         if (!resolved) resolve(false)
       },
     })
+  }).finally(() => {
+    pendingReauth = null
   })
+  return pendingReauth
 }
 
 const myModal = {
