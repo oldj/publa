@@ -3,7 +3,7 @@
 import { useCurrentUser } from '@/app/(admin)/_components/AdminCountsContext'
 import { useAdminUrl } from '@/app/(admin)/_components/AdminPathContext'
 import { PageHeader } from '@/app/(admin)/_components/PageHeader'
-import { sensitiveFetch } from '@/app/(admin)/_lib/sensitive-fetch'
+import { ensureReauth, sensitiveFetch } from '@/app/(admin)/_lib/sensitive-fetch'
 import CodeEditor from '@/components/editors/CodeEditor'
 import { isLocale, LOCALE_LABELS, SUPPORTED_LOCALES } from '@/i18n/locales'
 import { notify } from '@/lib/notify'
@@ -192,12 +192,14 @@ export default function SettingsPage() {
     event.target.value = ''
     if (!file) return
 
+    if (!(await ensureReauth())) return
+
     setFaviconAction('upload')
     try {
       const formData = new FormData()
       formData.append('file', file)
 
-      const res = await sensitiveFetch('/api/settings/favicon', {
+      const res = await fetch('/api/settings/favicon', {
         method: 'POST',
         body: formData,
       })
