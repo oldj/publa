@@ -11,9 +11,9 @@ import { maybeFirst } from '@/server/db/query'
 import { users } from '@/server/db/schema'
 import { jsonError, jsonSuccess } from '@/server/lib/api-response'
 import {
-  clearLoginFailures,
-  enforceLoginRateLimit,
-  recordLoginFailure,
+  clearReauthFailures,
+  enforceReauthRateLimit,
+  recordReauthFailure,
 } from '@/server/lib/rate-limit'
 import { safeParseJson } from '@/server/lib/request'
 import { getRequestInfo } from '@/server/lib/request-info'
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
   }
 
   const { ip } = getRequestInfo(request)
-  if ((await enforceLoginRateLimit(guard.user.username, ip)).locked) {
+  if ((await enforceReauthRateLimit(guard.user.username, ip)).locked) {
     return jsonError({
       source: request,
       namespace: 'admin.login.errors',
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
   )
 
   if (!row || !(await verifyPassword(password, row.passwordHash))) {
-    await recordLoginFailure(guard.user.username, ip)
+    await recordReauthFailure(guard.user.username, ip)
     return jsonError({
       source: request,
       namespace: 'common.api',
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
     })
   }
 
-  await clearLoginFailures(guard.user.username)
+  await clearReauthFailures(guard.user.username)
   const token = await createReauthToken(guard.user)
   await setReauthCookie(token)
 

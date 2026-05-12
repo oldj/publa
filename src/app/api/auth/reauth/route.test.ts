@@ -94,8 +94,35 @@ describe('/api/auth/reauth', () => {
 
     const events = await testDb.select().from(rateEvents)
     expect(events).toHaveLength(1)
-    expect(events[0].eventType).toBe('login_fail')
+    // 二次验证失败应记到独立的 reauth_fail，不会污染 login 计数器
+    expect(events[0].eventType).toBe('reauth_fail')
     expect(events[0].identifier).toBe('owner')
+  })
+
+  it('连续 reauth 失败会被独立锁定，但不会让 login 接口被锁', async () => {
+    const { isLoginLocked } = await import('@/server/lib/rate-limit')
+
+    // 连续 5 次失败：达到阈值后应触发 reauth_lock_username
+    for (let i = 0; i < 5; i++) {
+      await POST(
+        new Request('http://localhost/api/auth/reauth', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-forwarded-for': '198.51.100.10',
+          },
+          body: JSON.stringify({ password: 'wrong' }),
+        }) as any,
+      )
+    }
+
+    const reauthLocks = (await testDb.select().from(rateEvents)).filter(
+      (e) => e.eventType === 'reauth_lock_username',
+    )
+    expect(reauthLocks.length).toBeGreaterThan(0)
+
+    // login 限流不受影响
+    expect(await isLoginLocked('owner')).toBe(false)
   })
 
   it('近期验证有效时状态检查返回成功', async () => {

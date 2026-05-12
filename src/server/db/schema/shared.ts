@@ -12,6 +12,9 @@ export const rateEventType = [
   'login_fail',
   'login_lock_username',
   'login_lock_ip',
+  'reauth_fail',
+  'reauth_lock_username',
+  'reauth_lock_ip',
   'comment',
   'guestbook',
 ] as const
