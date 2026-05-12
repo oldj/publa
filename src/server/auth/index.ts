@@ -313,13 +313,31 @@ export async function requireRecentReauth(
     return { ok: false, response: await reauthRequiredResponse(source) }
   }
 
-  const row = await maybeFirst(
-    db
-      .select({ tokenVersion: users.tokenVersion })
-      .from(users)
-      .where(eq(users.id, user.id))
-      .limit(1),
-  )
+  let row: { tokenVersion: number } | null = null
+  try {
+    row = await maybeFirst(
+      db
+        .select({ tokenVersion: users.tokenVersion })
+        .from(users)
+        .where(eq(users.id, user.id))
+        .limit(1),
+    )
+  } catch (error) {
+    // 与 requireCurrentUser 对齐：JWT 配置缺失映射为 503，让前端能区分「需要重验证」与「服务端故障」。
+    // 其他 DB 异常仍向上抛，由全局处理或路由层兜底，避免吞掉真实错误。
+    if (isAuthConfigError(error)) {
+      return {
+        ok: false,
+        response: await jsonError({
+          namespace: 'common.api',
+          key: 'authenticationUnavailable',
+          code: 'CONFIGURATION_ERROR',
+          status: 503,
+        }),
+      }
+    }
+    throw error
+  }
   if (!row || row.tokenVersion !== reauthPayload.tokenVersion) {
     return { ok: false, response: await reauthRequiredResponse(source) }
   }

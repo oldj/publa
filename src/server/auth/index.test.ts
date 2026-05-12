@@ -205,4 +205,26 @@ describe('二次验证 tokenVersion 失效机制', () => {
       requireRecentReauth({ id: 2, username: 'editor', role: 'editor' }),
     ).rejects.toThrow()
   })
+
+  it('requireRecentReauth 在 DB 路径抛出 AuthConfigError 时返回 503', async () => {
+    const token = await createReauthToken({ id: 2, username: 'editor', role: 'editor' })
+    mockCookieValues({ _reauth: token })
+
+    const { AuthConfigError } = await import('./shared')
+    const spy = vi.spyOn(testDb, 'select').mockImplementationOnce(() => {
+      throw new AuthConfigError('JWT_SECRET is not configured')
+    })
+
+    try {
+      const result = await requireRecentReauth({ id: 2, username: 'editor', role: 'editor' })
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.response.status).toBe(503)
+        const body = await result.response.json()
+        expect(body.code).toBe('CONFIGURATION_ERROR')
+      }
+    } finally {
+      spy.mockRestore()
+    }
+  })
 })
