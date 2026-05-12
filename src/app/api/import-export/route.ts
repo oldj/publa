@@ -34,6 +34,24 @@ function contentDisposition(filename: string): string {
   return `attachment; filename="${encoded}"; filename*=UTF-8''${encoded}`
 }
 
+function isSettingsType(type: string) {
+  return type === 'settings'
+}
+
+function canManageSettingsData(user: { role: string }) {
+  return user.role === 'owner'
+}
+
+function forbiddenSettingsDataResponse(request: NextRequest) {
+  return jsonError({
+    source: request,
+    namespace: 'common.api',
+    key: 'forbidden',
+    code: 'FORBIDDEN',
+    status: 403,
+  })
+}
+
 /** 导出数据 */
 export async function GET(request: NextRequest) {
   const guard = await requireRole(['owner', 'admin'], {
@@ -41,14 +59,19 @@ export async function GET(request: NextRequest) {
     key: 'forbidden',
   })
   if (!guard.ok) return guard.response
+
+  const type = request.nextUrl.searchParams.get('type') || 'content'
+  if (isSettingsType(type) && !canManageSettingsData(guard.user)) {
+    return forbiddenSettingsDataResponse(request)
+  }
+
   const reauth = await requireRecentReauth(guard.user, request)
   if (!reauth.ok) return reauth.response
 
-  const type = request.nextUrl.searchParams.get('type') || 'content'
   const ts = formatTimestamp()
   const prefix = await getFilenamePrefix()
 
-  if (type === 'settings') {
+  if (isSettingsType(type)) {
     const data = await exportSettingsData()
     await logActivity(request, guard.user.id, 'export_data')
     return new NextResponse(JSON.stringify(data, null, 2), {
@@ -76,8 +99,6 @@ export async function POST(request: NextRequest) {
     key: 'forbidden',
   })
   if (!guard.ok) return guard.response
-  const reauth = await requireRecentReauth(guard.user, request)
-  if (!reauth.ok) return reauth.response
 
   let data: any
   try {
@@ -90,6 +111,10 @@ export async function POST(request: NextRequest) {
       code: 'INVALID_FORMAT',
       status: 400,
     })
+  }
+
+  if (data?.meta?.type === 'settings' && !canManageSettingsData(guard.user)) {
+    return forbiddenSettingsDataResponse(request)
   }
 
   const validation = validateImportData(data)
@@ -111,6 +136,9 @@ export async function POST(request: NextRequest) {
       status: 400,
     })
   }
+
+  const reauth = await requireRecentReauth(guard.user, request)
+  if (!reauth.ok) return reauth.response
 
   try {
     let results

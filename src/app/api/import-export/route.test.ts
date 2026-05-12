@@ -151,6 +151,36 @@ describe('/api/import-export POST', () => {
     expect(mockLogActivity).toHaveBeenCalledWith(expect.anything(), 1, 'export_data')
   })
 
+  it('管理员不能导出设置数据', async () => {
+    mockRequireRole.mockResolvedValueOnce({
+      ok: true,
+      user: { id: 2, username: 'admin', role: 'admin' },
+    })
+
+    const response = await GET(new NextRequest('http://localhost/api/import-export?type=settings'))
+    const json = await response.json()
+
+    expect(response.status).toBe(403)
+    expect(json.code).toBe('FORBIDDEN')
+    expect(mockRequireRecentReauth).not.toHaveBeenCalled()
+    expect(mockExportSettingsData).not.toHaveBeenCalled()
+  })
+
+  it('管理员可以导出内容数据', async () => {
+    mockRequireRole.mockResolvedValueOnce({
+      ok: true,
+      user: { id: 2, username: 'admin', role: 'admin' },
+    })
+
+    const response = await GET(new NextRequest('http://localhost/api/import-export?type=content'))
+    const json = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(json.meta.type).toBe('content')
+    expect(mockExportContentData).toHaveBeenCalled()
+    expect(mockRequireRecentReauth).toHaveBeenCalled()
+  })
+
   it('缺少二次验证时不能导入数据', async () => {
     mockRequireRecentReauth.mockResolvedValueOnce({
       ok: false,
@@ -161,7 +191,12 @@ describe('/api/import-export POST', () => {
       new Request('http://localhost/api/import-export', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
+        body: JSON.stringify({
+          meta: { type: 'content', version: '2.0' },
+          categories: [],
+          tags: [],
+          contents: [],
+        }),
       }) as any,
     )
     const json = await response.json()
@@ -172,7 +207,7 @@ describe('/api/import-export POST', () => {
     expect(mockImportSettingsData).not.toHaveBeenCalled()
   })
 
-  it('管理员可以导入数据', async () => {
+  it('管理员可以导入内容数据', async () => {
     mockRequireRole.mockResolvedValueOnce({
       ok: true,
       user: { id: 2, username: 'admin', role: 'admin' },
@@ -197,6 +232,71 @@ describe('/api/import-export POST', () => {
     expect(Array.isArray(json.data.results)).toBe(true)
     expect(typeof json.data.results[0]).toBe('string')
     expect(mockImportContentData).toHaveBeenCalledWith(expect.anything(), 2)
+  })
+
+  it('管理员不能导入设置数据', async () => {
+    mockRequireRole.mockResolvedValueOnce({
+      ok: true,
+      user: { id: 2, username: 'admin', role: 'admin' },
+    })
+
+    const response = await POST(
+      new Request('http://localhost/api/import-export', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          meta: { type: 'settings', version: '2.0' },
+          settings: [],
+        }),
+      }) as any,
+    )
+    const json = await response.json()
+
+    expect(response.status).toBe(403)
+    expect(json.code).toBe('FORBIDDEN')
+    expect(mockRequireRecentReauth).not.toHaveBeenCalled()
+    expect(mockImportSettingsData).not.toHaveBeenCalled()
+  })
+
+  it('管理员提交不完整的设置导入数据时也会被禁止', async () => {
+    mockRequireRole.mockResolvedValueOnce({
+      ok: true,
+      user: { id: 2, username: 'admin', role: 'admin' },
+    })
+
+    const response = await POST(
+      new Request('http://localhost/api/import-export', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          meta: { type: 'settings', version: '2.0' },
+        }),
+      }) as any,
+    )
+    const json = await response.json()
+
+    expect(response.status).toBe(403)
+    expect(json.code).toBe('FORBIDDEN')
+    expect(mockRequireRecentReauth).not.toHaveBeenCalled()
+    expect(mockImportSettingsData).not.toHaveBeenCalled()
+  })
+
+  it('站长可以导入设置数据', async () => {
+    const response = await POST(
+      new Request('http://localhost/api/import-export', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          meta: { type: 'settings', version: '2.0' },
+          settings: [],
+        }),
+      }) as any,
+    )
+    const json = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(json.success).toBe(true)
+    expect(mockImportSettingsData).toHaveBeenCalled()
   })
 
   it('非法 JSON 返回 INVALID_FORMAT', async () => {
