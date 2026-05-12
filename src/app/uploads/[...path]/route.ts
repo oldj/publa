@@ -56,10 +56,19 @@ export async function GET(
   const contentType = MIME_TYPES[ext] || 'application/octet-stream'
   const fileBuffer = fs.readFileSync(realFilePath)
 
-  return new NextResponse(fileBuffer, {
-    headers: {
-      'Content-Type': contentType,
-      'Cache-Control': 'public, max-age=31536000, immutable',
-    },
-  })
+  const headers: Record<string, string> = {
+    'Content-Type': contentType,
+    'Cache-Control': 'public, max-age=31536000, immutable',
+  }
+
+  // SVG 在浏览器中会作为文档解析并执行内嵌 <script> / 事件属性，
+  // 强制以附件方式下载并叠加 sandbox CSP，避免管理员上传后被诱导直接打开触发同源 XSS。
+  if (ext === '.svg') {
+    const downloadName = path.basename(realFilePath)
+    headers['Content-Disposition'] = `attachment; filename="${encodeURIComponent(downloadName)}"`
+    headers['Content-Security-Policy'] = "default-src 'none'; sandbox"
+    headers['X-Content-Type-Options'] = 'nosniff'
+  }
+
+  return new NextResponse(fileBuffer, { headers })
 }

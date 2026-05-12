@@ -10,7 +10,7 @@ vi.mock('@/app/(admin)/_components/myModals', () => ({
   },
 }))
 
-const { ensureReauth, sensitiveJsonFetch } = await import('./sensitive-fetch')
+const { ensureReauth, sensitiveJsonFetch, sensitiveUploadFetch } = await import('./sensitive-fetch')
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -73,5 +73,50 @@ describe('sensitiveJsonFetch', () => {
 
     expect(fetch).not.toHaveBeenCalled()
     expect(mockReauth).not.toHaveBeenCalled()
+  })
+})
+
+describe('sensitiveUploadFetch', () => {
+  beforeEach(() => {
+    mockReauth.mockReset()
+    vi.stubGlobal('fetch', vi.fn())
+  })
+
+  it('FormData 请求遇到 REAUTH_REQUIRED 后弹窗并复用同一份 body 重试', async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(jsonResponse({ success: false, code: 'REAUTH_REQUIRED' }, 403))
+      .mockResolvedValueOnce(jsonResponse({ success: true }))
+    mockReauth.mockResolvedValueOnce(true)
+
+    const formData = new FormData()
+    formData.append('file', new Blob(['x'], { type: 'image/png' }), 'icon.png')
+
+    const response = await sensitiveUploadFetch('/api/settings/favicon', {
+      method: 'POST',
+      body: formData,
+    })
+    const json = await response.json()
+
+    expect(json.success).toBe(true)
+    expect(mockReauth).toHaveBeenCalledTimes(1)
+    expect(fetch).toHaveBeenCalledTimes(2)
+    // 两次 fetch 复用同一个 FormData 引用，便于浏览器/Node 重新序列化
+    expect(vi.mocked(fetch).mock.calls[0][1]?.body).toBe(formData)
+    expect(vi.mocked(fetch).mock.calls[1][1]?.body).toBe(formData)
+  })
+
+  it('用户取消二次验证后不重试', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      jsonResponse({ success: false, code: 'REAUTH_REQUIRED' }, 403),
+    )
+    mockReauth.mockResolvedValueOnce(false)
+
+    const response = await sensitiveUploadFetch('/api/settings/favicon', {
+      method: 'POST',
+      body: new FormData(),
+    })
+
+    expect(response.status).toBe(403)
+    expect(fetch).toHaveBeenCalledTimes(1)
   })
 })

@@ -64,6 +64,26 @@ describe('favicon service', () => {
     ).rejects.toMatchObject({ code: 'INVALID_FILE_TYPE' })
   })
 
+  it('拒绝上传 SVG 图标（避免浏览器直接打开 /favicon.ico 时执行内嵌脚本）', async () => {
+    // 显式声明 image/svg+xml
+    await expect(
+      favicon.saveUploadedFavicon({
+        buffer: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"></svg>'),
+        originalFilename: 'icon.svg',
+        mimeType: 'image/svg+xml',
+      }),
+    ).rejects.toMatchObject({ code: 'INVALID_FILE_TYPE' })
+
+    // 仅靠扩展名推断也应被拒
+    await expect(
+      favicon.saveUploadedFavicon({
+        buffer: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"></svg>'),
+        originalFilename: 'icon.svg',
+        mimeType: '',
+      }),
+    ).rejects.toMatchObject({ code: 'INVALID_FILE_TYPE' })
+  })
+
   it('不允许上传超过上限的图标', async () => {
     await expect(
       favicon.saveUploadedFavicon({

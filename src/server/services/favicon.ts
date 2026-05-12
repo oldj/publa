@@ -3,11 +3,13 @@ import fs from 'fs/promises'
 import path from 'path'
 import { getAllSettings, updateSettings, type LooseSettingType } from './settings'
 
+// 拒绝 image/svg+xml：favicon 通过 /favicon.ico 路由按存储的 mimeType 输出，
+// 浏览器若直接访问该 URL 会按 SVG 渲染并执行内嵌 <script>，构成 XSS。
+// 用栅格图（ico/png/webp）作为 favicon 已能覆盖全部主流场景。
 export const FAVICON_ALLOWED_MIME_TYPES = [
   'image/x-icon',
   'image/vnd.microsoft.icon',
   'image/png',
-  'image/svg+xml',
   'image/webp',
 ] as const
 
@@ -84,7 +86,6 @@ function inferMimeTypeFromFilename(filename: string): string {
 
   if (ext === '.ico') return 'image/x-icon'
   if (ext === '.png') return 'image/png'
-  if (ext === '.svg') return 'image/svg+xml'
   if (ext === '.webp') return 'image/webp'
 
   return ''

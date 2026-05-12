@@ -3,7 +3,7 @@
 import { useCurrentUser } from '@/app/(admin)/_components/AdminCountsContext'
 import { useAdminUrl } from '@/app/(admin)/_components/AdminPathContext'
 import { PageHeader } from '@/app/(admin)/_components/PageHeader'
-import { ensureReauth, sensitiveJsonFetch } from '@/app/(admin)/_lib/sensitive-fetch'
+import { sensitiveJsonFetch, sensitiveUploadFetch } from '@/app/(admin)/_lib/sensitive-fetch'
 import CodeEditor from '@/components/editors/CodeEditor'
 import { isLocale, LOCALE_LABELS, SUPPORTED_LOCALES } from '@/i18n/locales'
 import { notify } from '@/lib/notify'
@@ -192,14 +192,12 @@ export default function SettingsPage() {
     event.target.value = ''
     if (!file) return
 
-    if (!(await ensureReauth())) return
-
     setFaviconAction('upload')
     try {
       const formData = new FormData()
       formData.append('file', file)
 
-      const res = await fetch('/api/settings/favicon', {
+      const res = await sensitiveUploadFetch('/api/settings/favicon', {
         method: 'POST',
         body: formData,
       })
@@ -349,7 +347,7 @@ export default function SettingsPage() {
                 <input
                   hidden
                   type="file"
-                  accept=".ico,image/x-icon,image/vnd.microsoft.icon,image/png,image/svg+xml,image/webp"
+                  accept=".ico,image/x-icon,image/vnd.microsoft.icon,image/png,image/webp"
                   onChange={handleUploadFavicon}
                 />
               </Button>

@@ -113,6 +113,27 @@ describe('src/app/uploads/[...path]/route', () => {
     expect(mockReadFileSync).not.toHaveBeenCalled()
   })
 
+  it('SVG 文件强制以附件下载并设置严格 CSP', async () => {
+    mockExistsSync.mockReturnValue(true)
+    mockReadFileSync.mockReturnValue(
+      Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><script>1</script></svg>'),
+    )
+
+    const response = await uploadsRoute.GET(
+      new Request('http://localhost/uploads/img/evil.svg') as any,
+      {
+        params: Promise.resolve({ path: ['img', 'evil.svg'] }),
+      },
+    )
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('Content-Type')).toBe('image/svg+xml')
+    expect(response.headers.get('Content-Disposition')).toContain('attachment')
+    expect(response.headers.get('Content-Disposition')).toContain('evil.svg')
+    expect(response.headers.get('Content-Security-Policy')).toBe("default-src 'none'; sandbox")
+    expect(response.headers.get('X-Content-Type-Options')).toBe('nosniff')
+  })
+
   it('realpath 抛错（文件被并发删除等）返回 403', async () => {
     mockExistsSync.mockReturnValue(true)
     mockRealpathSync.mockImplementation(() => {
