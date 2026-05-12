@@ -1,17 +1,23 @@
+import path from 'path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { mockExistsSync, mockReadFileSync, mockRedirectResponseOrNotFound } = vi.hoisted(() => ({
-  mockExistsSync: vi.fn(),
-  mockReadFileSync: vi.fn(),
-  mockRedirectResponseOrNotFound: vi.fn(),
-}))
+const { mockExistsSync, mockReadFileSync, mockRealpathSync, mockRedirectResponseOrNotFound } =
+  vi.hoisted(() => ({
+    mockExistsSync: vi.fn(),
+    mockReadFileSync: vi.fn(),
+    mockRealpathSync: vi.fn(),
+    mockRedirectResponseOrNotFound: vi.fn(),
+  }))
 
 vi.mock('fs', () => ({
   default: {
     existsSync: mockExistsSync,
     readFileSync: mockReadFileSync,
+    realpathSync: mockRealpathSync,
   },
 }))
+
+const UPLOAD_DIR = path.resolve(process.cwd(), 'data', 'uploads')
 
 vi.mock('@/server/lib/frontend-404', () => ({
   redirectResponseOrNotFound: mockRedirectResponseOrNotFound,
@@ -23,7 +29,11 @@ describe('src/app/uploads/[...path]/route', () => {
   beforeEach(() => {
     mockExistsSync.mockReset()
     mockReadFileSync.mockReset()
+    mockRealpathSync.mockReset()
     mockRedirectResponseOrNotFound.mockReset()
+    // 默认 realpath 透传输入，模拟"无软链"的正常文件系统；
+    // 涉及软链穿越的用例在内部覆盖该实现。
+    mockRealpathSync.mockImplementation((p: string) => p)
   })
 
   it('上传文件不存在时会先尝试跳转规则', async () => {
@@ -82,5 +92,41 @@ describe('src/app/uploads/[...path]/route', () => {
 
     expect(response.status).toBe(403)
     expect(mockExistsSync).not.toHaveBeenCalled()
+  })
+
+  it('文件本身是指向上传目录外的符号链接时返回 403', async () => {
+    mockExistsSync.mockReturnValue(true)
+    // 模拟：上传目录下的文件被解析到目录外（攻击者在 uploads 中植入软链）
+    mockRealpathSync.mockImplementation((p: string) => {
+      if (p === UPLOAD_DIR) return UPLOAD_DIR
+      return '/etc/passwd'
+    })
+
+    const response = await uploadsRoute.GET(
+      new Request('http://localhost/uploads/link.png') as any,
+      {
+        params: Promise.resolve({ path: ['link.png'] }),
+      },
+    )
+
+    expect(response.status).toBe(403)
+    expect(mockReadFileSync).not.toHaveBeenCalled()
+  })
+
+  it('realpath 抛错（文件被并发删除等）返回 403', async () => {
+    mockExistsSync.mockReturnValue(true)
+    mockRealpathSync.mockImplementation(() => {
+      throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' })
+    })
+
+    const response = await uploadsRoute.GET(
+      new Request('http://localhost/uploads/img/photo.png') as any,
+      {
+        params: Promise.resolve({ path: ['img', 'photo.png'] }),
+      },
+    )
+
+    expect(response.status).toBe(403)
+    expect(mockReadFileSync).not.toHaveBeenCalled()
   })
 })

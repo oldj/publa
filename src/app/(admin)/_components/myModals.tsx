@@ -115,6 +115,8 @@ function ReauthModalContent({
       })
       const json = await response.json()
       if (json.success) {
+        // 成功后立即清空密码，避免明文在组件状态中残留
+        setPassword('')
         shouldResetLoading = false
         onSuccess()
         return
