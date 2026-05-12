@@ -285,29 +285,14 @@ export async function requireRecentReauth(
   user: AuthUser,
   source?: Request,
 ): Promise<{ ok: true } | { ok: false; response: NextResponse }> {
+  const cookieStore = await cookies()
+  const token = cookieStore.get(REAUTH_COOKIE_NAME)?.value
+  if (!token) return { ok: false, response: await reauthRequiredResponse(source) }
+
+  let payload: JWTPayload
   try {
-    const cookieStore = await cookies()
-    const token = cookieStore.get(REAUTH_COOKIE_NAME)?.value
-    if (!token) return { ok: false, response: await reauthRequiredResponse(source) }
-
-    const { payload } = await jwtVerify(token, getJwtSecret())
-    const reauthPayload = payload as ReauthTokenPayload
-    if (reauthPayload.purpose !== 'reauth' || reauthPayload.userId !== user.id) {
-      return { ok: false, response: await reauthRequiredResponse(source) }
-    }
-
-    const row = await maybeFirst(
-      db
-        .select({ tokenVersion: users.tokenVersion })
-        .from(users)
-        .where(eq(users.id, user.id))
-        .limit(1),
-    )
-    if (!row || row.tokenVersion !== reauthPayload.tokenVersion) {
-      return { ok: false, response: await reauthRequiredResponse(source) }
-    }
-
-    return { ok: true }
+    const verified = await jwtVerify(token, getJwtSecret())
+    payload = verified.payload
   } catch (error) {
     if (isAuthConfigError(error)) {
       return {
@@ -322,6 +307,24 @@ export async function requireRecentReauth(
     }
     return { ok: false, response: await reauthRequiredResponse(source) }
   }
+
+  const reauthPayload = payload as ReauthTokenPayload
+  if (reauthPayload.purpose !== 'reauth' || reauthPayload.userId !== user.id) {
+    return { ok: false, response: await reauthRequiredResponse(source) }
+  }
+
+  const row = await maybeFirst(
+    db
+      .select({ tokenVersion: users.tokenVersion })
+      .from(users)
+      .where(eq(users.id, user.id))
+      .limit(1),
+  )
+  if (!row || row.tokenVersion !== reauthPayload.tokenVersion) {
+    return { ok: false, response: await reauthRequiredResponse(source) }
+  }
+
+  return { ok: true }
 }
 
 export { AUTH_COOKIE_NAME, REAUTH_COOKIE_NAME }

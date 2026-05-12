@@ -169,6 +169,18 @@ describe('二次验证 tokenVersion 失效机制', () => {
     expect(result.ok).toBe(false)
   })
 
+  it('requireRecentReauth 拒绝非法二次验证 token 并返回 REAUTH_REQUIRED', async () => {
+    mockCookieValues({ _reauth: 'not-a-valid-jwt' })
+
+    const result = await requireRecentReauth({ id: 2, username: 'editor', role: 'editor' })
+
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      const json = await result.response.json()
+      expect(json.code).toBe('REAUTH_REQUIRED')
+    }
+  })
+
   it('requireRecentReauth 在 tokenVersion 变化后拒绝旧二次验证 token', async () => {
     const token = await createReauthToken({ id: 2, username: 'editor', role: 'editor' })
     mockCookieValues({ _reauth: token })
@@ -181,5 +193,16 @@ describe('二次验证 tokenVersion 失效机制', () => {
     const result = await requireRecentReauth({ id: 2, username: 'editor', role: 'editor' })
 
     expect(result.ok).toBe(false)
+  })
+
+  it('requireRecentReauth 遇到数据库错误时向上抛出', async () => {
+    const token = await createReauthToken({ id: 2, username: 'editor', role: 'editor' })
+    mockCookieValues({ _reauth: token })
+
+    await testDb.run(sql.raw('DROP TABLE "users"'))
+
+    await expect(
+      requireRecentReauth({ id: 2, username: 'editor', role: 'editor' }),
+    ).rejects.toThrow()
   })
 })
