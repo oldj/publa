@@ -182,6 +182,24 @@ describe('/api/settings', () => {
     expect(mockUpdateSettings).not.toHaveBeenCalled()
   })
 
+  it('敏感 HTML 设置未实际变化时不需要二次验证', async () => {
+    const response = await PUT(
+      new Request('http://localhost/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customHeadHtml: '',
+        }),
+      }) as any,
+    )
+    const json = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(json.success).toBe(true)
+    expect(mockRequireRecentReauth).not.toHaveBeenCalled()
+    expect(mockUpdateSettings).toHaveBeenCalledWith({ customHeadHtml: '' })
+  })
+
   it('通过 /api/settings 写入敏感字段会被拒绝', async () => {
     mockNormalizeSettingsPayload.mockImplementationOnce(() => {
       const error = {
