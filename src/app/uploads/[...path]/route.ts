@@ -1,9 +1,10 @@
-import { redirectResponseOrNotFound } from '@/server/lib/frontend-404'
 import fs from 'fs'
-import { NextRequest, NextResponse } from 'next/server'
 import path from 'path'
+import { redirectResponseOrNotFound } from '@/server/lib/frontend-404'
+import { NextRequest, NextResponse } from 'next/server'
 
 const UPLOAD_DIR = path.join(process.cwd(), 'data', 'uploads')
+const RESOLVED_UPLOAD_DIR = path.resolve(UPLOAD_DIR)
 
 const MIME_TYPES: Record<string, string> = {
   '.jpg': 'image/jpeg',
@@ -23,10 +24,11 @@ export async function GET(
   { params }: { params: Promise<{ path: string[] }> },
 ) {
   const { path: pathSegments } = await params
-  const filePath = path.join(UPLOAD_DIR, ...pathSegments)
+  const filePath = path.resolve(RESOLVED_UPLOAD_DIR, ...pathSegments)
+  const relativePath = path.relative(RESOLVED_UPLOAD_DIR, filePath)
 
   // 防止路径遍历攻击
-  if (!filePath.startsWith(UPLOAD_DIR)) {
+  if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
     return new NextResponse('Forbidden', { status: 403 })
   }
 

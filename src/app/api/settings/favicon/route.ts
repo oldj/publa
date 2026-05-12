@@ -1,4 +1,4 @@
-import { requireRole } from '@/server/auth'
+import { requireRecentReauth, requireRole } from '@/server/auth'
 import { jsonError, jsonSuccess } from '@/server/lib/api-response'
 import { safeParseJson } from '@/server/lib/request'
 import {
@@ -50,6 +50,8 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   const guard = await requireRole(['owner', 'admin'])
   if (!guard.ok) return guard.response
+  const reauth = await requireRecentReauth(guard.user, request)
+  if (!reauth.ok) return reauth.response
 
   const formData = await request.formData()
   const file = formData.get('file')
@@ -80,6 +82,8 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   const guard = await requireRole(['owner', 'admin'])
   if (!guard.ok) return guard.response
+  const reauth = await requireRecentReauth(guard.user, request)
+  if (!reauth.ok) return reauth.response
 
   const { data: body, error } = await safeParseJson<{ url?: string }>(request)
   if (error) return error
@@ -93,9 +97,11 @@ export async function PUT(request: NextRequest) {
   }
 }
 
-export async function DELETE() {
+export async function DELETE(request: NextRequest) {
   const guard = await requireRole(['owner', 'admin'])
   if (!guard.ok) return guard.response
+  const reauth = await requireRecentReauth(guard.user, request)
+  if (!reauth.ok) return reauth.response
 
   const data = await resetFavicon()
   return jsonSuccess(data)

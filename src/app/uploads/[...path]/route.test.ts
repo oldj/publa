@@ -71,4 +71,16 @@ describe('src/app/uploads/[...path]/route', () => {
     expect(response.status).toBe(403)
     expect(mockExistsSync).not.toHaveBeenCalled()
   })
+
+  it('同前缀兄弟目录也不能绕过路径边界', async () => {
+    const response = await uploadsRoute.GET(
+      new Request('http://localhost/uploads/../uploads_evil/secret.png') as any,
+      {
+        params: Promise.resolve({ path: ['..', 'uploads_evil', 'secret.png'] }),
+      },
+    )
+
+    expect(response.status).toBe(403)
+    expect(mockExistsSync).not.toHaveBeenCalled()
+  })
 })

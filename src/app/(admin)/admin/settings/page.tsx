@@ -168,7 +168,7 @@ export default function SettingsPage() {
   const handleApplyFaviconUrl = async () => {
     setFaviconAction('url')
     try {
-      const res = await fetch('/api/settings/favicon', {
+      const res = await sensitiveFetch('/api/settings/favicon', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: faviconUrlInput }),
@@ -197,7 +197,7 @@ export default function SettingsPage() {
       const formData = new FormData()
       formData.append('file', file)
 
-      const res = await fetch('/api/settings/favicon', {
+      const res = await sensitiveFetch('/api/settings/favicon', {
         method: 'POST',
         body: formData,
       })
@@ -218,7 +218,7 @@ export default function SettingsPage() {
   const handleResetFavicon = async () => {
     setFaviconAction('reset')
     try {
-      const res = await fetch('/api/settings/favicon', {
+      const res = await sensitiveFetch('/api/settings/favicon', {
         method: 'DELETE',
       })
       const json = await res.json()
