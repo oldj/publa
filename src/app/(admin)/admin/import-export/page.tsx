@@ -181,7 +181,8 @@ export default function ImportExportPage() {
     const message = type === 'content' ? t('confirm.exportContent') : t('confirm.exportSettings')
     const confirmed = await myModal.confirm({ message })
     if (!confirmed) return
-    if (!(await ensureReauth())) return
+    // 仅 settings 导出需要二次验证，content 导出仅是后台可见内容的备份
+    if (type === 'settings' && !(await ensureReauth())) return
     window.open(`/api/import-export?type=${type}`, '_blank')
   }
 

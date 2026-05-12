@@ -166,7 +166,7 @@ describe('/api/import-export POST', () => {
     expect(mockExportSettingsData).not.toHaveBeenCalled()
   })
 
-  it('管理员可以导出内容数据', async () => {
+  it('管理员可以导出内容数据，且不需要二次验证', async () => {
     mockRequireRole.mockResolvedValueOnce({
       ok: true,
       user: { id: 2, username: 'admin', role: 'admin' },
@@ -178,7 +178,8 @@ describe('/api/import-export POST', () => {
     expect(response.status).toBe(200)
     expect(json.meta.type).toBe('content')
     expect(mockExportContentData).toHaveBeenCalled()
-    expect(mockRequireRecentReauth).toHaveBeenCalled()
+    // content 导出仅是后台可见内容的备份，不需要 reauth
+    expect(mockRequireRecentReauth).not.toHaveBeenCalled()
   })
 
   it('缺少二次验证时不能导入数据', async () => {

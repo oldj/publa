@@ -65,8 +65,12 @@ export async function GET(request: NextRequest) {
     return forbiddenSettingsDataResponse(request)
   }
 
-  const reauth = await requireRecentReauth(guard.user, request)
-  if (!reauth.ok) return reauth.response
+  // 仅 settings 导出包含用户、跳转、菜单等敏感配置，需要二次验证；
+  // content 导出仅是后台可见内容的备份，admin 在 UI 里本就能读，无需额外密码确认。
+  if (isSettingsType(type)) {
+    const reauth = await requireRecentReauth(guard.user, request)
+    if (!reauth.ok) return reauth.response
+  }
 
   const ts = formatTimestamp()
   const prefix = await getFilenamePrefix()
