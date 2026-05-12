@@ -656,13 +656,15 @@ export async function importSettingsData(data: any, currentUserId: number) {
         db.select().from(users).where(eq(users.username, item.username)).limit(1),
       )
       if (existing) {
-        // 更新除密码外的字段；当前操作用户不修改角色，防止自己失去权限
+        // 更新除密码外的字段；以下两类账号一律不改 role：
+        // - 当前操作用户：避免自己失去权限
+        // - 已是 owner 的账号：避免被静默降权（导入数据若改写 owner.role，会丢失站长权限）
         const updateFields: Record<string, any> = {
           email: item.email ?? existing.email,
           avatarUrl: item.avatarUrl ?? existing.avatarUrl,
           updatedAt: new Date().toISOString(),
         }
-        if (existing.id !== currentUserId) {
+        if (existing.id !== currentUserId && existing.role !== 'owner') {
           updateFields.role = item.role ?? existing.role
         }
         await db.update(users).set(updateFields).where(eq(users.id, existing.id))

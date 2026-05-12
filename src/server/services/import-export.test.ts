@@ -1331,6 +1331,32 @@ describe('importSettingsData', () => {
     expect(admin.email).toBe('changed@example.com')
   })
 
+  it('导入时不会把其他 owner 账号降级', async () => {
+    // 预置另一个 owner，模拟双站长场景
+    await testDb.insert(schema.users).values({
+      id: 9,
+      username: 'owner2',
+      passwordHash: 'hash',
+      role: 'owner',
+      email: 'owner2@example.com',
+    })
+
+    // 当前操作用户是 admin（id=1），导入数据试图把 owner2 改为 editor
+    await importSettingsData(
+      {
+        settings: [],
+        users: [{ username: 'owner2', email: 'updated@example.com', role: 'editor' }],
+      },
+      1,
+    )
+
+    const owner2 = (await testDb.select().from(schema.users)).find(
+      (u) => u.username === 'owner2',
+    )!
+    expect(owner2.role).toBe('owner') // 角色保持不变
+    expect(owner2.email).toBe('updated@example.com') // 其他字段允许更新
+  })
+
   it('导入不存在的用户生成随机密码', async () => {
     await importSettingsData(
       {
