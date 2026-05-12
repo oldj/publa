@@ -2,9 +2,10 @@
 
 import myModal from '@/app/(admin)/_components/myModals'
 
-type SensitiveFetchInput = string | URL
-type SensitiveFetchInit = Parameters<typeof fetch>[1]
-type SensitiveFetchBody = NonNullable<SensitiveFetchInit>['body']
+type SensitiveJsonFetchInput = string | URL
+type SensitiveJsonFetchInit = Omit<NonNullable<Parameters<typeof fetch>[1]>, 'body'> & {
+  body?: string | null
+}
 
 async function isReauthRequired(response: Response): Promise<boolean> {
   try {
@@ -29,24 +30,19 @@ export async function ensureReauth(options: { verifyCurrent?: boolean } = {}): P
   return myModal.reauth()
 }
 
-function isReplayableBody(body: SensitiveFetchBody): boolean {
-  if (body == null) return true
-  // string / URLSearchParams / Blob / ArrayBuffer / TypedArray 都可被 fetch 重复读取；
-  // ReadableStream 与 FormData（含 File 流）首次发送后无法重放，禁止用于二次验证重试。
-  if (typeof body === 'string') return true
-  if (body instanceof URLSearchParams) return true
-  if (typeof Blob !== 'undefined' && body instanceof Blob) return true
-  if (body instanceof ArrayBuffer) return true
-  if (ArrayBuffer.isView(body)) return true
-  return false
+function isJsonStringBody(body: unknown): boolean {
+  return body == null || typeof body === 'string'
 }
 
-/** 仅接受可安全重试的 URL 输入与可重放 body，避免 Request body stream 首次发送后无法重放。 */
-export async function sensitiveFetch(input: SensitiveFetchInput, init?: SensitiveFetchInit) {
-  if (!isReplayableBody(init?.body)) {
+/** 仅用于 JSON 字符串 body 或无 body 的敏感请求；文件上传等非 JSON 请求请先 ensureReauth()。 */
+export async function sensitiveJsonFetch(
+  input: SensitiveJsonFetchInput,
+  init?: SensitiveJsonFetchInit,
+) {
+  if (!isJsonStringBody(init?.body)) {
     throw new TypeError(
-      'sensitiveFetch only supports replayable bodies (string/URLSearchParams/Blob/ArrayBuffer). ' +
-        'Avoid passing FormData or ReadableStream — call ensureReauth() manually before the request instead.',
+      'sensitiveJsonFetch only supports string JSON bodies or no body. ' +
+        'Call ensureReauth() manually before non-JSON requests such as FormData or ReadableStream.',
     )
   }
 

@@ -3,7 +3,7 @@
 import { useAdminCounts, useCurrentUser } from '@/app/(admin)/_components/AdminCountsContext'
 import { useAdminUrl } from '@/app/(admin)/_components/AdminPathContext'
 import myModal from '@/app/(admin)/_components/myModals'
-import { ensureReauth, sensitiveFetch } from '@/app/(admin)/_lib/sensitive-fetch'
+import { ensureReauth, sensitiveJsonFetch } from '@/app/(admin)/_lib/sensitive-fetch'
 import { SafeDrawer } from '@/components/SafeDrawer'
 import { notify } from '@/lib/notify'
 import {
@@ -243,7 +243,7 @@ export default function ImportExportPage() {
     updateImportState(type, { importing: true, results: [] })
 
     try {
-      const res = await sensitiveFetch('/api/import-export', {
+      const res = await sensitiveJsonFetch('/api/import-export', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(file.data),

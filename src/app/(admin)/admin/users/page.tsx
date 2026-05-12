@@ -5,7 +5,7 @@ import adminStyles from '@/app/(admin)/_components/AdminShell.module.scss'
 import myModal from '@/app/(admin)/_components/myModals'
 import { NowrapBadge } from '@/app/(admin)/_components/NowrapBadge'
 import { RoleLabel } from '@/app/(admin)/_components/RoleLabel'
-import { sensitiveFetch } from '@/app/(admin)/_lib/sensitive-fetch'
+import { sensitiveJsonFetch } from '@/app/(admin)/_lib/sensitive-fetch'
 import { SafeDrawer } from '@/components/SafeDrawer'
 import { notify } from '@/lib/notify'
 import { normalizeEmail, normalizePassword, normalizeUsername } from '@/lib/user-input'
@@ -135,7 +135,7 @@ export default function UsersPage() {
 
     setLoading(true)
     try {
-      const res = await sensitiveFetch('/api/users', {
+      const res = await sensitiveJsonFetch('/api/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -192,7 +192,7 @@ export default function UsersPage() {
       if (editForm.password) body.password = password
       if (currentUser?.role === 'owner') body.role = editForm.role
 
-      const res = await sensitiveFetch(`/api/users/${editUser.id}`, {
+      const res = await sensitiveJsonFetch(`/api/users/${editUser.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -214,7 +214,7 @@ export default function UsersPage() {
 
   const handleDelete = async (id: number, username: string) => {
     if (!(await myModal.confirm({ message: t('deleteConfirm', { username }) }))) return
-    const res = await sensitiveFetch(`/api/users/${id}`, { method: 'DELETE' })
+    const res = await sensitiveJsonFetch(`/api/users/${id}`, { method: 'DELETE' })
     const json = await res.json()
     if (json.success) {
       notify({ color: 'green', message: tCommon('messages.deleteSuccess') })

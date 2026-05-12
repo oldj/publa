@@ -10,7 +10,7 @@ vi.mock('@/app/(admin)/_components/myModals', () => ({
   },
 }))
 
-const { ensureReauth, sensitiveFetch } = await import('./sensitive-fetch')
+const { ensureReauth, sensitiveJsonFetch } = await import('./sensitive-fetch')
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -19,7 +19,7 @@ function jsonResponse(body: unknown, status = 200) {
   })
 }
 
-describe('sensitiveFetch', () => {
+describe('sensitiveJsonFetch', () => {
   beforeEach(() => {
     mockReauth.mockReset()
     vi.stubGlobal('fetch', vi.fn())
@@ -41,7 +41,7 @@ describe('sensitiveFetch', () => {
       .mockResolvedValueOnce(jsonResponse({ success: true }))
     mockReauth.mockResolvedValueOnce(true)
 
-    const response = await sensitiveFetch('/api/users', { method: 'POST' })
+    const response = await sensitiveJsonFetch('/api/users', { method: 'POST' })
     const json = await response.json()
 
     expect(json.success).toBe(true)
@@ -56,10 +56,22 @@ describe('sensitiveFetch', () => {
     )
     mockReauth.mockResolvedValueOnce(false)
 
-    const response = await sensitiveFetch('/api/users', { method: 'POST' })
+    const response = await sensitiveJsonFetch('/api/users', { method: 'POST' })
     const json = await response.json()
 
     expect(json.code).toBe('REAUTH_REQUIRED')
     expect(fetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('拒绝 FormData 这类不可作为 JSON 重试的请求体', async () => {
+    await expect(
+      sensitiveJsonFetch('/api/users', {
+        method: 'POST',
+        body: new FormData(),
+      } as any),
+    ).rejects.toThrow(TypeError)
+
+    expect(fetch).not.toHaveBeenCalled()
+    expect(mockReauth).not.toHaveBeenCalled()
   })
 })

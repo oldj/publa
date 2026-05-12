@@ -3,7 +3,7 @@
 import { useCurrentUser } from '@/app/(admin)/_components/AdminCountsContext'
 import adminStyles from '@/app/(admin)/_components/AdminShell.module.scss'
 import myModal from '@/app/(admin)/_components/myModals'
-import { sensitiveFetch } from '@/app/(admin)/_lib/sensitive-fetch'
+import { sensitiveJsonFetch } from '@/app/(admin)/_lib/sensitive-fetch'
 import { SafeDrawer } from '@/components/SafeDrawer'
 import { notify } from '@/lib/notify'
 import {
@@ -195,7 +195,7 @@ export default function AttachmentsPage() {
     }
 
     try {
-      const res = await sensitiveFetch('/api/attachments/config', {
+      const res = await sensitiveJsonFetch('/api/attachments/config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(testConfig),
@@ -218,7 +218,7 @@ export default function AttachmentsPage() {
     setSaving(true)
 
     try {
-      const res = await sensitiveFetch('/api/attachments/config', {
+      const res = await sensitiveJsonFetch('/api/attachments/config', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(configForm),
