@@ -172,6 +172,30 @@ describe('/api/comments', () => {
     expect(savedComment?.userId).toBe(1)
   })
 
+  it('验证码错误时返回 INVALID_CAPTCHA 且 meta.captchaShouldRefresh 为 true', async () => {
+    await createPost({ slug: 'invalid-captcha-post' })
+    mockVerifyCaptcha.mockResolvedValue(false)
+
+    const response = await POST(
+      new Request('http://localhost/api/comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          slug: 'invalid-captcha-post',
+          username: '访客',
+          content: '测试评论',
+          captchaCode: 'wrong',
+        }),
+      }) as any,
+    )
+    const json = await response.json()
+
+    expect(response.status).toBe(400)
+    expect(json.code).toBe('INVALID_CAPTCHA')
+    // 回归保护：失败响应需带 meta.captchaShouldRefresh，前端据此自动刷新
+    expect(json.meta?.captchaShouldRefresh).toBe(true)
+  })
+
   it('评论内容超过最大长度时返回 CONTENT_TOO_LONG', async () => {
     await createPost({ slug: 'length-test-post' })
 
@@ -252,6 +276,8 @@ describe('/api/comments', () => {
 
     expect(second.status).toBe(429)
     expect(json.code).toBe('RATE_LIMITED')
+    // 回归保护：RATE_LIMITED 时 captcha 已被消费，前端依赖 meta.captchaShouldRefresh 自动刷新
+    expect(json.meta?.captchaShouldRefresh).toBe(true)
   })
 
   it('parentId 为 "0" 时作为顶级评论正常提交', async () => {

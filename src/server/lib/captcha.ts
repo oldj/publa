@@ -1,8 +1,10 @@
 import { db } from '@/server/db'
-import { maybeFirst } from '@/server/db/query'
 import { captchas } from '@/server/db/schema'
 import { eq, lt } from 'drizzle-orm'
 import svgCaptcha from 'svg-captcha'
+
+// 验证码生命周期：服务端 captcha 行与客户端 cookie 都从这里取值，避免两边漂移。
+export const CAPTCHA_TTL_SECONDS = 5 * 60
 
 /** 生成验证码 */
 export async function generateCaptcha(sessionId: string) {
@@ -13,7 +15,7 @@ export async function generateCaptcha(sessionId: string) {
     background: '#f0f0f0',
   })
 
-  const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString()
+  const expiresAt = new Date(Date.now() + CAPTCHA_TTL_SECONDS * 1000).toISOString()
 
   await db
     .insert(captchas)
@@ -30,18 +32,15 @@ export async function generateCaptcha(sessionId: string) {
   return captcha.data // SVG 字符串
 }
 
-/** 验证验证码（验证即销毁） */
+/** 验证验证码（验证即销毁，原子一步式消费） */
 export async function verifyCaptcha(sessionId: string, input: string): Promise<boolean> {
-  const row = await maybeFirst(
-    db.select().from(captchas).where(eq(captchas.sessionId, sessionId)).limit(1),
-  )
+  // 使用 DELETE ... RETURNING 一步完成"查出并消费"，
+  // 同一行只可能被一条并发语句拿到，避免"先查后删"的复用窗口。
+  // SQLite (libsql) 与 PostgreSQL 均原生支持该语法。
+  const [row] = await db.delete(captchas).where(eq(captchas.sessionId, sessionId)).returning()
+
   if (!row) return false
-
-  // 先检查过期，再删除，避免过期验证码被无意义地删除
   if (row.expiresAt < new Date().toISOString()) return false
-
-  await db.delete(captchas).where(eq(captchas.sessionId, sessionId))
-
   return row.text === input.toLowerCase()
 }
 
