@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "es2020",
+    "target": "ES2022",
     "lib": [
       "dom",
       "dom.iterable",
@@ -20,14 +20,8 @@
       "@/*": [
         "./src/*"
       ],
-      "src/*": [
-        "./src/*"
-      ],
       "typings": [
         "./typings.d.ts"
-      ],
-      "@public/*": [
-        "./public/*"
       ]
     },
     "jsx": "react-jsx",

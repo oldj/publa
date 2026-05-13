@@ -2,7 +2,6 @@ import js from '@eslint/js'
 import typescript from '@typescript-eslint/eslint-plugin'
 import typescriptParser from '@typescript-eslint/parser'
 import prettier from 'eslint-config-prettier'
-import react from 'eslint-plugin-react'
 import reactHooks from 'eslint-plugin-react-hooks'
 import globals from 'globals'
 
@@ -38,7 +37,6 @@ export default [
     },
     plugins: {
       '@typescript-eslint': typescript,
-      react,
       'react-hooks': reactHooks,
     },
     rules: {
@@ -92,12 +90,6 @@ export default [
         },
       ],
 
-      // React 相关规则
-      'react/react-in-jsx-scope': 'off',
-      'react/prop-types': 'off',
-      'react/jsx-uses-react': 'off',
-      'react/jsx-uses-vars': 'error',
-
       // 通用规则
       'no-unused-vars': 'off', // 禁用原生规则，使用 TypeScript 专用规则
       // 'no-console': 'warn',
@@ -110,11 +102,9 @@ export default [
         { skipStrings: true, skipComments: true, skipTemplates: true },
       ],
       'no-empty': 'warn',
-    },
-    settings: {
-      react: {
-        version: 'detect',
-      },
+      // ESLint 10 recommended 新增；暂关掉保持与 v9 行为一致，作为后续代码质量任务再开启
+      'preserve-caught-error': 'off',
+      'no-useless-assignment': 'off',
     },
   },
   // 为 .mjs 文件配置 Node.js 环境
