@@ -1,8 +1,8 @@
 import { GUESTBOOK_MAX_LENGTH } from '@/lib/constants'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
 import * as schema from '@/server/db/schema'
-import { setupTestDb, testDb } from '@/server/services/__test__/setup'
 import { settings } from '@/server/db/schema'
+import { setupTestDb, testDb } from '@/server/services/__test__/setup'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const { mockVerifyCaptcha, mockCookies } = vi.hoisted(() => ({
   mockVerifyCaptcha: vi.fn(),
@@ -126,6 +126,8 @@ describe('/api/guestbook POST', () => {
 
     expect(second.status).toBe(429)
     expect(json.code).toBe('RATE_LIMITED')
+    // 回归保护：失败响应需带 meta.captchaShouldRefresh，前端据此自动刷新
+    expect(json.meta?.captchaShouldRefresh).toBe(true)
   })
 
   it('用户名和内容为空时返回校验错误', async () => {
@@ -184,5 +186,7 @@ describe('/api/guestbook POST', () => {
 
     expect(response.status).toBe(400)
     expect(json.code).toBe('INVALID_CAPTCHA')
+    // 回归保护：失败响应需带 meta.captchaShouldRefresh，前端据此自动刷新
+    expect(json.meta?.captchaShouldRefresh).toBe(true)
   })
 })

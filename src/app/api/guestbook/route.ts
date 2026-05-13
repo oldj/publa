@@ -51,6 +51,10 @@ export async function POST(request: NextRequest) {
     })
   }
 
+  // 注意：以下任何路径（包括 INVALID_CAPTCHA 短路场景）返回时，
+  // captcha token 状态已不可用，jsonError 必须带 meta.captchaShouldRefresh: true
+  // 让前端同步刷新。若未来调整流水线顺序，需同步检查此处与所有受影响的 jsonError 调用。
+  //
   // 验证验证码
   const cookieStore = await cookies()
   const sessionId = cookieStore.get('captcha_session')?.value
@@ -61,6 +65,7 @@ export async function POST(request: NextRequest) {
       key: 'invalidCaptcha',
       code: 'INVALID_CAPTCHA',
       status: 400,
+      meta: { captchaShouldRefresh: true },
     })
   }
 
@@ -74,6 +79,7 @@ export async function POST(request: NextRequest) {
       key: 'rateLimited',
       code: 'RATE_LIMITED',
       status: 429,
+      meta: { captchaShouldRefresh: true },
     })
   }
 

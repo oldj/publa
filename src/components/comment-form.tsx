@@ -8,7 +8,7 @@ import lodash from 'lodash'
 import { useTranslations } from 'next-intl'
 import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
-import CaptchaInput from 'src/components/captcha-input'
+import CaptchaInput, { type CaptchaInputHandle } from 'src/components/captcha-input'
 import { COMMENT_MAX_LENGTH } from 'src/lib/constants'
 import Button from 'src/widgets/Button'
 
@@ -33,7 +33,10 @@ const CommentForm = (props: Props) => {
   const refForm = useRef<HTMLFormElement>(null)
   const contentValue = watch('content', '')
 
-  let refreshCaptcha = () => {}
+  // CaptchaInput 通过 useImperativeHandle 暴露 refresh() 方法
+  const captchaInputRef = useRef<CaptchaInputHandle>(null)
+  // register 的 ref 单独取出给内部 <input>，imperative handle 走外层 ref
+  const { ref: captchaInputDomRef, ...captchaRegister } = register('captchaCode')
 
   // 从 localStorage 恢复用户信息，放在 useEffect 中避免水合不匹配
   useEffect(() => {
@@ -76,9 +79,10 @@ const CommentForm = (props: Props) => {
           })
 
           // form.setFieldsValue({ content: '', captchaCode: '' })
-          refreshCaptcha()
+          captchaInputRef.current?.refresh()
           const cached = lodash.pick(values, ['username', 'email', 'url'])
-          reset({ contentId, parentId, content: '', captchaCode: '', ...cached })
+          // 清空字段放在 spread 之后，避免 cached 未来扩展时把空值覆盖掉
+          reset({ contentId, parentId, ...cached, content: '', captchaCode: '' })
           if (typeof onSuccess === 'function') {
             onSuccess(r.data)
           }
@@ -99,7 +103,13 @@ const CommentForm = (props: Props) => {
               break
           }
 
-          // alert(message.toString())
+          // 后端在 meta.captchaShouldRefresh 显式告知本次失败是否需要前端刷新 captcha，
+          // 由后端单方面维护"用户 captcha 状态是否仍可用"的事实，前端无需枚举 code。
+          if (r.meta?.captchaShouldRefresh) {
+            captchaInputRef.current?.refresh()
+            reset({ ...values, captchaCode: '' })
+          }
+
           dialog.Alert({
             icon: 'error',
             // title: '评论失败',
@@ -241,9 +251,10 @@ const CommentForm = (props: Props) => {
           <span className="comment-form-info">{tCommon('labels.caseInsensitive')}</span>
         </label>
         <CaptchaInput
-          setRefresh={(fn: () => void) => (refreshCaptcha = fn)}
+          ref={captchaInputRef}
+          inputRef={captchaInputDomRef}
           required={true}
-          {...register('captchaCode')}
+          {...captchaRegister}
         />
 
         {/*<Form.Item className={styles.submit}>*/}
