@@ -3,6 +3,9 @@ import { captchas } from '@/server/db/schema'
 import { eq, lt } from 'drizzle-orm'
 import svgCaptcha from 'svg-captcha'
 
+// 验证码生命周期：服务端 captcha 行与客户端 cookie 都从这里取值，避免两边漂移。
+export const CAPTCHA_TTL_SECONDS = 5 * 60
+
 /** 生成验证码 */
 export async function generateCaptcha(sessionId: string) {
   const captcha = svgCaptcha.create({
@@ -12,7 +15,7 @@ export async function generateCaptcha(sessionId: string) {
     background: '#f0f0f0',
   })
 
-  const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString()
+  const expiresAt = new Date(Date.now() + CAPTCHA_TTL_SECONDS * 1000).toISOString()
 
   await db
     .insert(captchas)
