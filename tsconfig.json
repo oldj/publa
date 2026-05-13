@@ -20,9 +20,6 @@
       "@/*": [
         "./src/*"
       ],
-      "src/*": [
-        "./src/*"
-      ],
       "typings": [
         "./typings.d.ts"
       ]

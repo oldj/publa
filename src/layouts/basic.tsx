@@ -3,13 +3,13 @@
  * @homepage: https://oldj.net
  */
 
+import Footer from '@/components/footer'
+import Nav from '@/components/nav'
 import BlankLayout from '@/layouts/blank'
 import { getMenuTree } from '@/server/services/menus'
 import { getFrontendCategories, getFrontendTags } from '@/server/services/posts-frontend'
 import { getAllSettings, toBool, toStr } from '@/server/services/settings'
 import React from 'react'
-import Footer from 'src/components/footer'
-import Nav from 'src/components/nav'
 
 interface IProps {
   children?: React.ReactNode

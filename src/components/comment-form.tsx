@@ -3,14 +3,14 @@
  * @homepage: https://oldj.net
  */
 
+import CaptchaInput, { type CaptchaInputHandle } from '@/components/captcha-input'
+import { COMMENT_MAX_LENGTH } from '@/lib/constants'
+import Button from '@/widgets/Button'
 import dialog from '@/widgets/dialog'
 import lodash from 'lodash'
 import { useTranslations } from 'next-intl'
 import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
-import CaptchaInput, { type CaptchaInputHandle } from 'src/components/captcha-input'
-import { COMMENT_MAX_LENGTH } from 'src/lib/constants'
-import Button from 'src/widgets/Button'
 
 interface Props {
   contentId: number

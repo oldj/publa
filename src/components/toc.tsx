@@ -2,11 +2,11 @@
  */
 
 import { isAnyPartOfElementInViewport } from '@/lib/element'
+import { IHeader } from '@/lib/getHeadersFromHTML'
 import { IconMenuDeep } from '@tabler/icons-react'
 import clsx from 'clsx'
 import { useTranslations } from 'next-intl'
 import React, { useEffect, useState } from 'react'
-import { IHeader } from 'src/lib/getHeadersFromHTML'
 
 interface IProps {
   headers: IHeader[]
