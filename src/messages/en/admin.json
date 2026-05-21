@@ -1089,6 +1089,10 @@
       "label": "Content type",
       "richtext": "Rich text"
     },
+    "htmlNotice": {
+      "trusted": "HTML will be saved as-is. Avoid pasting code from untrusted sources.",
+      "sanitized": "HTML will be sanitized; script tags and event handlers will be stripped."
+    },
     "header": {
       "preview": "Preview",
       "publish": "Publish",

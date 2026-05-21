@@ -1,9 +1,10 @@
 import { requireCurrentUser, requireRole } from '@/server/auth'
 import { db } from '@/server/db'
 import { jsonError, jsonSuccess } from '@/server/lib/api-response'
-import { renderMarkdown, htmlToText } from '@/server/lib/markdown'
-import { sanitizeRichTextHtml } from '@/server/lib/sanitize-html-content'
+import { htmlToText, renderMarkdown } from '@/server/lib/markdown'
 import { isUniqueConstraintError, parseIntParam, safeParseJson } from '@/server/lib/request'
+import { sanitizeRichTextHtml } from '@/server/lib/sanitize-html-content'
+import { logActivity } from '@/server/services/activity-logs'
 import {
   createEmptyPage,
   createPage,
@@ -13,7 +14,6 @@ import {
 } from '@/server/services/pages'
 import { publishDraft, saveDraft } from '@/server/services/revisions'
 import { parsePageDraftMetadata } from '@/shared/revision-metadata'
-import { logActivity } from '@/server/services/activity-logs'
 import { NextRequest } from 'next/server'
 
 function getPathValidationKey(
@@ -112,12 +112,14 @@ export async function POST(request: NextRequest) {
       body.contentHtml = await renderMarkdown(body.contentRaw || '')
       body.contentText = htmlToText(body.contentHtml)
     } else {
-      body.contentHtml = sanitizeRichTextHtml(body.contentHtml || body.contentRaw)
+      body.contentHtml = sanitizeRichTextHtml(body.contentHtml || body.contentRaw, {
+        role: guard.user.role,
+      })
       body.contentText = body.contentText || htmlToText(body.contentHtml)
     }
   } else if (body.contentHtml) {
     // 只传 contentHtml 不传 contentRaw 时同样要过白名单，避免绕过
-    body.contentHtml = sanitizeRichTextHtml(body.contentHtml)
+    body.contentHtml = sanitizeRichTextHtml(body.contentHtml, { role: guard.user.role })
     body.contentText = body.contentText || htmlToText(body.contentHtml)
   }
 

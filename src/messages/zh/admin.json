@@ -1089,6 +1089,10 @@
       "label": "内容类型",
       "richtext": "富文本"
     },
+    "htmlNotice": {
+      "trusted": "HTML 将原样保存，请勿粘贴来源不明的代码。",
+      "sanitized": "HTML 将经白名单过滤，script 标签、事件属性等会被移除。"
+    },
     "header": {
       "preview": "预览",
       "publish": "发布",

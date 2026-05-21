@@ -2,8 +2,9 @@ import { requireCurrentUser, requireRole } from '@/server/auth'
 import { db } from '@/server/db'
 import { jsonError, jsonSuccess } from '@/server/lib/api-response'
 import { htmlToText, renderMarkdown } from '@/server/lib/markdown'
-import { sanitizeRichTextHtml } from '@/server/lib/sanitize-html-content'
 import { isUniqueConstraintError, parseIdParam, safeParseJson } from '@/server/lib/request'
+import { sanitizeRichTextHtml } from '@/server/lib/sanitize-html-content'
+import { logActivity } from '@/server/services/activity-logs'
 import {
   deletePost,
   getPostById,
@@ -13,7 +14,6 @@ import {
 } from '@/server/services/posts'
 import { getDraft, publishDraft, saveDraft } from '@/server/services/revisions'
 import { parsePostDraftMetadata } from '@/shared/revision-metadata'
-import { logActivity } from '@/server/services/activity-logs'
 import { NextRequest } from 'next/server'
 
 function getSlugValidationKey(code: 'REQUIRED' | 'STARTS_WITH_HYPHEN' | 'ENDS_WITH_HYPHEN') {
@@ -135,12 +135,14 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       body.contentHtml = await renderMarkdown(body.contentRaw || '')
       body.contentText = htmlToText(body.contentHtml)
     } else {
-      body.contentHtml = sanitizeRichTextHtml(body.contentHtml || body.contentRaw)
+      body.contentHtml = sanitizeRichTextHtml(body.contentHtml || body.contentRaw, {
+        role: guard.user.role,
+      })
       body.contentText = body.contentText || htmlToText(body.contentHtml)
     }
   } else if (body.contentHtml) {
     // 只传 contentHtml 不传 contentRaw 时同样要过白名单，避免绕过
-    body.contentHtml = sanitizeRichTextHtml(body.contentHtml)
+    body.contentHtml = sanitizeRichTextHtml(body.contentHtml, { role: guard.user.role })
     body.contentText = body.contentText || htmlToText(body.contentHtml)
   }
 

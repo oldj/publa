@@ -1,10 +1,10 @@
 import { requireCurrentUser, requireRole } from '@/server/auth'
 import { jsonError, jsonSuccess } from '@/server/lib/api-response'
-import { renderMarkdown, htmlToText } from '@/server/lib/markdown'
-import { sanitizeRichTextHtml } from '@/server/lib/sanitize-html-content'
+import { htmlToText, renderMarkdown } from '@/server/lib/markdown'
 import { parseIdParam, safeParseJson } from '@/server/lib/request'
+import { sanitizeRichTextHtml } from '@/server/lib/sanitize-html-content'
 import { getPageById } from '@/server/services/pages'
-import { saveDraft, getDraft, deleteDraft } from '@/server/services/revisions'
+import { deleteDraft, getDraft, saveDraft } from '@/server/services/revisions'
 import { parsePageDraftMetadata } from '@/shared/revision-metadata'
 import { NextRequest } from 'next/server'
 
@@ -57,12 +57,12 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       contentHtml = await renderMarkdown(contentRaw || '')
       contentText = htmlToText(contentHtml)
     } else {
-      contentHtml = sanitizeRichTextHtml(contentHtml || contentRaw)
+      contentHtml = sanitizeRichTextHtml(contentHtml || contentRaw, { role: guard.user.role })
       if (!contentText) contentText = htmlToText(contentHtml)
     }
   } else if (contentHtml) {
     // 只传 contentHtml 不传 contentRaw 时同样要过白名单，避免绕过
-    contentHtml = sanitizeRichTextHtml(contentHtml)
+    contentHtml = sanitizeRichTextHtml(contentHtml, { role: guard.user.role })
     if (!contentText) contentText = htmlToText(contentHtml)
   }
 

@@ -1,5 +1,6 @@
 'use client'
 
+import { useCurrentUser } from '@/app/(admin)/_components/AdminCountsContext'
 import { useAdminUrl } from '@/app/(admin)/_components/AdminPathContext'
 import { EditorHeader } from '@/app/(admin)/_components/EditorHeader'
 import myModal from '@/app/(admin)/_components/myModals'
@@ -80,7 +81,9 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
   const router = useRouter()
   const adminUrl = useAdminUrl()
   const t = useTranslations('admin.editor.page')
+  const tEditor = useTranslations('admin.editor')
   const tCommon = useTranslations('common')
+  const currentUser = useCurrentUser()
   const [loading, setLoading] = useState(false)
   const [pathError, setPathError] = useState<string | null>(null)
   const [dirty, setDirty] = useState(false)
@@ -1081,6 +1084,13 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
                 language={contentType === 'markdown' ? 'markdown' : 'html'}
                 label={
                   contentType === 'markdown' ? t('fields.markdownContent') : t('fields.htmlContent')
+                }
+                description={
+                  contentType === 'html'
+                    ? currentUser?.role === 'owner' || currentUser?.role === 'admin'
+                      ? tEditor('htmlNotice.trusted')
+                      : tEditor('htmlNotice.sanitized')
+                    : undefined
                 }
                 placeholder={
                   contentType === 'markdown'
