@@ -2,19 +2,22 @@ import type { AuthRole } from '@/server/auth'
 import sanitizeHtml from 'sanitize-html'
 import { sanitizeOptions } from './markdown'
 
+const DEFAULT_BYPASS_ROLES: readonly AuthRole[] = ['owner', 'admin']
+
 /**
- * 富文本编辑器保存时的 HTML 净化。
- * 复用 markdown 白名单，避免两套配置脱节。
+ * 富文本编辑器保存时的 HTML 净化。复用 markdown 白名单，避免两套配置脱节。
  *
- * 当调用方传入 owner / admin 角色时，认为发布者完全可信，跳过净化原样返回。
- * 站长 / 管理员对前台 XSS 自行负责；editor 及未知来源仍走白名单。
+ * `bypassRoles` 来自后台设置（getHtmlSanitizeBypassRoles），列出哪些角色发布时跳过净化；
+ * 不传时退回 owner / admin 兜底，与历史行为一致。命中 bypassRoles 的发布者完全可信，
+ * 内容原样保存——前台 XSS 风险由站长/管理员自负。
  */
 export function sanitizeRichTextHtml(
   html: string | null | undefined,
-  options?: { role?: AuthRole },
+  options?: { role?: AuthRole; bypassRoles?: readonly AuthRole[] },
 ): string {
   if (!html) return ''
-  if (options?.role === 'owner' || options?.role === 'admin') {
+  const bypassRoles = options?.bypassRoles ?? DEFAULT_BYPASS_ROLES
+  if (options?.role && bypassRoles.includes(options.role)) {
     return html
   }
   return sanitizeHtml(html, sanitizeOptions)

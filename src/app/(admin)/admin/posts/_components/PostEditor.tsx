@@ -1,6 +1,9 @@
 'use client'
 
-import { useCurrentUser } from '@/app/(admin)/_components/AdminCountsContext'
+import {
+  useCurrentUser,
+  useHtmlSanitizeBypassRoles,
+} from '@/app/(admin)/_components/AdminCountsContext'
 import { useAdminUrl } from '@/app/(admin)/_components/AdminPathContext'
 import { EditorHeader } from '@/app/(admin)/_components/EditorHeader'
 import myModal from '@/app/(admin)/_components/myModals'
@@ -143,6 +146,8 @@ export default function PostEditor({ postId }: { postId?: number }) {
   const tEditor = useTranslations('admin.editor')
   const tCommon = useTranslations('common')
   const currentUser = useCurrentUser()
+  const htmlBypassRoles = useHtmlSanitizeBypassRoles()
+  const htmlBypassEnabled = !!currentUser && htmlBypassRoles.includes(currentUser.role)
   const [loading, setLoading] = useState(false)
   const [categories, setCategories] = useState<Category[]>([])
   const [allTags, setAllTags] = useState<Tag[]>([])
@@ -1215,7 +1220,7 @@ export default function PostEditor({ postId }: { postId?: number }) {
                 }
                 description={
                   contentType === 'html'
-                    ? currentUser?.role === 'owner' || currentUser?.role === 'admin'
+                    ? htmlBypassEnabled
                       ? tEditor('htmlNotice.trusted')
                       : tEditor('htmlNotice.sanitized')
                     : undefined

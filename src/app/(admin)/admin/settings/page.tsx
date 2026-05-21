@@ -7,9 +7,11 @@ import { sensitiveJsonFetch, sensitiveUploadFetch } from '@/app/(admin)/_lib/sen
 import CodeEditor from '@/components/editors/CodeEditor'
 import { isLocale, LOCALE_LABELS, SUPPORTED_LOCALES } from '@/i18n/locales'
 import { notify } from '@/lib/notify'
+import type { AuthRole } from '@/server/auth'
 import {
   Box,
   Button,
+  Center,
   Divider,
   Group,
   NumberInput,
@@ -17,6 +19,7 @@ import {
   Select,
   Stack,
   Switch,
+  Table,
   Tabs,
   Text,
   TextInput,
@@ -101,6 +104,21 @@ export default function SettingsPage() {
     setSettings((prev) => ({ ...prev, [key]: value }))
   }
 
+  const HTML_SANITIZE_ROLES: readonly AuthRole[] = ['owner', 'admin', 'editor']
+  const bypassRoles: AuthRole[] = Array.isArray(settings.htmlSanitizeBypassRoles)
+    ? (settings.htmlSanitizeBypassRoles as AuthRole[]).filter((r) =>
+        HTML_SANITIZE_ROLES.includes(r),
+      )
+    : ['owner', 'admin']
+  const setBypass = (role: AuthRole, bypass: boolean) => {
+    const target = new Set(bypassRoles)
+    if (bypass) target.add(role)
+    else target.delete(role)
+    // 按 HTML_SANITIZE_ROLES 固定顺序输出，避免 toggle 后顺序变化误触发 dirty / reauth
+    const next = HTML_SANITIZE_ROLES.filter((r) => target.has(r))
+    setField('htmlSanitizeBypassRoles', next)
+  }
+
   const restoreScrollPositionSoon = (x: number, y: number) => {
     const restore = () => window.scrollTo(x, y)
 
@@ -116,7 +134,12 @@ export default function SettingsPage() {
   const handleSave = async () => {
     const previousLanguage = initialSettingsRef.current.language
     const nextSettings = { ...settings }
-    const shouldRefreshLocale = nextSettings.language !== previousLanguage
+    // language 变更需重解析 locale；htmlSanitizeBypassRoles 变更需让 admin layout 重读 SSR
+    // 注入值（否则编辑器侧提示文案会 stale）。两种情况都走 router.refresh()。
+    const shouldRefreshLayout =
+      nextSettings.language !== previousLanguage ||
+      JSON.stringify(nextSettings.htmlSanitizeBypassRoles) !==
+        JSON.stringify(initialSettingsRef.current.htmlSanitizeBypassRoles)
 
     // 检查 customHeadHtml 中是否存在不支持的标签
     const headHtml = String(settings.customHeadHtml ?? '')
@@ -147,11 +170,11 @@ export default function SettingsPage() {
       if (json.success) {
         notify({ color: 'green', message: tCommon('save.success') })
         initialSettingsRef.current = nextSettings
-        if (shouldRefreshLocale) {
+        if (shouldRefreshLayout) {
           const scrollX = window.scrollX
           const scrollY = window.scrollY
 
-          // 仅语言变化时刷新 RSC，让根布局重新解析 locale；普通保存无需刷新页面。
+          // 影响根布局 SSR 的字段（语言、HTML 净化策略）变化时刷新 RSC；其他保存无需刷新。
           router.refresh()
           restoreScrollPositionSoon(scrollX, scrollY)
         }
@@ -428,6 +451,61 @@ export default function SettingsPage() {
           checked={settings.enableSearch === true}
           onChange={(e) => setField('enableSearch', e.currentTarget.checked)}
         />
+
+        <Divider label={t('sections.contentSecurity')} labelPosition="left" mt="md" />
+        <Stack gap="xs">
+          <Text size="sm" fw={500}>
+            {t('fields.htmlSanitize.title')}
+          </Text>
+          <Text size="sm" c="dimmed">
+            {t('fields.htmlSanitize.description')}
+          </Text>
+          <Table withTableBorder withColumnBorders striped={false} style={{ maxWidth: 480 }}>
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th />
+                <Table.Th ta="center">{t('fields.htmlSanitize.col.raw')}</Table.Th>
+                <Table.Th ta="center">{t('fields.htmlSanitize.col.sanitized')}</Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {HTML_SANITIZE_ROLES.map((role) => {
+                const isBypass = bypassRoles.includes(role)
+                return (
+                  <Table.Tr key={role}>
+                    <Table.Td>{t(`fields.htmlSanitize.role.${role}`)}</Table.Td>
+                    <Table.Td>
+                      <Center>
+                        <Radio
+                          name={`htmlSanitize-${role}`}
+                          checked={isBypass}
+                          onChange={() => setBypass(role, true)}
+                          aria-label={t('fields.htmlSanitize.col.raw')}
+                        />
+                      </Center>
+                    </Table.Td>
+                    <Table.Td>
+                      <Center>
+                        <Radio
+                          name={`htmlSanitize-${role}`}
+                          checked={!isBypass}
+                          onChange={() => setBypass(role, false)}
+                          aria-label={t('fields.htmlSanitize.col.sanitized')}
+                        />
+                      </Center>
+                    </Table.Td>
+                  </Table.Tr>
+                )
+              })}
+            </Table.Tbody>
+          </Table>
+          <Text size="xs" c="dimmed">
+            {t('fields.htmlSanitize.note.raw')}
+          </Text>
+          <Text size="xs" c="dimmed">
+            {t('fields.htmlSanitize.note.sanitized')}
+          </Text>
+        </Stack>
 
         <Divider label={t('sections.footer')} labelPosition="left" mt="md" />
         <CodeEditor

@@ -13,6 +13,7 @@ import {
   validatePagePath,
 } from '@/server/services/pages'
 import { getDraft, publishDraft, saveDraft } from '@/server/services/revisions'
+import { getHtmlSanitizeBypassRoles } from '@/server/services/settings'
 import { parsePageDraftMetadata } from '@/shared/revision-metadata'
 import { NextRequest } from 'next/server'
 
@@ -138,6 +139,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   // 根据内容类型处理
   const ct = body.contentType || 'richtext'
   body.contentType = ct
+  const sanitizeBypassRoles = await getHtmlSanitizeBypassRoles()
   if (body.contentRaw !== undefined) {
     if (ct === 'markdown') {
       body.contentHtml = await renderMarkdown(body.contentRaw || '')
@@ -146,12 +148,16 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       // richtext/html：内容作为 HTML 保存前需要经过白名单净化
       body.contentHtml = sanitizeRichTextHtml(body.contentHtml || body.contentRaw, {
         role: guard.user.role,
+        bypassRoles: sanitizeBypassRoles,
       })
       body.contentText = body.contentText || htmlToText(body.contentHtml)
     }
   } else if (body.contentHtml) {
     // 只传 contentHtml 不传 contentRaw 时同样要过白名单，避免绕过
-    body.contentHtml = sanitizeRichTextHtml(body.contentHtml, { role: guard.user.role })
+    body.contentHtml = sanitizeRichTextHtml(body.contentHtml, {
+      role: guard.user.role,
+      bypassRoles: sanitizeBypassRoles,
+    })
     body.contentText = body.contentText || htmlToText(body.contentHtml)
   }
 

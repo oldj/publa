@@ -257,4 +257,28 @@ describe('sanitizeRichTextHtml', () => {
     expect(withRole).not.toContain('<script')
     expect(withRole).toContain('<p>safe</p>')
   })
+
+  // bypassRoles 可注入：覆盖默认的 owner / admin 策略
+  it('bypassRoles=[]：所有角色都走净化（即使是 owner）', () => {
+    const html = '<svg onload="x"/><script>1</script>'
+    const result = sanitizeRichTextHtml(html, { role: 'owner', bypassRoles: [] })
+    expect(result).not.toContain('onload')
+    expect(result).not.toContain('<script')
+  })
+
+  it('bypassRoles=["editor"]：editor 跳过，admin 反而走净化', () => {
+    const html = '<script>1</script>'
+    const editor = sanitizeRichTextHtml(html, { role: 'editor', bypassRoles: ['editor'] })
+    const admin = sanitizeRichTextHtml(html, { role: 'admin', bypassRoles: ['editor'] })
+    expect(editor).toBe(html)
+    expect(admin).not.toContain('<script')
+  })
+
+  it('bypassRoles=["owner","admin","editor"]：所有角色都跳过', () => {
+    const html = '<svg onload="x"/>'
+    const bypass: Array<'owner' | 'admin' | 'editor'> = ['owner', 'admin', 'editor']
+    for (const role of bypass) {
+      expect(sanitizeRichTextHtml(html, { role, bypassRoles: bypass })).toBe(html)
+    }
+  })
 })

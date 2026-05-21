@@ -13,6 +13,7 @@ import {
   validateSlug,
 } from '@/server/services/posts'
 import { publishDraft, saveDraft } from '@/server/services/revisions'
+import { getHtmlSanitizeBypassRoles } from '@/server/services/settings'
 import { parsePostDraftMetadata } from '@/shared/revision-metadata'
 import { NextRequest } from 'next/server'
 
@@ -101,6 +102,7 @@ export async function POST(request: NextRequest) {
   // 推导并持久化 contentType
   const ct = body.contentType || (body.isMarkdown ? 'markdown' : 'richtext')
   body.contentType = ct
+  const sanitizeBypassRoles = await getHtmlSanitizeBypassRoles()
 
   // 根据内容类型处理（contentRaw !== undefined 表示字段显式提交，包括空串清空场景）
   if (body.contentRaw !== undefined) {
@@ -110,12 +112,16 @@ export async function POST(request: NextRequest) {
     } else {
       body.contentHtml = sanitizeRichTextHtml(body.contentHtml || body.contentRaw, {
         role: guard.user.role,
+        bypassRoles: sanitizeBypassRoles,
       })
       body.contentText = body.contentText || htmlToText(body.contentHtml)
     }
   } else if (body.contentHtml) {
     // 只传 contentHtml 不传 contentRaw 时同样要过白名单，避免绕过
-    body.contentHtml = sanitizeRichTextHtml(body.contentHtml, { role: guard.user.role })
+    body.contentHtml = sanitizeRichTextHtml(body.contentHtml, {
+      role: guard.user.role,
+      bypassRoles: sanitizeBypassRoles,
+    })
     body.contentText = body.contentText || htmlToText(body.contentHtml)
   }
 

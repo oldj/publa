@@ -1,16 +1,23 @@
 import { SUPPORTED_LOCALES } from '@/i18n/locales'
+import type { AuthRole } from '@/server/auth'
 import { db } from '@/server/db'
 import { maybeFirst } from '@/server/db/query'
 import { settings } from '@/server/db/schema'
 import { eq } from 'drizzle-orm'
 import { cache } from 'react'
 
+const ALL_AUTH_ROLES: readonly AuthRole[] = ['owner', 'admin', 'editor']
+
+function isAuthRole(value: unknown): value is AuthRole {
+  return typeof value === 'string' && (ALL_AUTH_ROLES as readonly string[]).includes(value)
+}
+
 export interface NotifySettingValue {
   enabled: boolean
   userIds: number[]
 }
 
-export type SettingValue = string | boolean | number | number[] | NotifySettingValue
+export type SettingValue = string | boolean | number | number[] | string[] | NotifySettingValue
 type Mutable<T> = { -readonly [K in keyof T]: T[K] }
 type WidenLiteral<T> = T extends string
   ? string
@@ -26,7 +33,7 @@ type WidenLiteral<T> = T extends string
             ? NotifySettingValue
             : T
 
-type SettingValueKind = 'string' | 'boolean' | 'number' | 'numberArray' | 'notify'
+type SettingValueKind = 'string' | 'boolean' | 'number' | 'numberArray' | 'stringArray' | 'notify'
 
 const DEFAULT_NOTIFY_SETTING_VALUE: NotifySettingValue = Object.freeze({
   enabled: false,
@@ -60,6 +67,7 @@ export const ADMIN_SETTINGS_KEYS = [
   'customBodyEndHtml',
   'activeThemeId',
   'activeCustomStyleIds',
+  'htmlSanitizeBypassRoles',
 ] as const
 
 export const EMAIL_SETTINGS_KEYS = [
@@ -112,6 +120,8 @@ const NUMBER_SETTING_KEYS = ['rssLimit', 'activeThemeId'] as const
 
 const NUMBER_ARRAY_SETTING_KEYS = ['activeCustomStyleIds'] as const
 
+const STRING_ARRAY_SETTING_KEYS = ['htmlSanitizeBypassRoles'] as const
+
 const NOTIFY_SETTING_KEYS = ['emailNotifyNewComment', 'emailNotifyNewGuestbook'] as const
 
 const STRING_SETTING_KEYS = [
@@ -154,6 +164,7 @@ const SETTING_VALUE_KINDS: Record<string, SettingValueKind> = Object.freeze({
   ...Object.fromEntries(BOOLEAN_SETTING_KEYS.map((key) => [key, 'boolean' as const])),
   ...Object.fromEntries(NUMBER_SETTING_KEYS.map((key) => [key, 'number' as const])),
   ...Object.fromEntries(NUMBER_ARRAY_SETTING_KEYS.map((key) => [key, 'numberArray' as const])),
+  ...Object.fromEntries(STRING_ARRAY_SETTING_KEYS.map((key) => [key, 'stringArray' as const])),
   ...Object.fromEntries(NOTIFY_SETTING_KEYS.map((key) => [key, 'notify' as const])),
 })
 
@@ -204,6 +215,7 @@ const EXPLICIT_DEFAULT_SETTINGS = defineExplicitDefaultSettings({
   emailSmtpEncryption: 'tls',
   emailNotifyNewComment: DEFAULT_NOTIFY_SETTING_VALUE,
   emailNotifyNewGuestbook: DEFAULT_NOTIFY_SETTING_VALUE,
+  htmlSanitizeBypassRoles: ['owner', 'admin'] as AuthRole[],
   storageProvider: '',
   storageS3Endpoint: '',
   storageS3Region: '',
@@ -231,6 +243,7 @@ type ExplicitDefaultSettingKey = keyof ExplicitDefaultSettingType
 
 export type SettingType = ExplicitDefaultSettingType & {
   activeThemeId: number
+  htmlSanitizeBypassRoles: AuthRole[]
 }
 
 export type SettingKey = keyof SettingType
@@ -246,7 +259,8 @@ export const KNOWN_SETTING_KEYS = Object.freeze(
 ) as readonly SettingKey[]
 
 function cloneSettingValue(value: SettingValue): SettingValue {
-  if (Array.isArray(value)) return [...value]
+  // number[] / string[] 在 spread 后会被推断为联合 (string | number)[]，需要断言回原数组类型
+  if (Array.isArray(value)) return [...value] as SettingValue
   if (value && typeof value === 'object') {
     return { ...(value as NotifySettingValue), userIds: [...(value as NotifySettingValue).userIds] }
   }
@@ -278,6 +292,8 @@ export function getDefaultSettingValue<K extends SettingKey>(key: K): SettingTyp
     case 'number':
       return 0 as SettingType[K]
     case 'numberArray':
+      return [] as unknown as SettingType[K]
+    case 'stringArray':
       return [] as unknown as SettingType[K]
     case 'notify':
       return cloneSettingValue(DEFAULT_NOTIFY_SETTING_VALUE) as SettingType[K]
@@ -346,6 +362,24 @@ function normalizeSettingValue(key: string, value: unknown): SettingValue {
         }
       }
       return value as number[]
+    case 'stringArray':
+      if (!Array.isArray(value)) {
+        throw new SettingsValidationError({ invalidValueKeys: [key] })
+      }
+      for (const item of value) {
+        if (typeof item !== 'string') {
+          throw new SettingsValidationError({ invalidValueKeys: [key] })
+        }
+      }
+      // htmlSanitizeBypassRoles 限定为 AuthRole 子集，过滤掉未知角色而非静默接受
+      if (key === 'htmlSanitizeBypassRoles') {
+        for (const item of value as string[]) {
+          if (!isAuthRole(item)) {
+            throw new SettingsValidationError({ invalidValueKeys: [key] })
+          }
+        }
+      }
+      return value as string[]
     case 'notify':
       try {
         return validateNotifyValue(value)
@@ -524,9 +558,11 @@ export function pickSettings<K extends SettingKey>(
             ? 0
             : kind === 'numberArray'
               ? []
-              : kind === 'notify'
-                ? cloneSettingValue(DEFAULT_NOTIFY_SETTING_VALUE)
-                : ''
+              : kind === 'stringArray'
+                ? []
+                : kind === 'notify'
+                  ? cloneSettingValue(DEFAULT_NOTIFY_SETTING_VALUE)
+                  : ''
       ) as SettingType[K]
     }
   }
@@ -556,4 +592,18 @@ export async function updateSettings(data: PartialSettingType) {
       await setSetting(key, value)
     }
   }
+}
+
+/**
+ * 读取「HTML 净化跳过的角色」列表。
+ * 缺 key 时回退到 EXPLICIT_DEFAULT_SETTINGS（升级用户在 ensureSettingsSeeded 跑前不会拿到空数组）；
+ * 用户主动保存的空数组（"所有角色都走净化"）会被尊重原样返回。
+ */
+export async function getHtmlSanitizeBypassRoles(): Promise<AuthRole[]> {
+  const all = await getAllSettings()
+  const raw = all.htmlSanitizeBypassRoles
+  if (Array.isArray(raw)) {
+    return raw.filter(isAuthRole)
+  }
+  return [...EXPLICIT_DEFAULT_SETTINGS.htmlSanitizeBypassRoles] as AuthRole[]
 }

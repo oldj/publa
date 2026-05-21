@@ -103,7 +103,8 @@
       "rss": "RSS 设置",
       "search": "搜索设置",
       "footer": "底部版权",
-      "customHtml": "自定义 HTML"
+      "customHtml": "自定义 HTML",
+      "contentSecurity": "内容安全"
     },
     "customHtmlTabs": {
       "head": "Head",
@@ -156,7 +157,24 @@
       "customBodyStartHtml": "自定义 Body 头部 HTML",
       "customBodyStartHtmlDescription": "在 '<body>' 标签后方插入 HTML",
       "customBodyEndHtml": "自定义 Body 底部 HTML",
-      "customBodyEndHtmlDescription": "在 '</body>' 标签前方插入 HTML"
+      "customBodyEndHtmlDescription": "在 '</body>' 标签前方插入 HTML",
+      "htmlSanitize": {
+        "title": "HTML 净化策略",
+        "description": "当用户在文章或自定义页面里选择「HTML」内容类型时，按发布者角色决定是否对其 HTML 做白名单净化。",
+        "col": {
+          "raw": "原样输出",
+          "sanitized": "过滤高风险标签"
+        },
+        "role": {
+          "owner": "站长（owner）",
+          "admin": "管理员（admin）",
+          "editor": "编辑（editor）"
+        },
+        "note": {
+          "raw": "「原样输出」：发布的 HTML 不做净化，包含 script、事件属性等都原样保存。请仅授予完全信任的角色。",
+          "sanitized": "「过滤高风险标签」：发布的 HTML 会经白名单过滤，script、on* 事件属性、未列入白名单的标签等会被移除。"
+        }
+      }
     },
     "modes": {
       "default": "默认图标",

@@ -5,12 +5,14 @@ const {
   mockRequireRecentReauth,
   mockRequireRole,
   mockGetAllSettings,
+  mockGetHtmlSanitizeBypassRoles,
   mockNormalizeSettingsPayload,
   mockUpdateSettings,
 } = vi.hoisted(() => ({
   mockRequireRecentReauth: vi.fn(),
   mockRequireRole: vi.fn(),
   mockGetAllSettings: vi.fn(),
+  mockGetHtmlSanitizeBypassRoles: vi.fn(),
   mockNormalizeSettingsPayload: vi.fn(),
   mockUpdateSettings: vi.fn(),
 }))
@@ -31,6 +33,7 @@ vi.mock('@/server/services/settings', () => {
   return {
     ADMIN_SETTINGS_KEYS,
     getAllSettings: mockGetAllSettings,
+    getHtmlSanitizeBypassRoles: mockGetHtmlSanitizeBypassRoles,
     isSettingsValidationError: (error: unknown) =>
       Boolean(error && typeof error === 'object' && 'name' in (error as Record<string, unknown>)),
     normalizeSettingsPayload: mockNormalizeSettingsPayload,
@@ -52,6 +55,7 @@ describe('/api/settings', () => {
     mockRequireRecentReauth.mockReset()
     mockRequireRole.mockReset()
     mockGetAllSettings.mockReset()
+    mockGetHtmlSanitizeBypassRoles.mockReset()
     mockNormalizeSettingsPayload.mockReset()
     mockUpdateSettings.mockReset()
 
@@ -67,6 +71,7 @@ describe('/api/settings', () => {
       storageS3SecretKey: 'SECRET_VALUE',
     })
     mockRequireRecentReauth.mockResolvedValue({ ok: true })
+    mockGetHtmlSanitizeBypassRoles.mockResolvedValue(['owner', 'admin'])
     mockNormalizeSettingsPayload.mockImplementation((payload) => payload)
   })
 
@@ -113,6 +118,7 @@ describe('/api/settings', () => {
       enableComment: true,
       showCommentsGlobally: false,
       customHeadHtml: '',
+      htmlSanitizeBypassRoles: ['owner', 'admin'],
     })
     expect(json.data.storageS3SecretKey).toBeUndefined()
   })

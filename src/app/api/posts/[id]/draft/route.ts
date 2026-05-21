@@ -5,6 +5,7 @@ import { parseIdParam, safeParseJson } from '@/server/lib/request'
 import { sanitizeRichTextHtml } from '@/server/lib/sanitize-html-content'
 import { getPostById } from '@/server/services/posts'
 import { deleteDraft, getDraft, saveDraft } from '@/server/services/revisions'
+import { getHtmlSanitizeBypassRoles } from '@/server/services/settings'
 import { parsePostDraftMetadata } from '@/shared/revision-metadata'
 import { NextRequest } from 'next/server'
 
@@ -52,6 +53,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
   // 推导 contentType
   const ct = body.contentType || (body.isMarkdown ? 'markdown' : 'richtext')
+  const sanitizeBypassRoles = await getHtmlSanitizeBypassRoles()
 
   // 根据内容类型处理（contentRaw !== undefined 表示字段显式提交，包括空串清空场景）
   if (contentRaw !== undefined) {
@@ -59,12 +61,18 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       contentHtml = await renderMarkdown(contentRaw || '')
       contentText = htmlToText(contentHtml)
     } else {
-      contentHtml = sanitizeRichTextHtml(contentHtml || contentRaw, { role: guard.user.role })
+      contentHtml = sanitizeRichTextHtml(contentHtml || contentRaw, {
+        role: guard.user.role,
+        bypassRoles: sanitizeBypassRoles,
+      })
       if (!contentText) contentText = htmlToText(contentHtml)
     }
   } else if (contentHtml) {
     // 只传 contentHtml 不传 contentRaw 时同样要过白名单，避免绕过
-    contentHtml = sanitizeRichTextHtml(contentHtml, { role: guard.user.role })
+    contentHtml = sanitizeRichTextHtml(contentHtml, {
+      role: guard.user.role,
+      bypassRoles: sanitizeBypassRoles,
+    })
     if (!contentText) contentText = htmlToText(contentHtml)
   }
 
