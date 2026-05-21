@@ -6,9 +6,13 @@ export async function register() {
   await runMigrations()
   console.log('Database migration completed.')
 
-  // 升级现有库时为新增的 setting key 幂等补齐默认值，避免运行时缺 key 拿到 undefined
+  // 升级现有库时为新增的 setting key 幂等补齐默认值；未初始化的库（首次启动）跳过，
+  // 让 setup 流程的 seed() 用用户选择的初始语言写入 settings.language。
+  const { isSystemInitialized } = await import('@/server/auth')
   const { ensureBuiltinThemes, ensureSettingsSeeded } = await import('@/server/db/seed')
-  await ensureSettingsSeeded()
+  if (await isSystemInitialized()) {
+    await ensureSettingsSeeded()
+  }
   await ensureBuiltinThemes()
 
   // 初始化 JWT secret（环境变量 > 数据库 > 自动生成）
