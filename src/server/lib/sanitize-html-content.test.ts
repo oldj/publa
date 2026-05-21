@@ -80,12 +80,6 @@ describe('sanitizeRichTextHtml', () => {
     expect(result).toContain('margin-right:auto')
   })
 
-  it('剥离 margin-left 非 auto 值', () => {
-    const html = '<div style="margin-left:10px"></div>'
-    const result = sanitizeRichTextHtml(html)
-    expect(result).not.toContain('margin-left')
-  })
-
   it('幂等：净化后再净化结果不变', () => {
     const html =
       '<div data-embed="" data-provider="bilibili" class="embed"><iframe src="https://player.bilibili.com/player.html?bvid=BV1xx" allow="fullscreen" loading="lazy"></iframe></div>'
@@ -148,6 +142,143 @@ describe('sanitizeRichTextHtml', () => {
       const html = `<iframe src="https://${hostname}/embed/123"></iframe>`
       const result = sanitizeRichTextHtml(html)
       expect(result).toContain(hostname)
+    }
+  })
+
+  // SVG 支持（editor 档：走白名单，svg 保留，恶意元素被剥）
+  it('保留基本 SVG 结构与属性', () => {
+    const html =
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path d="M12 2L2 22h20L12 2z" fill="red"/></svg>'
+    const result = sanitizeRichTextHtml(html)
+    expect(result).toContain('<svg')
+    expect(result).toContain('<path')
+    expect(result).toContain('d="M12 2L2 22h20L12 2z"')
+    expect(result).toContain('fill="red"')
+  })
+
+  it('剥离 SVG 内的 script 标签', () => {
+    const html = '<svg><script>alert("xss")</script><circle cx="10" cy="10" r="5"/></svg>'
+    const result = sanitizeRichTextHtml(html)
+    expect(result).not.toContain('<script')
+    expect(result).toContain('<circle')
+  })
+
+  it('剥离 SVG 标签上的 onload / onclick 等事件属性', () => {
+    const html = '<svg onload="alert(1)"><rect onclick="hack()" width="10" height="10"/></svg>'
+    const result = sanitizeRichTextHtml(html)
+    expect(result).not.toContain('onload')
+    expect(result).not.toContain('onclick')
+    expect(result).toContain('<svg')
+    expect(result).toContain('<rect')
+  })
+
+  it('剥离 foreignObject（防止任意 HTML 注入）', () => {
+    const html =
+      '<svg><foreignObject><div onclick="hack()">evil</div></foreignObject><circle cx="5" cy="5" r="3"/></svg>'
+    const result = sanitizeRichTextHtml(html)
+    expect(result).not.toMatch(/foreignobject/i)
+    expect(result).not.toContain('onclick')
+  })
+
+  it('剥离 use 标签的 javascript: 协议（通过 allowedSchemes）', () => {
+    const html = '<svg><use href="javascript:alert(1)"/></svg>'
+    const result = sanitizeRichTextHtml(html)
+    expect(result).not.toContain('javascript:')
+  })
+
+  it('保留 SVG 渐变定义', () => {
+    const html =
+      '<svg><defs><linearGradient id="g1"><stop offset="0%" stop-color="red"/><stop offset="100%" stop-color="blue"/></linearGradient></defs><rect width="100" height="100" fill="url(#g1)"/></svg>'
+    const result = sanitizeRichTextHtml(html)
+    // sanitize-html 会将 camelCase 标签小写为 lineargradient；浏览器在 SVG 上下文中渲染时仍会纠正
+    expect(result.toLowerCase()).toContain('<lineargradient')
+    expect(result).toContain('<stop')
+    expect(result).toContain('stop-color="red"')
+    expect(result).toContain('stop-color="blue"')
+  })
+
+  it('保留 SVG <title> 子标签（无障碍）', () => {
+    const html = '<svg><title>关闭按钮</title><path d="M0 0L10 10"/></svg>'
+    const result = sanitizeRichTextHtml(html)
+    expect(result).toContain('<title>关闭按钮</title>')
+  })
+
+  // style 标签
+  it('保留 <style> 标签及内部 CSS', () => {
+    const html = '<style>.my-class { color: red; padding: 8px }</style><p class="my-class">x</p>'
+    const result = sanitizeRichTextHtml(html)
+    expect(result).toContain('<style')
+    expect(result).toContain('.my-class')
+    expect(result).toContain('color: red')
+  })
+
+  it('保留 <style> 的 media 属性', () => {
+    const html = '<style media="(prefers-color-scheme: dark)">body{color:#fff}</style>'
+    const result = sanitizeRichTextHtml(html)
+    expect(result).toContain('media="(prefers-color-scheme: dark)"')
+  })
+
+  // inline style 白名单扩展
+  it('保留扩展后的 inline style 属性（transform / padding / display / margin）', () => {
+    const html =
+      '<div style="transform: rotate(5deg); padding: 8px; display: flex; margin: 4px">x</div>'
+    const result = sanitizeRichTextHtml(html)
+    expect(result).toContain('transform:rotate(5deg)')
+    expect(result).toContain('padding:8px')
+    expect(result).toContain('display:flex')
+    expect(result).toContain('margin:4px')
+  })
+
+  it('inline style margin-left 支持任意值（不再限于 auto）', () => {
+    const html = '<div style="margin-left: 10px">x</div>'
+    const result = sanitizeRichTextHtml(html)
+    expect(result).toContain('margin-left:10px')
+  })
+
+  // 角色 bypass
+  it('role=owner 时跳过净化，原样返回（含 script / 事件属性）', () => {
+    const html =
+      '<svg onload="alert(1)"><foreignObject><script>evil()</script></foreignObject></svg><script>more()</script>'
+    const result = sanitizeRichTextHtml(html, { role: 'owner' })
+    expect(result).toBe(html)
+  })
+
+  it('role=admin 时跳过净化，原样返回', () => {
+    const html = '<style>body{display:none}</style><svg onload="x"></svg>'
+    const result = sanitizeRichTextHtml(html, { role: 'admin' })
+    expect(result).toBe(html)
+  })
+
+  it('role=editor 时仍走白名单（与不传 role 一致）', () => {
+    const html = '<p>safe</p><script>alert(1)</script>'
+    const withRole = sanitizeRichTextHtml(html, { role: 'editor' })
+    const without = sanitizeRichTextHtml(html)
+    expect(withRole).toBe(without)
+    expect(withRole).not.toContain('<script')
+    expect(withRole).toContain('<p>safe</p>')
+  })
+
+  // bypassRoles 可注入：覆盖默认的 owner / admin 策略
+  it('bypassRoles=[]：所有角色都走净化（即使是 owner）', () => {
+    const html = '<svg onload="x"/><script>1</script>'
+    const result = sanitizeRichTextHtml(html, { role: 'owner', bypassRoles: [] })
+    expect(result).not.toContain('onload')
+    expect(result).not.toContain('<script')
+  })
+
+  it('bypassRoles=["editor"]：editor 跳过，admin 反而走净化', () => {
+    const html = '<script>1</script>'
+    const editor = sanitizeRichTextHtml(html, { role: 'editor', bypassRoles: ['editor'] })
+    const admin = sanitizeRichTextHtml(html, { role: 'admin', bypassRoles: ['editor'] })
+    expect(editor).toBe(html)
+    expect(admin).not.toContain('<script')
+  })
+
+  it('bypassRoles=["owner","admin","editor"]：所有角色都跳过', () => {
+    const html = '<svg onload="x"/>'
+    const bypass: Array<'owner' | 'admin' | 'editor'> = ['owner', 'admin', 'editor']
+    for (const role of bypass) {
+      expect(sanitizeRichTextHtml(html, { role, bypassRoles: bypass })).toBe(html)
     }
   })
 })

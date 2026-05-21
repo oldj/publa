@@ -103,7 +103,8 @@
       "rss": "RSS settings",
       "search": "Search settings",
       "footer": "Footer copyright",
-      "customHtml": "Custom HTML"
+      "customHtml": "Custom HTML",
+      "contentSecurity": "Content security"
     },
     "customHtmlTabs": {
       "head": "Head",
@@ -156,7 +157,24 @@
       "customBodyStartHtml": "Custom Body start HTML",
       "customBodyStartHtmlDescription": "Injected right after '<body>'",
       "customBodyEndHtml": "Custom Body end HTML",
-      "customBodyEndHtmlDescription": "Injected before '</body>'"
+      "customBodyEndHtmlDescription": "Injected before '</body>'",
+      "htmlSanitize": {
+        "title": "HTML sanitization policy",
+        "description": "When an author picks 'HTML' as the content type for a post or custom page, this matrix decides whether the HTML is sanitized based on the author's role.",
+        "col": {
+          "raw": "Raw output",
+          "sanitized": "Filter risky tags"
+        },
+        "role": {
+          "owner": "Owner",
+          "admin": "Admin",
+          "editor": "Editor"
+        },
+        "note": {
+          "raw": "'Raw output': HTML is saved as-is, including script tags and event handlers. Grant only to fully trusted roles.",
+          "sanitized": "'Filter risky tags': HTML goes through an allowlist; script, on* event handlers and tags not on the list are stripped."
+        }
+      }
     },
     "modes": {
       "default": "Default icon",
@@ -1088,6 +1106,10 @@
     "contentTypeSelector": {
       "label": "Content type",
       "richtext": "Rich text"
+    },
+    "htmlNotice": {
+      "trusted": "HTML will be saved as-is. Avoid pasting code from untrusted sources.",
+      "sanitized": "HTML will be sanitized; script tags and event handlers will be stripped."
     },
     "header": {
       "preview": "Preview",

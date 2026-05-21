@@ -6,6 +6,7 @@ import { logActivity } from '@/server/services/activity-logs'
 import {
   ADMIN_SETTINGS_KEYS,
   getAllSettings,
+  getHtmlSanitizeBypassRoles,
   isSettingsValidationError,
   normalizeSettingsPayload,
   pickSettings,
@@ -16,6 +17,7 @@ import { NextRequest } from 'next/server'
 // 触发二次验证的敏感字段：
 // - 自定义 HTML / footer 直接进入页面 DOM，被改写后可注入脚本或钓鱼内容；
 // - siteUrl 影响 RSS、邮件回链、canonical 等所有外部跳转源，被改写会扩散到站外。
+// - htmlSanitizeBypassRoles 改动会让被列入的角色发布的 HTML 完全跳过净化，等同于权限提升。
 // 存储 / 邮件 / favicon 等其他敏感配置走各自路由，已在那里独立接入 requireRecentReauth。
 const REAUTH_SETTING_KEYS = [
   'customHeadHtml',
@@ -24,6 +26,7 @@ const REAUTH_SETTING_KEYS = [
   'customBodyEndHtml',
   'footerCopyright',
   'siteUrl',
+  'htmlSanitizeBypassRoles',
 ] as const
 
 function hasSensitiveSettingChange(
@@ -44,6 +47,9 @@ export async function GET() {
   if (!guard.ok) return guard.response
 
   const data = pickSettings(await getAllSettings(), ADMIN_SETTINGS_KEYS)
+  // pickSettings 对缺失的 stringArray key 返回 [] —— 升级用户首次访问设置页时
+  // 该 key 可能还没落到 DB（ensureSettingsSeeded 未跑或刚加），交给 helper 兜底业务默认
+  data.htmlSanitizeBypassRoles = await getHtmlSanitizeBypassRoles()
   return jsonSuccess(data)
 }
 

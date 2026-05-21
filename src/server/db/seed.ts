@@ -131,6 +131,25 @@ export async function seed(tx?: BaseSQLiteDatabase<any, any, any>, options: Seed
 }
 
 /**
+ * 幂等补齐设置表中缺失的默认值条目。
+ * 升级老库时新加的 setting key 不会因 seed 不再执行而长期为空，
+ * 已存在的 key 由于 onConflictDoNothing 不会被覆盖，用户自定义值得到保留。
+ */
+export async function ensureSettingsSeeded(
+  conn: BaseSQLiteDatabase<any, any, any> | typeof db = db,
+) {
+  const payload: PartialSettingType = getDefaultSettingsPayload()
+  // activeThemeId 依赖内置主题真实 id，由 ensureBuiltinThemes 单独处理
+  delete payload.activeThemeId
+  for (const [key, value] of Object.entries(payload)) {
+    await conn
+      .insert(settings)
+      .values({ key, value: serializeSettingValue(key, value) })
+      .onConflictDoNothing()
+  }
+}
+
+/**
  * 幂等确保内置主题（浅色/深色/空白）存在，并设置默认选中主题。
  * 供 seed() 和应用启动（instrumentation）共同调用，支持已有数据库平滑升级。
  */

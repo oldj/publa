@@ -2,8 +2,9 @@ import { requireCurrentUser, requireRole } from '@/server/auth'
 import { db } from '@/server/db'
 import { jsonError, jsonSuccess } from '@/server/lib/api-response'
 import { htmlToText, renderMarkdown } from '@/server/lib/markdown'
-import { sanitizeRichTextHtml } from '@/server/lib/sanitize-html-content'
 import { isUniqueConstraintError, parseIntParam, safeParseJson } from '@/server/lib/request'
+import { sanitizeRichTextHtml } from '@/server/lib/sanitize-html-content'
+import { logActivity } from '@/server/services/activity-logs'
 import {
   createEmptyPost,
   createPost,
@@ -12,8 +13,8 @@ import {
   validateSlug,
 } from '@/server/services/posts'
 import { publishDraft, saveDraft } from '@/server/services/revisions'
+import { getHtmlSanitizeBypassRoles } from '@/server/services/settings'
 import { parsePostDraftMetadata } from '@/shared/revision-metadata'
-import { logActivity } from '@/server/services/activity-logs'
 import { NextRequest } from 'next/server'
 
 function getSlugValidationKey(code: 'REQUIRED' | 'STARTS_WITH_HYPHEN' | 'ENDS_WITH_HYPHEN') {
@@ -101,6 +102,7 @@ export async function POST(request: NextRequest) {
   // 推导并持久化 contentType
   const ct = body.contentType || (body.isMarkdown ? 'markdown' : 'richtext')
   body.contentType = ct
+  const sanitizeBypassRoles = await getHtmlSanitizeBypassRoles()
 
   // 根据内容类型处理（contentRaw !== undefined 表示字段显式提交，包括空串清空场景）
   if (body.contentRaw !== undefined) {
@@ -108,12 +110,18 @@ export async function POST(request: NextRequest) {
       body.contentHtml = await renderMarkdown(body.contentRaw || '')
       body.contentText = htmlToText(body.contentHtml)
     } else {
-      body.contentHtml = sanitizeRichTextHtml(body.contentHtml || body.contentRaw)
+      body.contentHtml = sanitizeRichTextHtml(body.contentHtml || body.contentRaw, {
+        role: guard.user.role,
+        bypassRoles: sanitizeBypassRoles,
+      })
       body.contentText = body.contentText || htmlToText(body.contentHtml)
     }
   } else if (body.contentHtml) {
     // 只传 contentHtml 不传 contentRaw 时同样要过白名单，避免绕过
-    body.contentHtml = sanitizeRichTextHtml(body.contentHtml)
+    body.contentHtml = sanitizeRichTextHtml(body.contentHtml, {
+      role: guard.user.role,
+      bypassRoles: sanitizeBypassRoles,
+    })
     body.contentText = body.contentText || htmlToText(body.contentHtml)
   }
 

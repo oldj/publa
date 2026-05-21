@@ -2,7 +2,7 @@
 
 import { notify } from '@/lib/notify'
 import { version } from '@/lib/version'
-import type { AuthUser } from '@/server/auth'
+import type { AuthRole, AuthUser } from '@/server/auth'
 import {
   AppShell,
   Burger,
@@ -132,9 +132,11 @@ function NavLinks({ user }: { user: AuthUser | null }) {
 export function AdminShell({
   children,
   user,
+  htmlSanitizeBypassRoles,
 }: {
   children: React.ReactNode
   user: AuthUser | null
+  htmlSanitizeBypassRoles: readonly AuthRole[]
 }) {
   const [opened, { toggle }] = useDisclosure()
   const { siteShortTitle, setSiteShortTitle } = useSiteShortTitle()
@@ -177,7 +179,7 @@ export function AdminShell({
   }
 
   return (
-    <AdminCountsProvider user={user}>
+    <AdminCountsProvider user={user} htmlSanitizeBypassRoles={htmlSanitizeBypassRoles}>
       <AppShell
         navbar={{
           width: 260,

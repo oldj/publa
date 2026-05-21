@@ -1,5 +1,9 @@
 'use client'
 
+import {
+  useCurrentUser,
+  useHtmlSanitizeBypassRoles,
+} from '@/app/(admin)/_components/AdminCountsContext'
 import { useAdminUrl } from '@/app/(admin)/_components/AdminPathContext'
 import { EditorHeader } from '@/app/(admin)/_components/EditorHeader'
 import myModal from '@/app/(admin)/_components/myModals'
@@ -139,7 +143,11 @@ export default function PostEditor({ postId }: { postId?: number }) {
   const router = useRouter()
   const adminUrl = useAdminUrl()
   const t = useTranslations('admin.editor.post')
+  const tEditor = useTranslations('admin.editor')
   const tCommon = useTranslations('common')
+  const currentUser = useCurrentUser()
+  const htmlBypassRoles = useHtmlSanitizeBypassRoles()
+  const htmlBypassEnabled = !!currentUser && htmlBypassRoles.includes(currentUser.role)
   const [loading, setLoading] = useState(false)
   const [categories, setCategories] = useState<Category[]>([])
   const [allTags, setAllTags] = useState<Tag[]>([])
@@ -1209,6 +1217,13 @@ export default function PostEditor({ postId }: { postId?: number }) {
                 language={contentType === 'markdown' ? 'markdown' : 'html'}
                 label={
                   contentType === 'markdown' ? t('fields.markdownContent') : t('fields.htmlContent')
+                }
+                description={
+                  contentType === 'html'
+                    ? htmlBypassEnabled
+                      ? tEditor('htmlNotice.trusted')
+                      : tEditor('htmlNotice.sanitized')
+                    : undefined
                 }
                 placeholder={
                   contentType === 'markdown'

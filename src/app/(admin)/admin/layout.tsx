@@ -2,7 +2,7 @@ import { AdminShell } from '@/app/(admin)/_components/AdminShell'
 import { SiteShortTitleProvider } from '@/app/(admin)/_components/SiteShortTitleContext'
 import { adminUrl } from '@/lib/admin-path'
 import { getCurrentUser, isSystemInitialized } from '@/server/auth'
-import { getSetting } from '@/server/services/settings'
+import { getHtmlSanitizeBypassRoles, getSetting } from '@/server/services/settings'
 import '@/styles/admin.scss'
 import { redirect } from 'next/navigation'
 
@@ -13,11 +13,17 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     redirect(initialized ? adminUrl('/login') : '/setup')
   }
 
-  const siteShortTitle = (await getSetting('siteShortTitle')) || ''
+  const [siteShortTitleRaw, htmlSanitizeBypassRoles] = await Promise.all([
+    getSetting('siteShortTitle'),
+    getHtmlSanitizeBypassRoles(),
+  ])
+  const siteShortTitle = siteShortTitleRaw || ''
 
   return (
     <SiteShortTitleProvider initialValue={siteShortTitle}>
-      <AdminShell user={user}>{children}</AdminShell>
+      <AdminShell user={user} htmlSanitizeBypassRoles={htmlSanitizeBypassRoles}>
+        {children}
+      </AdminShell>
     </SiteShortTitleProvider>
   )
 }

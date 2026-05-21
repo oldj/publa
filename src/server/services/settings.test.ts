@@ -7,6 +7,7 @@ const {
   SettingsValidationError,
   deserializeSettingValue,
   getAllSettings,
+  getHtmlSanitizeBypassRoles,
   getSetting,
   normalizeSettingsPayload,
   pickSettings,
@@ -48,6 +49,20 @@ describe('settings service', () => {
     expect(settings.rssLimit).toBe(20)
   })
 
+  it('字符串数组设置完整 round-trip（JSON 序列化 + 反序列化）', async () => {
+    await setSetting('htmlSanitizeBypassRoles', ['owner', 'editor'])
+
+    const row = await testDb
+      .select()
+      .from(schema.settings)
+      .where(eq(schema.settings.key, 'htmlSanitizeBypassRoles'))
+      .limit(1)
+
+    // DB 中存的是 JSON 编码后的数组字面量
+    expect(row[0]?.value).toBe('["owner","editor"]')
+    expect(await getSetting('htmlSanitizeBypassRoles')).toEqual(['owner', 'editor'])
+  })
+
   it('通知设置按对象读��', async () => {
     await setSetting('emailNotifyNewComment', { enabled: true, userIds: [1, 2] })
 
@@ -83,9 +98,9 @@ describe('settings service', () => {
   })
 
   it('规范化 payload 时拒绝向布尔设置写入字符串', () => {
-    expect(() =>
-      normalizeSettingsPayload({ enableComment: 'false' }),
-    ).toThrow(SettingsValidationError)
+    expect(() => normalizeSettingsPayload({ enableComment: 'false' })).toThrow(
+      SettingsValidationError,
+    )
   })
 
   it('规范化 payload 时拒��向标量设置写入对象', () => {
@@ -123,6 +138,27 @@ describe('settings service', () => {
     expect(() => normalizeSettingsPayload({ language: 123 })).toThrow(SettingsValidationError)
     expect(() => normalizeSettingsPayload({ language: null })).toThrow(SettingsValidationError)
     expect(() => normalizeSettingsPayload({ language: { zh: true } })).toThrow(
+      SettingsValidationError,
+    )
+  })
+
+  it('htmlSanitizeBypassRoles 接受合法的 AuthRole 子集', () => {
+    expect(normalizeSettingsPayload({ htmlSanitizeBypassRoles: ['owner', 'admin'] })).toEqual({
+      htmlSanitizeBypassRoles: ['owner', 'admin'],
+    })
+    expect(normalizeSettingsPayload({ htmlSanitizeBypassRoles: [] })).toEqual({
+      htmlSanitizeBypassRoles: [],
+    })
+  })
+
+  it('htmlSanitizeBypassRoles 拒绝未知角色与非字符串元素', () => {
+    expect(() =>
+      normalizeSettingsPayload({ htmlSanitizeBypassRoles: ['owner', 'superuser'] }),
+    ).toThrow(SettingsValidationError)
+    expect(() => normalizeSettingsPayload({ htmlSanitizeBypassRoles: [1, 2] })).toThrow(
+      SettingsValidationError,
+    )
+    expect(() => normalizeSettingsPayload({ htmlSanitizeBypassRoles: 'owner' })).toThrow(
       SettingsValidationError,
     )
   })
@@ -199,6 +235,79 @@ describe('pickSettings', () => {
     expect(result.emailNotifyNewComment).toEqual({ enabled: false, userIds: [] })
     expect(result.emailNotifyNewGuestbook).toEqual({ enabled: false, userIds: [] })
   })
+
+  it('缺失的字符串数组 key 默认为空数组（fallback 由调用方决定，见 getHtmlSanitizeBypassRoles）', () => {
+    const result = pickSettings({}, ['htmlSanitizeBypassRoles'])
+    expect(result.htmlSanitizeBypassRoles).toEqual([])
+  })
+})
+
+describe('getHtmlSanitizeBypassRoles', () => {
+  beforeEach(async () => {
+    await setupTestDb()
+  })
+
+  it('未写入时回退到默认 ["owner", "admin"]（兼容升级场景）', async () => {
+    expect(await getHtmlSanitizeBypassRoles()).toEqual(['owner', 'admin'])
+  })
+
+  it('用户保存的空数组被尊重（所有角色都走净化）', async () => {
+    await setSetting('htmlSanitizeBypassRoles', [])
+    expect(await getHtmlSanitizeBypassRoles()).toEqual([])
+  })
+
+  it('原样返回用户设置的角色子集', async () => {
+    await setSetting('htmlSanitizeBypassRoles', ['owner'])
+    expect(await getHtmlSanitizeBypassRoles()).toEqual(['owner'])
+  })
+
+  it('过滤掉脏数据中的未知角色', async () => {
+    // 绕过 normalize 直接写入脏值，模拟手工改 DB 或旧版本残留
+    await testDb.insert(schema.settings).values({
+      key: 'htmlSanitizeBypassRoles',
+      value: JSON.stringify(['owner', 'superuser', 'admin']),
+    })
+    expect(await getHtmlSanitizeBypassRoles()).toEqual(['owner', 'admin'])
+  })
+})
+
+describe('ensureSettingsSeeded', () => {
+  beforeEach(async () => {
+    await setupTestDb()
+  })
+
+  it('为缺失的 key 写入默认值（升级场景核心保证）', async () => {
+    const { ensureSettingsSeeded } = await import('@/server/db/seed')
+    const before = await getAllSettings()
+    expect(before.htmlSanitizeBypassRoles).toBeUndefined()
+    expect(before.siteTitle).toBeUndefined()
+
+    await ensureSettingsSeeded()
+
+    const after = await getAllSettings()
+    expect(after.htmlSanitizeBypassRoles).toEqual(['owner', 'admin'])
+    expect(after.siteTitle).toBe('Publa')
+  })
+
+  it('不覆盖已存在的用户自定义值（onConflictDoNothing 幂等）', async () => {
+    const { ensureSettingsSeeded } = await import('@/server/db/seed')
+    await setSetting('siteTitle', 'MyBlog')
+    await setSetting('htmlSanitizeBypassRoles', [])
+
+    await ensureSettingsSeeded()
+
+    expect(await getSetting('siteTitle')).toBe('MyBlog')
+    // 用户保存的空数组（语义为"所有角色都走净化"）不被默认值覆盖
+    expect(await getSetting('htmlSanitizeBypassRoles')).toEqual([])
+  })
+
+  it('重复调用幂等不报错', async () => {
+    const { ensureSettingsSeeded } = await import('@/server/db/seed')
+    await ensureSettingsSeeded()
+    await ensureSettingsSeeded()
+    await ensureSettingsSeeded()
+    expect(await getSetting('htmlSanitizeBypassRoles')).toEqual(['owner', 'admin'])
+  })
 })
 
 describe('deserializeSettingValue', () => {
@@ -206,7 +315,9 @@ describe('deserializeSettingValue', () => {
     expect(deserializeSettingValue('siteTitle', '"Publa"')).toBe('Publa')
     expect(deserializeSettingValue('enableComment', 'false')).toBe(false)
     expect(deserializeSettingValue('rssLimit', '20')).toBe(20)
-    expect(deserializeSettingValue('emailNotifyNewComment', '{"enabled":true,"userIds":[1]}')).toEqual({
+    expect(
+      deserializeSettingValue('emailNotifyNewComment', '{"enabled":true,"userIds":[1]}'),
+    ).toEqual({
       enabled: true,
       userIds: [1],
     })
