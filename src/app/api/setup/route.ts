@@ -1,11 +1,11 @@
 import { DEFAULT_LOCALE, isLocale } from '@/i18n/locales'
-import { normalizeEmail, normalizePassword, normalizeUsername } from '@/lib/user-input'
+import { normalizePassword, normalizeUsername, parseEmail } from '@/lib/user-input'
 import { createToken, hashPassword, setAuthCookie } from '@/server/auth'
-import { jsonError, jsonSuccess } from '@/server/lib/api-response'
 import { db } from '@/server/db'
 import { insertOne, maybeFirst } from '@/server/db/query'
 import { users } from '@/server/db/schema'
 import { seed } from '@/server/db/seed'
+import { jsonError, jsonSuccess } from '@/server/lib/api-response'
 import { eq } from 'drizzle-orm'
 import { NextRequest } from 'next/server'
 
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const username = normalizeUsername(body?.username)
     const password = normalizePassword(body?.password)
-    const email = normalizeEmail(body?.email)
+    const emailResult = parseEmail(body?.email)
     const language = isLocale(body?.language) ? body.language : DEFAULT_LOCALE
 
     if (!username || !password) {
@@ -40,6 +40,17 @@ export async function POST(request: NextRequest) {
         status: 400,
       })
     }
+
+    if (!emailResult.success) {
+      return jsonError({
+        source: request,
+        namespace: 'admin.setup.errors',
+        key: 'invalidEmail',
+        code: 'VALIDATION_ERROR',
+        status: 400,
+      })
+    }
+    const email = emailResult.data
 
     if (password.length < 6) {
       return jsonError({

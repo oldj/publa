@@ -18,7 +18,8 @@
       "passwordTooShort": "Password must be at least 6 characters",
       "passwordMismatch": "Passwords do not match",
       "setupFailed": "Setup failed",
-      "alreadyInitialized": "System already initialized"
+      "alreadyInitialized": "System already initialized",
+      "invalidEmail": "Invalid email address"
     },
     "success": "Setup succeeded, redirecting to the admin panel"
   },
@@ -630,10 +631,18 @@
   "notificationEmails": {
     "unknownContentTitle": "Unknown post",
     "authorSays": "said: ",
+    "noSiteUrlNotice": "Please log in to the admin panel to view and handle it.",
     "newComment": {
       "subject": "New comment: {title}",
       "title": "Post \"{title}\" received a new comment",
-      "linkText": "View comment"
+      "openPostLink": "Open post",
+      "linkText": "View comment",
+      "statusLabel": "Status: ",
+      "status": {
+        "pending": "Pending",
+        "approved": "Approved",
+        "rejected": "Rejected"
+      }
     },
     "newGuestbook": {
       "subject": "New guestbook message from {authorName}",
@@ -971,6 +980,7 @@
       "usernameRequired": "Username is required",
       "passwordRequired": "Password is required",
       "invalidRole": "Invalid role value",
+      "invalidEmail": "Invalid email address",
       "usernameAndPasswordRequired": "Username and password are required",
       "adminCanOnlyCreateEditor": "Administrators can only create editor accounts",
       "ownerRoleCreationForbidden": "Creating owner accounts is not allowed",

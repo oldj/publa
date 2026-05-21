@@ -18,7 +18,8 @@
       "passwordTooShort": "密码长度至少 6 位",
       "passwordMismatch": "两次密码输入不一致",
       "setupFailed": "初始化失败",
-      "alreadyInitialized": "系统已初始化"
+      "alreadyInitialized": "系统已初始化",
+      "invalidEmail": "邮箱格式不合法"
     },
     "success": "初始化成功，即将跳转到后台"
   },
@@ -630,10 +631,18 @@
   "notificationEmails": {
     "unknownContentTitle": "未知文章",
     "authorSays": "说：",
+    "noSiteUrlNotice": "请登录后台查看并处理。",
     "newComment": {
       "subject": "新评论：{title}",
       "title": "文章「{title}」收到新评论",
-      "linkText": "查看评论"
+      "openPostLink": "打开文章",
+      "linkText": "查看评论",
+      "statusLabel": "状态：",
+      "status": {
+        "pending": "未批准",
+        "approved": "已批准",
+        "rejected": "已驳回"
+      }
     },
     "newGuestbook": {
       "subject": "新留言：来自 {authorName}",
@@ -971,6 +980,7 @@
       "usernameRequired": "用户名不能为空",
       "passwordRequired": "密码不能为空",
       "invalidRole": "无效的角色值",
+      "invalidEmail": "邮箱格式不合法",
       "usernameAndPasswordRequired": "用户名和密码不能为空",
       "adminCanOnlyCreateEditor": "管理员只能创建编辑角色",
       "ownerRoleCreationForbidden": "不能创建站长角色",

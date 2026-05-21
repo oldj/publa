@@ -1,4 +1,4 @@
-import { normalizeEmail, normalizePassword, normalizeUsername } from '@/lib/user-input'
+import { normalizePassword, normalizeUsername, parseEmail } from '@/lib/user-input'
 import { requireCurrentUser, requireRecentReauth, requireRole } from '@/server/auth'
 import { jsonError, jsonSuccess } from '@/server/lib/api-response'
 import { safeParseJson } from '@/server/lib/request'
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
   if (error) return error
   const username = normalizeUsername(body?.username)
   const password = normalizePassword(body?.password)
-  const email = normalizeEmail(body?.email)
+  const emailResult = parseEmail(body?.email)
 
   if (!username || !password) {
     return jsonError({
@@ -51,6 +51,17 @@ export async function POST(request: NextRequest) {
       status: 400,
     })
   }
+
+  if (!emailResult.success) {
+    return jsonError({
+      source: request,
+      namespace: 'admin.api.users',
+      key: 'invalidEmail',
+      code: 'VALIDATION_ERROR',
+      status: 400,
+    })
+  }
+  const email = emailResult.data
 
   // 管理员只能创建编辑，站长可以创建管理员和编辑
   const role = body.role || 'editor'

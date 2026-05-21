@@ -233,6 +233,7 @@ export async function POST(request: NextRequest) {
     authorName: rawUsername,
     content,
     contentId: access.content.id,
+    status: result.data.status,
   }).catch(() => {})
 
   return jsonSuccess(result.data)

@@ -1,9 +1,9 @@
-import { eq } from 'drizzle-orm'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { verifyPassword } from '@/server/auth'
 import { maybeFirst } from '@/server/db/query'
 import { users } from '@/server/db/schema'
 import { setupTestDb, testDb } from '@/server/services/__test__/setup'
+import { eq } from 'drizzle-orm'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const { mockCreateToken, mockSetAuthCookie, mockSeed } = vi.hoisted(() => ({
   mockCreateToken: vi.fn(),
@@ -41,15 +41,17 @@ describe('/api/setup POST', () => {
   })
 
   it('初始化时会清洗用户名邮箱和密码', async () => {
-    const response = await POST(new Request('http://localhost/api/setup', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        username: '  owner  ',
-        email: '  owner@example.com  ',
-        password: '  pass123  ',
-      }),
-    }) as any)
+    const response = await POST(
+      new Request('http://localhost/api/setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: '  owner  ',
+          email: '  owner@example.com  ',
+          password: '  pass123  ',
+        }),
+      }) as any,
+    )
     const json = await response.json()
 
     expect(response.status).toBe(200)
@@ -62,21 +64,46 @@ describe('/api/setup POST', () => {
     expect(saved!.username).toBe('owner')
     expect(saved!.email).toBe('owner@example.com')
     expect(await verifyPassword('pass123', saved!.passwordHash)).toBe(true)
-    expect(mockCreateToken).toHaveBeenCalledWith(expect.objectContaining({
-      username: 'owner',
-      role: 'owner',
-    }))
+    expect(mockCreateToken).toHaveBeenCalledWith(
+      expect.objectContaining({
+        username: 'owner',
+        role: 'owner',
+      }),
+    )
   })
 
   it('清洗后为空时返回校验错误', async () => {
-    const response = await POST(new Request('http://localhost/api/setup', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        username: '   ',
-        password: '      ',
-      }),
-    }) as any)
+    const response = await POST(
+      new Request('http://localhost/api/setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: '   ',
+          password: '      ',
+        }),
+      }) as any,
+    )
+    const json = await response.json()
+
+    expect(response.status).toBe(400)
+    expect(json.code).toBe('VALIDATION_ERROR')
+
+    const allUsers = await testDb.select().from(users)
+    expect(allUsers).toHaveLength(0)
+  })
+
+  it('初始化时邮箱格式不合法应返回 400', async () => {
+    const response = await POST(
+      new Request('http://localhost/api/setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: 'owner',
+          password: 'pass123',
+          email: 'not-an-email',
+        }),
+      }) as any,
+    )
     const json = await response.json()
 
     expect(response.status).toBe(400)
@@ -87,44 +114,50 @@ describe('/api/setup POST', () => {
   })
 
   it('合法 language 字段会透传给 seed', async () => {
-    const response = await POST(new Request('http://localhost/api/setup', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        username: 'owner',
-        password: 'pass123',
-        language: 'en',
-      }),
-    }) as any)
+    const response = await POST(
+      new Request('http://localhost/api/setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: 'owner',
+          password: 'pass123',
+          language: 'en',
+        }),
+      }) as any,
+    )
 
     expect(response.status).toBe(200)
     expect(mockSeed).toHaveBeenCalledWith(expect.anything(), { language: 'en' })
   })
 
   it('缺失 language 字段时使用默认 locale', async () => {
-    const response = await POST(new Request('http://localhost/api/setup', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        username: 'owner',
-        password: 'pass123',
-      }),
-    }) as any)
+    const response = await POST(
+      new Request('http://localhost/api/setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: 'owner',
+          password: 'pass123',
+        }),
+      }) as any,
+    )
 
     expect(response.status).toBe(200)
     expect(mockSeed).toHaveBeenCalledWith(expect.anything(), { language: 'en' })
   })
 
   it('非法 language 字段会被忽略并使用默认 locale', async () => {
-    const response = await POST(new Request('http://localhost/api/setup', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        username: 'owner',
-        password: 'pass123',
-        language: 'fr',
-      }),
-    }) as any)
+    const response = await POST(
+      new Request('http://localhost/api/setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: 'owner',
+          password: 'pass123',
+          language: 'fr',
+        }),
+      }) as any,
+    )
 
     expect(response.status).toBe(200)
     expect(mockSeed).toHaveBeenCalledWith(expect.anything(), { language: 'en' })

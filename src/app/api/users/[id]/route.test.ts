@@ -92,6 +92,27 @@ describe('/api/users/[id] PUT', () => {
     })
   })
 
+  it('更新用户时邮箱格式不合法应返回 400', async () => {
+    const response = await PUT(
+      new Request('http://localhost/api/users/2', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: 'not-an-email',
+        }),
+      }) as any,
+      {
+        params: Promise.resolve({ id: '2' }),
+      },
+    )
+    const json = await response.json()
+
+    expect(response.status).toBe(400)
+    expect(json.success).toBe(false)
+    expect(json.code).toBe('VALIDATION_ERROR')
+    expect(mockUpdateUser).not.toHaveBeenCalled()
+  })
+
   it('清洗后为空的密码会被拒绝', async () => {
     const response = await PUT(
       new Request('http://localhost/api/users/2', {

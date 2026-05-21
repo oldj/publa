@@ -151,6 +151,32 @@ describe('/api/users GET', () => {
     })
   })
 
+  it('创建用户时邮箱格式不合法应返回 400', async () => {
+    mockRequireRole.mockResolvedValueOnce({
+      ok: true,
+      user: { id: 1, username: 'owner', role: 'owner' },
+    })
+
+    const response = await POST(
+      new Request('http://localhost/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: 'new-user',
+          email: 'not-an-email',
+          password: 'pass123',
+          role: 'editor',
+        }),
+      }) as any,
+    )
+    const json = await response.json()
+
+    expect(response.status).toBe(400)
+    expect(json.success).toBe(false)
+    expect(json.code).toBe('VALIDATION_ERROR')
+    expect(mockCreateUser).not.toHaveBeenCalled()
+  })
+
   it('创建用户缺少二次验证时返回 REAUTH_REQUIRED', async () => {
     mockRequireRole.mockResolvedValueOnce({
       ok: true,

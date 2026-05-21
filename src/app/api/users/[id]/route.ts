@@ -1,4 +1,4 @@
-import { normalizeEmail, normalizePassword, normalizeUsername } from '@/lib/user-input'
+import { normalizePassword, normalizeUsername, parseEmail } from '@/lib/user-input'
 import { requireCurrentUser, requireRecentReauth } from '@/server/auth'
 import { jsonError, jsonSuccess } from '@/server/lib/api-response'
 import { parseIdParam, safeParseJson } from '@/server/lib/request'
@@ -109,7 +109,17 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   }
 
   if (body?.email !== undefined) {
-    updateData.email = normalizeEmail(body.email) || ''
+    const emailResult = parseEmail(body.email)
+    if (!emailResult.success) {
+      return jsonError({
+        source: request,
+        namespace: 'admin.api.users',
+        key: 'invalidEmail',
+        code: 'VALIDATION_ERROR',
+        status: 400,
+      })
+    }
+    updateData.email = emailResult.data ?? ''
   }
 
   if (body?.password !== undefined) {
