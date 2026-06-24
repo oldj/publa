@@ -266,6 +266,8 @@
     "diffTitle": "Compare revisions",
     "diffOlder": "Older",
     "diffNewer": "Newer",
+    "diffCurrent": "Current",
+    "diffNoPublished": "No published version found",
     "diffLoadFailed": "Failed to load comparison"
   },
   "categoriesPage": {

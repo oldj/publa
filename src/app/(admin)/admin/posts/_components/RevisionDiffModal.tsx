@@ -1,70 +1,84 @@
 'use client'
 
 import { Badge, Center, Group, Loader, Modal, Stack, Text } from '@mantine/core'
-import dayjs from 'dayjs'
 import { useTranslations } from 'next-intl'
-import { useEffect, useState } from 'react'
-import { formatHtmlForDiff } from './format-html'
+import { useEffect, useRef, useState } from 'react'
+import { pickDiffText } from './diff-content'
 import RevisionDiffView from './RevisionDiffView'
 
-/** 对比所需的版本元信息（来自历史列表，不含内容） */
-export interface DiffRevisionMeta {
-  id: number
-  title: string
-  status: string
-  updatedAt: string
+/** 对比内容来源：按 revision id 拉取，或直接给定已就绪的对比文本 */
+export type DiffSource =
+  | { type: 'revision'; apiBase: string; id: number }
+  | { type: 'text'; value: string }
+
+/** 对比的一侧（含头部展示信息与内容来源） */
+export interface DiffSide {
+  /** 稳定标识：所指内容变化时必须随之变化，用于触发重新解析 */
+  key: string
+  /** 头部状态徽标；null 表示不显示 */
+  badge: { label: string; color: string } | null
+  /** 头部标题（可空） */
+  title?: string
+  /** 头部时间/说明（可空） */
+  caption?: string
+  source: DiffSource
 }
 
 interface Props {
   opened: boolean
   onClose: () => void
-  /** 版本内容接口前缀，如 `/api/posts/123/revisions` */
-  apiBase: string
   /** 较旧版本（左侧） */
-  older: DiffRevisionMeta | null
+  older: DiffSide | null
   /** 较新版本（右侧） */
-  newer: DiffRevisionMeta | null
+  newer: DiffSide | null
 }
 
-/** 加载状态，绑定到所属的版本对 key，避免切换对比时残留上一对的内容 */
+/** 加载状态绑定到所属的版本对 key，避免切换对比时残留上一对的内容 */
 type LoadState =
   | { status: 'loading'; key: string }
   | { status: 'ready'; key: string; left: string; right: string }
   | { status: 'error'; key: string }
 
-export default function RevisionDiffModal({ opened, onClose, apiBase, older, newer }: Props) {
+/** 解析一侧的对比文本：text 源直接返回，revision 源按 id 拉取后挑选 */
+async function resolveSource(source: DiffSource): Promise<string> {
+  if (source.type === 'text') return source.value
+
+  const res = await fetch(`${source.apiBase}/${source.id}`)
+  const json = await res.json()
+  // 区分「真正的空内容」与「接口失败」：失败时抛出，由上层进入错误态，
+  // 而不是退化成空字符串伪装成一份「无差异」的对比
+  if (!res.ok || !json.success) {
+    throw new Error('FETCH_REVISION_FAILED')
+  }
+  return pickDiffText(json.data)
+}
+
+export default function RevisionDiffModal({ opened, onClose, older, newer }: Props) {
   const t = useTranslations('admin.revisionHistory')
   const [state, setState] = useState<LoadState | null>(null)
 
-  const olderId = older?.id
-  const newerId = newer?.id
-  const currentKey = olderId !== undefined && newerId !== undefined ? `${olderId}-${newerId}` : null
+  // 用 ref 持有最新的 side：effect 仅以 key 为依赖触发重新解析，避免把每次 render
+  // 都换新引用的 older/newer 放进依赖导致反复拉取
+  const olderRef = useRef(older)
+  const newerRef = useRef(newer)
+  olderRef.current = older
+  newerRef.current = newer
+
+  const olderKey = older?.key
+  const newerKey = newer?.key
+  const currentKey =
+    olderKey !== undefined && newerKey !== undefined ? `${olderKey}|${newerKey}` : null
 
   useEffect(() => {
-    if (!opened || olderId === undefined || newerId === undefined) return
+    const o = olderRef.current
+    const n = newerRef.current
+    if (!opened || !o || !n) return
 
-    const key = `${olderId}-${newerId}`
+    const key = `${o.key}|${n.key}`
     let cancelled = false
     setState({ status: 'loading', key })
 
-    // 取「用户真正编辑的内容」做对比：
-    // - 富文本：渲染后的 HTML 源码（单行，需格式化拆行便于逐行 diff）
-    // - markdown / html 源码模式：直接用编辑原文 contentRaw（本就多行，保持原样）
-    const fetchDiffText = async (id: number): Promise<string> => {
-      const res = await fetch(`${apiBase}/${id}`)
-      const json = await res.json()
-      // 区分「真正的空内容」与「接口失败」：失败时抛出，由上层进入错误态，
-      // 而不是退化成空字符串伪装成一份「无差异」的对比
-      if (!res.ok || !json.success) {
-        throw new Error('FETCH_REVISION_FAILED')
-      }
-      const { contentType, contentRaw, contentHtml } = json.data
-      return contentType === 'markdown' || contentType === 'html'
-        ? (contentRaw ?? '')
-        : formatHtmlForDiff(contentHtml ?? '')
-    }
-
-    Promise.all([fetchDiffText(olderId), fetchDiffText(newerId)])
+    Promise.all([resolveSource(o.source), resolveSource(n.source)])
       .then(([left, right]) => {
         if (!cancelled) setState({ status: 'ready', key, left, right })
       })
@@ -75,27 +89,27 @@ export default function RevisionDiffModal({ opened, onClose, apiBase, older, new
     return () => {
       cancelled = true
     }
-  }, [opened, apiBase, olderId, newerId])
+  }, [opened, olderKey, newerKey])
 
-  const renderHeader = (rev: DiffRevisionMeta | null, sideLabel: string) => (
+  const renderHeader = (side: DiffSide | null, sideLabel: string) => (
     <Group gap="xs" wrap="nowrap" style={{ flex: 1, minWidth: 0 }}>
       <Badge size="xs" variant="outline" color="gray">
         {sideLabel}
       </Badge>
-      {rev && (
-        <>
-          <Badge size="xs" variant="light" color={rev.status === 'published' ? 'green' : 'blue'}>
-            {rev.status === 'published' ? t('published') : t('draftSnapshot')}
-          </Badge>
-          {rev.title && (
-            <Text size="xs" fw={500} truncate style={{ flex: 1, minWidth: 0 }}>
-              {rev.title}
-            </Text>
-          )}
-          <Text size="xs" c="dimmed" style={{ flexShrink: 0 }}>
-            {dayjs(rev.updatedAt).format('YYYY-MM-DD HH:mm:ss')}
-          </Text>
-        </>
+      {side?.badge && (
+        <Badge size="xs" variant="light" color={side.badge.color}>
+          {side.badge.label}
+        </Badge>
+      )}
+      {side?.title && (
+        <Text size="xs" fw={500} truncate style={{ flex: 1, minWidth: 0 }}>
+          {side.title}
+        </Text>
+      )}
+      {side?.caption && (
+        <Text size="xs" c="dimmed" style={{ flexShrink: 0 }}>
+          {side.caption}
+        </Text>
       )}
     </Group>
   )
@@ -107,12 +121,13 @@ export default function RevisionDiffModal({ opened, onClose, apiBase, older, new
     <Modal
       opened={opened}
       onClose={onClose}
-      fullScreen
+      size="90vw"
       title={t('diffTitle')}
       padding="md"
-      // 让 body 撑满全屏内容区，下方对比视图用 flex 自适应高度，避免硬编码高度
+      // 非全屏：宽高约为视口 90%，四周保留 Mantine 默认 5vw/5dvh 偏移以露出遮罩层；
+      // content 固定高度后用 flex 让下方对比视图自适应撑满（90dvh 恰为其 max-height）
       styles={{
-        content: { display: 'flex', flexDirection: 'column' },
+        content: { height: '90dvh', display: 'flex', flexDirection: 'column' },
         body: { flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' },
       }}
     >

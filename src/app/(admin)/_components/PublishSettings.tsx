@@ -1,5 +1,7 @@
 'use client'
 
+import type { DiffContentFields } from '@/app/(admin)/admin/posts/_components/diff-content'
+import PublishedCompareButton from '@/app/(admin)/admin/posts/_components/PublishedCompareButton'
 import { Button, Paper, SegmentedControl, Stack, Text } from '@mantine/core'
 import { DateTimePicker } from '@mantine/dates'
 import '@mantine/dates/styles.css'
@@ -28,6 +30,14 @@ export interface PublishSettingsProps {
   onSetScheduled: (publishedAt: string) => void
   /** 实体标签，用于确认对话框文案，如 '文章' 或 '页面' */
   entityLabel: string
+  /**
+   * 「对比当前内容与最近发布版」所需信息；提供且处于「已发布且有未发布改动」时，
+   * 在提示后展示对比按钮。未保存到 revision 的目标（无 id）不应传入。
+   */
+  compareSource?: {
+    apiBase: string
+    getCurrentContent: () => DiffContentFields
+  }
 }
 
 export default function PublishSettings({
@@ -42,6 +52,7 @@ export default function PublishSettings({
   onConvertToDraft,
   onSetScheduled,
   entityLabel,
+  compareSource,
 }: PublishSettingsProps) {
   const tCommon = useTranslations('common')
   const t = useTranslations('admin.editor.publishSettings')
@@ -171,9 +182,17 @@ export default function PublishSettings({
             </Text>
           )}
           {currentStatus === 'published' && dirty && (
-            <Text size="sm" c="orange">
-              {t('dirtyPublishedHint')}
-            </Text>
+            <>
+              <Text size="sm" c="orange">
+                {t('dirtyPublishedHint')}
+              </Text>
+              {compareSource && (
+                <PublishedCompareButton
+                  apiBase={compareSource.apiBase}
+                  getCurrentContent={compareSource.getCurrentContent}
+                />
+              )}
+            </>
           )}
         </Stack>
       )}

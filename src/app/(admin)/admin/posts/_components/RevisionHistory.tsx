@@ -8,7 +8,7 @@ import { IconGitCompare, IconRestore, IconTrash } from '@tabler/icons-react'
 import dayjs from 'dayjs'
 import { useTranslations } from 'next-intl'
 import { useCallback, useEffect, useState } from 'react'
-import RevisionDiffModal from './RevisionDiffModal'
+import RevisionDiffModal, { type DiffSide } from './RevisionDiffModal'
 
 interface Revision {
   id: number
@@ -108,6 +108,18 @@ export default function RevisionHistory({
     setDiffPair({ older: pair[0], newer: pair[1] })
     setDiffOpen(true)
   }
+
+  // 把历史版本映射为对比视图的一侧（按 id 懒加载内容）
+  const toDiffSide = (rev: Revision): DiffSide => ({
+    key: `rev:${rev.id}`,
+    badge: {
+      label: rev.status === 'published' ? t('published') : t('draftSnapshot'),
+      color: rev.status === 'published' ? 'green' : 'blue',
+    },
+    title: rev.title || undefined,
+    caption: dayjs(rev.updatedAt).format('YYYY-MM-DD HH:mm:ss'),
+    source: { type: 'revision', apiBase, id: rev.id },
+  })
 
   const handlePreview = async (id: number) => {
     const res = await fetch(`${apiBase}/${id}`)
@@ -323,9 +335,8 @@ export default function RevisionHistory({
       <RevisionDiffModal
         opened={opened && diffOpen}
         onClose={() => setDiffOpen(false)}
-        apiBase={apiBase}
-        older={diffPair?.older ?? null}
-        newer={diffPair?.newer ?? null}
+        older={diffPair ? toDiffSide(diffPair.older) : null}
+        newer={diffPair ? toDiffSide(diffPair.newer) : null}
       />
     </>
   )
