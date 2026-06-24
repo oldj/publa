@@ -261,7 +261,14 @@
     "restoreFailed": "恢复失败",
     "restore": "恢复",
     "published": "发布",
-    "draftSnapshot": "草稿快照"
+    "draftSnapshot": "草稿快照",
+    "compare": "对比",
+    "diffTitle": "版本对比",
+    "diffOlder": "较旧版本",
+    "diffNewer": "较新版本",
+    "diffCurrent": "当前内容",
+    "diffNoPublished": "未找到已发布版本",
+    "diffLoadFailed": "加载对比内容失败"
   },
   "categoriesPage": {
     "title": "分类管理",

@@ -1134,6 +1134,11 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
                 await handleSave(isPast ? 'published' : 'scheduled', { publishedAt })
               }}
               entityLabel={t('entityLabel')}
+              compareSource={
+                pageId
+                  ? { apiBase: `/api/pages/${pageId}/revisions`, getCurrentContent }
+                  : undefined
+              }
             />
 
             {isEdit && (

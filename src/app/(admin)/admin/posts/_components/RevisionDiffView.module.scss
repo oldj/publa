@@ -1,0 +1,115 @@
+// 只读双栏对比视图样式：从通用 diff 工具中裁剪而来，去除 revert/同步控件相关规则。
+// 颜色走 Mantine CSS 变量，并在暗色模式下覆盖，保证与后台主题一致。
+
+.editor {
+  --diff-editor-bg: var(--mantine-color-white);
+  --diff-editor-fg: var(--mantine-color-gray-9);
+  --diff-editor-muted: var(--mantine-color-gray-6);
+  --diff-editor-border: var(--mantine-color-gray-3);
+  --diff-left-bg: color-mix(in srgb, #e03131 14%, var(--diff-editor-bg));
+  --diff-left-text-bg: color-mix(in srgb, #e03131 28%, transparent);
+  --diff-left-gutter-bg: color-mix(in srgb, #e03131 76%, var(--diff-editor-bg));
+  --diff-right-bg: color-mix(in srgb, #2f9e44 14%, var(--diff-editor-bg));
+  --diff-right-text-bg: color-mix(in srgb, #2f9e44 28%, transparent);
+  --diff-right-gutter-bg: color-mix(in srgb, #2f9e44 76%, var(--diff-editor-bg));
+
+  width: 100%;
+  // 由父级 flex 容器撑满高度；min-height 兜底，避免极端布局下塌陷为 0
+  flex: 1 1 auto;
+  min-height: 360px;
+  overflow: hidden;
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
+    monospace;
+
+  :global(.cm-mergeView) {
+    height: 100%;
+    overflow: auto;
+    border: 1px solid var(--diff-editor-border);
+    border-radius: 6px;
+    background: var(--diff-editor-bg);
+  }
+
+  :global(.cm-mergeViewEditors) {
+    align-items: stretch;
+    min-height: 100%;
+  }
+
+  :global(.cm-mergeViewEditor) {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  :global(.cm-mergeView .cm-editor) {
+    flex: 1 1 auto;
+    min-height: 100% !important;
+    background: var(--diff-editor-bg);
+    color: var(--diff-editor-fg);
+    font-family: inherit;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  :global(.cm-mergeView .cm-editor .cm-scroller),
+  :global(.cm-mergeView .cm-editor .cm-content) {
+    font-family: inherit;
+  }
+
+  :global(.cm-mergeView .cm-scroller) {
+    min-height: 100% !important;
+  }
+
+  :global(.cm-editor.cm-focused) {
+    outline: none;
+  }
+
+  :global(.cm-editor .cm-content) {
+    min-height: 100%;
+    padding: 12px 0;
+  }
+
+  :global(.cm-editor .cm-line) {
+    padding: 0 12px;
+  }
+
+  :global(.cm-gutters) {
+    background-color: var(--diff-editor-bg);
+    color: var(--diff-editor-muted);
+    border-right: 1px solid var(--diff-editor-border);
+  }
+
+  :global(.cm-merge-a .cm-changedLine) {
+    background: var(--diff-left-bg);
+  }
+
+  :global(.cm-merge-b .cm-changedLine) {
+    background: var(--diff-right-bg);
+  }
+
+  :global(.cm-merge-a .cm-changedText) {
+    background: var(--diff-left-text-bg);
+  }
+
+  :global(.cm-merge-b .cm-changedText) {
+    background: var(--diff-right-text-bg);
+  }
+
+  :global(.cm-merge-a .cm-changedLineGutter) {
+    background: var(--diff-left-gutter-bg);
+  }
+
+  :global(.cm-merge-b .cm-changedLineGutter) {
+    background: var(--diff-right-gutter-bg);
+  }
+}
+
+[data-mantine-color-scheme="dark"] {
+  .editor {
+    --diff-editor-bg: var(--mantine-color-dark-7);
+    --diff-editor-fg: var(--mantine-color-dark-0);
+    --diff-editor-muted: var(--mantine-color-dark-2);
+    --diff-editor-border: var(--mantine-color-dark-4);
+  }
+}

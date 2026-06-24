@@ -1271,6 +1271,11 @@ export default function PostEditor({ postId }: { postId?: number }) {
                 await handleSave(isPast ? 'published' : 'scheduled', { publishedAt })
               }}
               entityLabel={t('entityLabel')}
+              compareSource={
+                postId
+                  ? { apiBase: `/api/posts/${postId}/revisions`, getCurrentContent }
+                  : undefined
+              }
             />
 
             {postId && (
