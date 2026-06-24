@@ -261,7 +261,12 @@
     "restoreFailed": "Failed to restore revision",
     "restore": "Restore",
     "published": "Published",
-    "draftSnapshot": "Draft snapshot"
+    "draftSnapshot": "Draft snapshot",
+    "compare": "Compare",
+    "diffTitle": "Compare revisions",
+    "diffOlder": "Older",
+    "diffNewer": "Newer",
+    "diffLoadFailed": "Failed to load comparison"
   },
   "categoriesPage": {
     "title": "Category management",
