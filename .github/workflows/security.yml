@@ -1,0 +1,37 @@
+name: security
+
+# 依赖漏洞扫描：npm 依赖（npm audit）。
+# 触发点：依赖清单/锁文件变更、每周定时（捕获未改依赖里新披露的 CVE）、手动。
+# 依赖 CVE 随时间披露，仅靠"改动才扫"会漏——schedule 是本工作流的主要价值。
+on:
+  push:
+    paths:
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/security.yml"
+  pull_request:
+    paths:
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/security.yml"
+  schedule:
+    - cron: "0 3 * * 1" # 每周一 03:00 UTC
+  workflow_dispatch: {}
+
+jobs:
+  npm-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: 安装 Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: npm audit 全量报告（不阻断，仅可见性）
+        run: npm audit || true
+      - name: npm audit 门禁（high/critical 才失败）
+        # 阈值设 high：moderate 传递性漏洞不阻断日常 PR，仅在出现真正严重问题时挡下。
+        # 降低阈值前请先确认无不可修复的传递性噪声。
+        run: npm audit --audit-level=high
