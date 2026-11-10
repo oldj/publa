@@ -22,6 +22,11 @@ vi.mock('@/server/auth', () => ({
   requireRecentReauth: mockRequireRecentReauth,
 }))
 
+// 固定测试语言，避免错误文案依赖开发数据库中的站点设置。
+vi.mock('@/server/services/settings', () => ({
+  getAllSettings: vi.fn().mockResolvedValue({ language: 'zh' }),
+}))
+
 vi.mock('@/server/services/favicon', () => ({
   getFaviconConfig: mockGetFaviconConfig,
   saveUploadedFavicon: mockSaveUploadedFavicon,

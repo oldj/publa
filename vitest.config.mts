@@ -1,9 +1,9 @@
 import { resolve } from 'path'
-import { loadEnvConfig } from '@next/env'
+import nextEnvConfig from '@next/env'
 import { configDefaults, defineConfig } from 'vitest/config'
 
 export default defineConfig(() => {
-  const { combinedEnv } = loadEnvConfig(process.cwd(), false, console, true)
+  const { combinedEnv } = nextEnvConfig.loadEnvConfig(process.cwd(), false, console, true)
   const {
     DATABASE_URL: _databaseUrl,
     DATABASE_AUTH_TOKEN: _databaseAuthToken,
@@ -14,7 +14,7 @@ export default defineConfig(() => {
   return {
     resolve: {
       alias: {
-        '@': resolve(__dirname, 'src'),
+        '@': resolve(import.meta.dirname, 'src'),
       },
     },
     test: {

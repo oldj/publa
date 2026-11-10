@@ -3,12 +3,12 @@
  * 使用懒加载避免在构建期提前解析旧式 CJS 插件
  */
 import { EMBED_HOSTNAMES } from '@/components/editors/embed/providers'
-import MarkdownIt from 'markdown-it'
+import MarkdownIt, { type MarkdownIt as MarkdownRenderer } from 'markdown-it'
 import sanitizeHtml from 'sanitize-html'
 
-let markdownRendererPromise: Promise<MarkdownIt> | null = null
+let markdownRendererPromise: Promise<MarkdownRenderer> | null = null
 
-async function getMarkdownRenderer(): Promise<MarkdownIt> {
+async function getMarkdownRenderer(): Promise<MarkdownRenderer> {
   if (!markdownRendererPromise) {
     markdownRendererPromise = (async () => {
       const [{ default: markdownItImsize }, { default: markdownItMathjax }] = await Promise.all([
@@ -28,7 +28,7 @@ async function getMarkdownRenderer(): Promise<MarkdownIt> {
   return markdownRendererPromise
 }
 
-// SVG 子元素标签（小写形式，依赖浏览器 HTML5 SVG 解析器在渲染时纠正大小写）
+// htmlparser2 12 会按 HTML5 规范纠正 SVG 标签大小写，白名单须使用对应名称。
 // 不包含 foreignObject——该标签允许嵌入任意 HTML，会绕过白名单
 const SVG_TAGS = [
   'svg',
@@ -47,27 +47,27 @@ const SVG_TAGS = [
   'rect',
   'text',
   'tspan',
-  'textpath',
-  'lineargradient',
-  'radialgradient',
+  'textPath',
+  'linearGradient',
+  'radialGradient',
   'stop',
-  'clippath',
+  'clipPath',
   'mask',
   'pattern',
   'marker',
   'filter',
-  'fegaussianblur',
-  'feoffset',
-  'feblend',
-  'fecolormatrix',
-  'fecomposite',
-  'feflood',
-  'femerge',
-  'femergenode',
-  'femorphology',
-  'fedropshadow',
-  'fedisplacementmap',
-  'feturbulence',
+  'feGaussianBlur',
+  'feOffset',
+  'feBlend',
+  'feColorMatrix',
+  'feComposite',
+  'feFlood',
+  'feMerge',
+  'feMergeNode',
+  'feMorphology',
+  'feDropShadow',
+  'feDisplacementMap',
+  'feTurbulence',
 ]
 
 // SVG 元素通用呈现属性（多数 svg 子标签可共用）
@@ -200,8 +200,8 @@ export const sanitizeOptions: sanitizeHtml.IOptions = {
       ...SVG_COMMON_ATTRS,
     ],
     tspan: ['x', 'y', 'dx', 'dy', 'text-anchor', 'font-size', 'font-weight', ...SVG_COMMON_ATTRS],
-    textpath: ['href', 'startoffset', 'class'],
-    lineargradient: [
+    textPath: ['href', 'startoffset', 'class'],
+    linearGradient: [
       'id',
       'x1',
       'y1',
@@ -211,7 +211,7 @@ export const sanitizeOptions: sanitizeHtml.IOptions = {
       'gradienttransform',
       'spreadmethod',
     ],
-    radialgradient: [
+    radialGradient: [
       'id',
       'cx',
       'cy',
@@ -223,7 +223,7 @@ export const sanitizeOptions: sanitizeHtml.IOptions = {
       'spreadmethod',
     ],
     stop: ['offset', 'stop-color', 'stop-opacity'],
-    clippath: ['id', 'clippathunits', 'class'],
+    clipPath: ['id', 'clippathunits', 'class'],
     mask: ['id', 'maskunits', 'maskcontentunits', 'x', 'y', 'width', 'height', 'class'],
     pattern: [
       'id',
@@ -248,18 +248,18 @@ export const sanitizeOptions: sanitizeHtml.IOptions = {
       'class',
     ],
     filter: ['id', 'x', 'y', 'width', 'height', 'filterunits', 'primitiveunits', 'class'],
-    fegaussianblur: ['in', 'stddeviation', 'edgemode', 'result'],
-    feoffset: ['in', 'dx', 'dy', 'result'],
-    feblend: ['in', 'in2', 'mode', 'result'],
-    fecolormatrix: ['in', 'type', 'values', 'result'],
-    fecomposite: ['in', 'in2', 'operator', 'k1', 'k2', 'k3', 'k4', 'result'],
-    feflood: ['flood-color', 'flood-opacity', 'result'],
-    femerge: ['result'],
-    femergenode: ['in'],
-    femorphology: ['in', 'operator', 'radius', 'result'],
-    fedropshadow: ['dx', 'dy', 'stddeviation', 'flood-color', 'flood-opacity', 'result'],
-    fedisplacementmap: ['in', 'in2', 'scale', 'xchannelselector', 'ychannelselector', 'result'],
-    feturbulence: ['type', 'basefrequency', 'numoctaves', 'seed', 'stitchtiles', 'result'],
+    feGaussianBlur: ['in', 'stddeviation', 'edgemode', 'result'],
+    feOffset: ['in', 'dx', 'dy', 'result'],
+    feBlend: ['in', 'in2', 'mode', 'result'],
+    feColorMatrix: ['in', 'type', 'values', 'result'],
+    feComposite: ['in', 'in2', 'operator', 'k1', 'k2', 'k3', 'k4', 'result'],
+    feFlood: ['flood-color', 'flood-opacity', 'result'],
+    feMerge: ['result'],
+    feMergeNode: ['in'],
+    feMorphology: ['in', 'operator', 'radius', 'result'],
+    feDropShadow: ['dx', 'dy', 'stddeviation', 'flood-color', 'flood-opacity', 'result'],
+    feDisplacementMap: ['in', 'in2', 'scale', 'xchannelselector', 'ychannelselector', 'result'],
+    feTurbulence: ['type', 'basefrequency', 'numoctaves', 'seed', 'stitchtiles', 'result'],
   },
   allowedStyles: {
     '*': {

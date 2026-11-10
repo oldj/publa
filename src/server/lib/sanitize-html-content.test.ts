@@ -190,11 +190,24 @@ describe('sanitizeRichTextHtml', () => {
     const html =
       '<svg><defs><linearGradient id="g1"><stop offset="0%" stop-color="red"/><stop offset="100%" stop-color="blue"/></linearGradient></defs><rect width="100" height="100" fill="url(#g1)"/></svg>'
     const result = sanitizeRichTextHtml(html)
-    // sanitize-html 会将 camelCase 标签小写为 lineargradient；浏览器在 SVG 上下文中渲染时仍会纠正
-    expect(result.toLowerCase()).toContain('<lineargradient')
+    expect(result).toContain('<linearGradient id="g1">')
     expect(result).toContain('<stop')
     expect(result).toContain('stop-color="red"')
     expect(result).toContain('stop-color="blue"')
+  })
+
+  it('保留 SVG 裁剪、滤镜和文本路径的标签及属性', () => {
+    const html =
+      '<svg viewBox="0 0 100 100"><defs><clipPath id="clip"><rect width="50" height="50"/></clipPath><filter id="blur"><feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blurred"/><feMerge><feMergeNode in="blurred"/></feMerge></filter><path id="curve" d="M0 0L100 100"/></defs><text clip-path="url(#clip)" filter="url(#blur)"><textPath href="#curve" startOffset="10%">文字</textPath></text></svg>'
+    const result = sanitizeRichTextHtml(html)
+
+    expect(result).toContain('viewbox="0 0 100 100"')
+    expect(result).toContain('<clipPath id="clip">')
+    expect(result).toContain(
+      '<feGaussianBlur in="SourceGraphic" stddeviation="2" result="blurred">',
+    )
+    expect(result).toContain('<feMerge><feMergeNode in="blurred">')
+    expect(result).toContain('<textPath href="#curve" startoffset="10%">文字</textPath>')
   })
 
   it('保留 SVG <title> 子标签（无障碍）', () => {

@@ -162,6 +162,15 @@ Vercel 调用 cron 路由时会携带 `Authorization` 头，需要 `CRON_SECRET`
 
 ## 开发指南
 
+### 开发工具依赖的安全覆盖
+
+`package.json` 中的以下 `overrides` 用于修复上游工具尚未更新的传递依赖，保留现有 ESLint、TypeScript ESLint 和 Drizzle Kit 版本：
+
+- `minimatch@^10.0.0` → `11.0.5`：修复 [glob 模式资源耗尽漏洞](https://github.com/advisories/GHSA-g3hv-75wg-m249)。11.x 删除了 `makeRe()` 等 API；当前调用方使用的匹配 API 已验证兼容，升级调用方时仍需复核。
+- `@esbuild-kit/core-utils` 下的 `esbuild` → `0.25.12`：修复 [开发服务器跨域漏洞](https://github.com/advisories/GHSA-67mh-4wv8-2f99)，仅覆盖 Drizzle Kit 旧 loader 的依赖，不改动其他工具使用的 esbuild。
+
+调整或移除这些覆盖时，需要检查 `npm audit` 和 `npm ls --all`，验证 ESLint 的文件匹配范围与规则执行，以及旧 loader 的 TypeScript 转译、SQLite/PostgreSQL 的迁移生成和执行。迁移验证应使用临时目录与独立测试库。上游原生采用安全版本后，应移除对应覆盖并重新验证。
+
 ### 修改数据库 Schema
 
 建议在修改 schema 前先停止正在运行的 `npm run dev`，避免热重载将本地数据库迁到中间状态。
