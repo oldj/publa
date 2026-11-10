@@ -72,6 +72,10 @@ ghcr.io/oldj/publa:<version>   # 例如 0.1.34、1.2.3-beta.4
 ghcr.io/oldj/publa:latest      # 最新稳定版（不包含预发布版本）
 ```
 
+两个架构分别在原生 runner 上构建，避免 QEMU 模拟执行原生依赖时挂起。发布前检查依赖漏洞，并对每个镜像验证启动、SQLite 迁移及验证码接口；全部通过后才更新镜像标签。
+
+需要重建已有版本时，可在 GitHub Actions 的 `Publish Docker image` 工作流中选择 `Run workflow`，使用包含修复的工作流分支，并填写原发布标签（如 `release-v0.1.47`）。工作流从该标签固定的提交构建，校验标签与 `package.json` 版本一致，无需移动或重新推送 Git 标签。重建稳定版也会更新 `latest`，因此不要用此入口回填旧稳定版。
+
 公共仓库可直接 `docker pull`，无需登录。下文示例中也可以将镜像替换为本地自行构建版本：
 
 ```bash
