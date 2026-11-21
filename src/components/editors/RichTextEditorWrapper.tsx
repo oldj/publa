@@ -23,7 +23,7 @@ import { TableKit } from '@tiptap/extension-table'
 import type { Editor } from '@tiptap/react'
 import { ReactNodeViewRenderer, useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
-import 'katex/dist/katex.min.css'
+import './editor-math.css'
 import { useTranslations } from 'next-intl'
 import { useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import CodeBlockView, { lowlight } from './CodeBlockView'
@@ -35,6 +35,7 @@ import ImageToolbar from './ImageToolbar'
 import LinkPopoverControl from './LinkPopover'
 import MathModal from './MathModal'
 import TableToolbar from './TableToolbar'
+import ThemedEditorContent from './ThemedEditorContent'
 import { getFloatingToolbarTop } from './toolbar-position'
 
 export interface RichTextEditorHandle {
@@ -60,6 +61,7 @@ const NARROW_MODE_STORAGE_KEY = 'publa.editor.narrowMode'
 const NARROW_MODE_MIN_VIEWPORT_PX = 720
 
 interface RichTextEditorWrapperProps {
+  layout?: 'post' | 'page' | 'blank'
   initialContent?: string
   placeholder?: string
   onUpdate?: () => void
@@ -77,6 +79,7 @@ interface RichTextEditorWrapperProps {
 }
 
 export default function RichTextEditorWrapper({
+  layout = 'post',
   initialContent,
   placeholder,
   onUpdate,
@@ -221,6 +224,12 @@ export default function RichTextEditorWrapper({
     ],
     content: initialContent || '',
     editorProps: {
+      attributes: {
+        class:
+          layout === 'post'
+            ? 'post-detail-content rich-content'
+            : 'dynamic-page-content rich-content',
+      },
       handlePaste: (view, event) => {
         const files = Array.from(event.clipboardData?.files || [])
         const images = files.filter((f) => f.type.startsWith('image/'))
@@ -315,11 +324,32 @@ export default function RichTextEditorWrapper({
 
   // 监听编辑器选区变化，更新图片工具栏位置
   useEffect(() => {
-    if (!editor) return
+    const container = editorContainerRef.current
+    const surface = container?.querySelector<HTMLElement>('[data-role="rich-text-editor"]')
+    const toolbar = container?.querySelector<HTMLElement>('.mantine-RichTextEditor-toolbar')
+    if (!editor || !container || !surface || !toolbar) return
+
+    // 正文单独滚动，浮动工具栏挂在外层；先按可见正文定位，再换算为外层坐标。
+    const toolbarTop = (target: DOMRect) => {
+      const bounds = surface.getBoundingClientRect()
+      const top = Math.max(0, bounds.top, toolbar.getBoundingClientRect().bottom)
+      const bottom = Math.min(window.innerHeight, bounds.bottom)
+      if (bottom <= top || target.bottom <= top || target.top >= bottom) return null
+
+      const height = 36
+      const offset = getFloatingToolbarTop({
+        containerTop: top,
+        targetTop: target.top,
+        targetBottom: target.bottom,
+        scrollTop: 0,
+        toolbarHeight: height,
+      })
+      const y = Math.max(top, Math.min(top + offset, bottom - height))
+      return y - container.getBoundingClientRect().top + container.scrollTop
+    }
 
     const updateImageToolbar = () => {
-      const container = editorContainerRef.current
-      if (!editor.isActive('image') || !container) {
+      if (!editor.isActive('image')) {
         setImageToolbar(null)
         selectedImgRef.current = null
         return
@@ -343,45 +373,41 @@ export default function RichTextEditorWrapper({
 
       selectedImgRef.current = imgEl
 
-      container
-        .querySelectorAll('.image-selected')
-        .forEach((el) => el.classList.remove('image-selected'))
-      nodeDom.classList.add('image-selected')
-
-      const containerRect = container.getBoundingClientRect()
-      const imgRect = imgEl.getBoundingClientRect()
-      const top = getFloatingToolbarTop({
-        containerTop: containerRect.top,
-        targetTop: imgRect.top,
-        targetBottom: imgRect.bottom,
-        scrollTop: container.scrollTop,
-      })
-
-      setImageToolbar({
-        top,
-        left: imgRect.left - containerRect.left + imgRect.width / 2,
-      })
+      if (!nodeDom.classList.contains('image-selected')) {
+        editor.view.dom.querySelector('.image-selected')?.classList.remove('image-selected')
+        nodeDom.classList.add('image-selected')
+      }
+      const rect = imgEl.getBoundingClientRect()
+      const top = toolbarTop(rect)
+      setImageToolbar(
+        top === null
+          ? null
+          : {
+              top,
+              left: rect.left - container.getBoundingClientRect().left + rect.width / 2,
+            },
+      )
     }
 
     const clearImageSelection = () => {
       if (!editor.isActive('image')) {
-        editorContainerRef.current
-          ?.querySelectorAll('.image-selected')
+        editor.view.dom
+          .querySelectorAll('.image-selected')
           .forEach((el) => el.classList.remove('image-selected'))
       }
     }
 
     const syncImageAlign = () => {
-      const imgs = editorContainerRef.current?.querySelectorAll('.ProseMirror img[data-align]')
-      imgs?.forEach((img) => {
+      const imgs = editor.view.dom.querySelectorAll('img[data-align]')
+      imgs.forEach((img) => {
         const align = img.getAttribute('data-align')
         const resizeContainer = img.closest('[data-resize-container]') as HTMLElement
         if (!resizeContainer) return
         resizeContainer.style.justifyContent =
           align === 'center' ? 'center' : align === 'right' ? 'flex-end' : ''
       })
-      const allContainers = editorContainerRef.current?.querySelectorAll('[data-resize-container]')
-      allContainers?.forEach((c) => {
+      const allContainers = editor.view.dom.querySelectorAll('[data-resize-container]')
+      allContainers.forEach((c) => {
         const img = c.querySelector('img')
         if (img && !img.getAttribute('data-align')) {
           ;(c as HTMLElement).style.justifyContent = ''
@@ -390,8 +416,7 @@ export default function RichTextEditorWrapper({
     }
 
     const updateTableToolbar = () => {
-      const container = editorContainerRef.current
-      if (!editor.isActive('table') || !container) {
+      if (!editor.isActive('table')) {
         setTableToolbar(null)
         return
       }
@@ -418,18 +443,20 @@ export default function RichTextEditorWrapper({
         return
       }
 
-      const containerRect = container.getBoundingClientRect()
-      const tableRect = tableDom.getBoundingClientRect()
-      const top = getFloatingToolbarTop({
-        containerTop: containerRect.top,
-        targetTop: tableRect.top,
-        targetBottom: tableRect.bottom,
-        scrollTop: container.scrollTop,
-      })
-
-      setTableToolbar({ top })
+      const top = toolbarTop(tableDom.getBoundingClientRect())
+      setTableToolbar(top === null ? null : { top })
     }
 
+    const updatePositions = () => {
+      if (editor.isActive('image')) updateImageToolbar()
+      if (editor.isActive('table')) updateTableToolbar()
+    }
+    // 迟到的主题、字体和图片也会改变选区位置，无需用户再次点击。
+    const resizeObserver = new ResizeObserver(updatePositions)
+    resizeObserver.observe(editor.view.dom)
+    resizeObserver.observe(surface)
+    window.addEventListener('scroll', updatePositions, true)
+    window.addEventListener('resize', updatePositions)
     editor.on('selectionUpdate', updateImageToolbar)
     editor.on('selectionUpdate', clearImageSelection)
     editor.on('selectionUpdate', updateTableToolbar)
@@ -437,6 +464,9 @@ export default function RichTextEditorWrapper({
     editor.on('transaction', syncImageAlign)
     editor.on('transaction', updateTableToolbar)
     return () => {
+      resizeObserver.disconnect()
+      window.removeEventListener('scroll', updatePositions, true)
+      window.removeEventListener('resize', updatePositions)
       editor.off('selectionUpdate', updateImageToolbar)
       editor.off('selectionUpdate', clearImageSelection)
       editor.off('selectionUpdate', updateTableToolbar)
@@ -469,7 +499,7 @@ export default function RichTextEditorWrapper({
             {t('label')}
           </Text>
         )}
-        <RichTextEditor editor={editor}>
+        <RichTextEditor editor={editor} withTypographyStyles={false}>
           <RichTextEditor.Toolbar sticky stickyOffset={0}>
             <RichTextEditor.ControlsGroup>
               <Tip label={t('bold')}>
@@ -636,7 +666,11 @@ export default function RichTextEditorWrapper({
                     disabled={saveLoading}
                     aria-label={tCommon('actions.save')}
                   >
-                    {saveLoading ? <Loader size={16} /> : <IconDeviceFloppy size={16} stroke={1.5} />}
+                    {saveLoading ? (
+                      <Loader size={16} />
+                    ) : (
+                      <IconDeviceFloppy size={16} stroke={1.5} />
+                    )}
                   </RichTextEditor.Control>
                 </Tip>
               </RichTextEditor.ControlsGroup>
@@ -689,7 +723,7 @@ export default function RichTextEditorWrapper({
             </RichTextEditor.ControlsGroup>
           </RichTextEditor.Toolbar>
 
-          <RichTextEditor.Content data-role="rich-text-editor" />
+          {editor && <ThemedEditorContent editor={editor} layout={layout} />}
         </RichTextEditor>
 
         {/* 图片浮动工具栏 */}

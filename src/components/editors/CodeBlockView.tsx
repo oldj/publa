@@ -38,7 +38,7 @@ export default function CodeBlockView({ node, updateAttributes }: any) {
         ))}
       </select>
       <pre>
-        <NodeViewContent as={'code' as any} />
+        <NodeViewContent as={'code' as any} className="hljs" />
       </pre>
     </NodeViewWrapper>
   )

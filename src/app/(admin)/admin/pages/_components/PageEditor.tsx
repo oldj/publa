@@ -1059,6 +1059,7 @@ export default function PageEditor({ pageId }: { pageId?: number }) {
 
             {/* 富文本编辑器 */}
             <RichTextEditorWrapper
+              layout={form.template === 'blank' ? 'blank' : 'page'}
               editorRef={richTextRef}
               placeholder={t('fields.contentPlaceholder')}
               onImageUpload={uploadImage}

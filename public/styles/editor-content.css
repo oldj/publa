@@ -1,0 +1,214 @@
+/* 图片对齐：通过 data-align 属性控制 */
+.ProseMirror img[data-align="center"] {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.ProseMirror img[data-align="right"] {
+  display: block;
+  margin-left: auto;
+}
+
+/* ResizableNodeView 容器也需要对齐 */
+.ProseMirror [data-resize-container]:has(img[data-align="center"]) {
+  justify-content: center;
+}
+
+.ProseMirror [data-resize-container]:has(img[data-align="right"]) {
+  justify-content: flex-end;
+}
+
+/* 图片容器不应遮住编辑器工具栏 */
+.ProseMirror [data-resize-container] {
+  position: static !important;
+  z-index: auto !important;
+}
+
+.ProseMirror [data-resize-wrapper] {
+  position: relative;
+}
+
+/* 选中图片的样式 */
+.ProseMirror .image-selected {
+  outline: 2px solid var(--mantine-color-blue-5);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* 拖拽调整尺寸的手柄 */
+.ProseMirror [data-resize-handle] {
+  width: 10px;
+  height: 10px;
+  background: var(--mantine-color-blue-5);
+  border: 1px solid white;
+  border-radius: 2px;
+  z-index: 5;
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+
+/* hover 或选中时显示手柄 */
+.ProseMirror [data-resize-wrapper]:hover [data-resize-handle],
+.ProseMirror .image-selected [data-resize-handle] {
+  opacity: 1;
+}
+
+/* 手柄光标 */
+.ProseMirror [data-resize-handle="top-left"],
+.ProseMirror [data-resize-handle="bottom-right"] {
+  cursor: nwse-resize;
+}
+
+.ProseMirror [data-resize-handle="top-right"],
+.ProseMirror [data-resize-handle="bottom-left"] {
+  cursor: nesw-resize;
+}
+
+/* 编辑态单元格需要为选区和列宽拖拽手柄提供定位。 */
+.ProseMirror td,
+.ProseMirror th {
+  min-width: 1em;
+  position: relative;
+}
+
+/* 选中单元格高亮 */
+.ProseMirror .selectedCell::after {
+  z-index: 2;
+  position: absolute;
+  content: "";
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  background: rgba(200, 200, 255, 0.4);
+  pointer-events: none;
+}
+
+/* 单元格内段落：消除 margin 防止 widget 出现时撑大高度 */
+.ProseMirror td > p,
+.ProseMirror th > p {
+  margin: 0;
+}
+
+/* 列宽拖拽手柄 */
+.ProseMirror .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background-color: var(--mantine-color-blue-5);
+  pointer-events: none;
+  z-index: 20;
+}
+
+.ProseMirror.resize-cursor {
+  cursor: col-resize;
+}
+
+/* 第三方站点嵌入节点 */
+.ProseMirror .embed {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9; /* 默认值，inline style 可覆盖 */
+  margin: 1em 0;
+  background: var(--mantine-color-gray-1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.ProseMirror .embed iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+/* 高度不定的嵌入（X.com 推文）：去掉 aspect-ratio，靠 min-height（inline style）+ postMessage 控制高度 */
+.ProseMirror .embed[data-aspect-ratio="auto"] {
+  aspect-ratio: auto;
+}
+
+/* 编辑态：选中高亮 */
+.ProseMirror .embed.embed-selected {
+  outline: 2px solid var(--mantine-color-blue-5);
+  outline-offset: 2px;
+}
+
+/* 透明点击层：覆盖 iframe，拦截鼠标事件让 ProseMirror 能选中节点 */
+.ProseMirror .embed .embed-click-mask {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  cursor: pointer;
+  background: transparent;
+}
+
+/* 编辑框接管版心与滚动，主题仍负责正文排版。 */
+@layer publa-editor-layout {
+  [data-editor-layout],
+  .ProseMirror.rich-content {
+    box-sizing: border-box !important;
+    display: block !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    min-height: 0 !important;
+  }
+
+  .ProseMirror.rich-content {
+    min-height: var(--editor-min-height) !important;
+    padding: 16px !important;
+  }
+}
+
+.ProseMirror.rich-content {
+  outline: none;
+  overflow: visible;
+}
+
+.ProseMirror.rich-content::after {
+  content: none;
+}
+
+.ProseMirror p.is-editor-empty:first-of-type::before {
+  content: attr(data-placeholder);
+  pointer-events: none;
+  float: left;
+  height: 0;
+  color: var(--mantine-color-placeholder);
+}
+
+.ProseMirror .tableWrapper,
+.ProseMirror pre {
+  overflow-x: auto;
+}
+
+.ProseMirror pre code {
+  display: block;
+}
+
+html[data-editor-document] {
+  --publa-editor-rem: 1em;
+  --publa-editor-font-rem: 1rem;
+}
+
+body {
+  --publa-editor-font-rem: var(--publa-editor-rem);
+}
+
+:where(html) {
+  font: medium/normal serif;
+  color: CanvasText;
+  background: Canvas;
+}
+
+:where(*) {
+  box-sizing: border-box;
+}

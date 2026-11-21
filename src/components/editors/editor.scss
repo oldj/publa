@@ -1,44 +1,16 @@
-/* 编辑器中的链接 */
-.ProseMirror a {
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
-/* 编辑器中的图片 */
-.ProseMirror img {
-  max-width: 100%;
-}
-
-/* 图片对齐：通过 data-align 属性控制 */
-.ProseMirror img[data-align="center"] {
-  display: block;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.ProseMirror img[data-align="right"] {
-  display: block;
-  margin-left: auto;
-}
-
-/* ResizableNodeView 容器也需要对齐 */
-.ProseMirror [data-resize-container]:has(img[data-align="center"]) {
-  justify-content: center;
-}
-
-.ProseMirror [data-resize-container]:has(img[data-align="right"]) {
-  justify-content: flex-end;
+/* 注册为长度后，前台根元素的 1em 会按其字号算成像素，再传给正文。 */
+@property --publa-editor-rem {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 16px;
 }
 
 /* 编辑器内容区最大高度限制：随视口缩放，但不超过 600px */
-.mantine-RichTextEditor-content {
+.rich-editor-surface {
+  --editor-min-height: min(360px, calc(100vh - 200px));
   max-height: min(600px, calc(100vh - 100px));
   overflow-y: auto;
-}
-
-/* 编辑器内容区最小高度，避免新建文章时只有一行高；小屏上自动收缩 */
-.ProseMirror {
-  min-height: min(360px, calc(100vh - 200px));
+  contain: paint;
 }
 
 /* 最大化时隐藏 AppShell 的 Navbar 和 Header，避免遮挡编辑器 */
@@ -64,20 +36,15 @@ body[data-rich-editor-maximized] .mantine-AppShell-header {
   }
 
   /* 由最外层容器统一接管滚动，工具栏 sticky 才会贴在视口顶部 */
-  .mantine-RichTextEditor-content {
+  .rich-editor-surface {
+    --editor-min-height: calc(100vh - 100px);
     max-height: none;
-    overflow-y: visible;
+    overflow: visible;
   }
 
-  .ProseMirror {
-    min-height: calc(100vh - 100px);
-  }
-
-  /* 限宽阅读：固定编辑内容区宽度并居中，宽屏长段落不再左右扫视 */
-  &[data-narrow-mode="true"] .ProseMirror {
-    max-width: 720px;
-    margin-left: auto;
-    margin-right: auto;
+  &[data-narrow-mode="true"] .rich-editor-surface {
+    max-width: 710px;
+    margin-inline: auto;
   }
 }
 
@@ -85,112 +52,6 @@ body[data-rich-editor-maximized] .mantine-AppShell-header {
 .mantine-RichTextEditor-toolbar {
   z-index: 10;
   position: sticky;
-}
-
-/* 图片容器不应遮住编辑器工具栏 */
-.ProseMirror [data-resize-container] {
-  position: static !important;
-  z-index: auto !important;
-}
-
-.ProseMirror [data-resize-wrapper] {
-  position: relative;
-}
-
-/* 选中图片的样式 */
-.ProseMirror .image-selected {
-  outline: 2px solid var(--mantine-color-blue-5);
-  outline-offset: 2px;
-  border-radius: 2px;
-}
-
-/* 拖拽调整尺寸的手柄 */
-.ProseMirror [data-resize-handle] {
-  width: 10px;
-  height: 10px;
-  background: var(--mantine-color-blue-5);
-  border: 1px solid white;
-  border-radius: 2px;
-  z-index: 5;
-  opacity: 0;
-  transition: opacity 150ms ease;
-}
-
-/* hover 或选中时显示手柄 */
-.ProseMirror [data-resize-wrapper]:hover [data-resize-handle],
-.ProseMirror .image-selected [data-resize-handle] {
-  opacity: 1;
-}
-
-/* 手柄光标 */
-.ProseMirror [data-resize-handle="top-left"],
-.ProseMirror [data-resize-handle="bottom-right"] {
-  cursor: nwse-resize;
-}
-
-.ProseMirror [data-resize-handle="top-right"],
-.ProseMirror [data-resize-handle="bottom-left"] {
-  cursor: nesw-resize;
-}
-
-/* 编辑器中的表格 */
-.ProseMirror table {
-  border-collapse: collapse;
-  table-layout: fixed;
-  width: 100%;
-  margin: 1em 0;
-  overflow: hidden;
-}
-
-.ProseMirror td,
-.ProseMirror th {
-  min-width: 1em;
-  border: 1px solid var(--mantine-color-gray-4);
-  padding: 6px 10px;
-  vertical-align: top;
-  box-sizing: border-box;
-  position: relative;
-}
-
-.ProseMirror th {
-  font-weight: bold;
-  text-align: left;
-  background-color: var(--mantine-color-gray-1);
-}
-
-/* 选中单元格高亮 */
-.ProseMirror .selectedCell::after {
-  z-index: 2;
-  position: absolute;
-  content: "";
-  left: 0;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  background: rgba(200, 200, 255, 0.4);
-  pointer-events: none;
-}
-
-/* 单元格内段落：消除 margin 防止 widget 出现时撑大高度 */
-.ProseMirror td > p,
-.ProseMirror th > p {
-  margin: 0;
-}
-
-/* 列宽拖拽手柄 */
-.ProseMirror .column-resize-handle {
-  position: absolute;
-  right: -2px;
-  top: 0;
-  bottom: 0;
-  width: 4px;
-  background-color: var(--mantine-color-blue-5);
-  pointer-events: none;
-  z-index: 20;
-}
-
-.ProseMirror.resize-cursor {
-  cursor: col-resize;
 }
 
 /* 图片浮动工具栏 */
@@ -207,48 +68,4 @@ body[data-rich-editor-maximized] .mantine-AppShell-header {
 
   /* 防止溢出容器 */
   max-width: calc(100vw - 40px);
-}
-
-/* 行内代码字号与正文保持一致 */
-.ProseMirror code {
-  font-size: inherit;
-}
-
-/* 第三方站点嵌入节点 */
-.ProseMirror .embed {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 16 / 9; /* 默认值，inline style 可覆盖 */
-  margin: 1em 0;
-  background: var(--mantine-color-gray-1);
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.ProseMirror .embed iframe {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  border: 0;
-}
-
-/* 高度不定的嵌入（X.com 推文）：去掉 aspect-ratio，靠 min-height（inline style）+ postMessage 控制高度 */
-.ProseMirror .embed[data-aspect-ratio="auto"] {
-  aspect-ratio: auto;
-}
-
-/* 编辑态：选中高亮 */
-.ProseMirror .embed.embed-selected {
-  outline: 2px solid var(--mantine-color-blue-5);
-  outline-offset: 2px;
-}
-
-/* 透明点击层：覆盖 iframe，拦截鼠标事件让 ProseMirror 能选中节点 */
-.ProseMirror .embed .embed-click-mask {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  cursor: pointer;
-  background: transparent;
 }
