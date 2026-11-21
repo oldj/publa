@@ -436,7 +436,7 @@ describe('deleteRevisions', () => {
 })
 
 describe('restoreRevision', () => {
-  it('恢复版本创建新的历史记录', async () => {
+  it('将选中的历史版本恢复为当前草稿，保留原有发布记录', async () => {
     await saveDraft(
       'post',
       1,

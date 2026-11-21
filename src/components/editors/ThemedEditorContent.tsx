@@ -13,8 +13,15 @@ function copyEditorStyles(root: ShadowRoot) {
 
   // 复用打包器生成的 KaTeX 样式和字体资源，避免把 Mantine 的全局排版引入正文。
   for (const sheet of document.styleSheets) {
-    if (sheet.href && new URL(sheet.href).origin !== location.origin) continue
-    for (const rule of sheet.cssRules) {
+    let rules: CSSRuleList
+    try {
+      rules = sheet.cssRules
+    } catch (error) {
+      // CDN 重定向和 CORS 都会影响读取权限，以浏览器对实际样式表的判断为准。
+      if (error instanceof DOMException && error.name === 'SecurityError') continue
+      throw error
+    }
+    for (const rule of rules) {
       if (rule instanceof CSSLayerBlockRule && rule.name === 'publa-editor-math') {
         const math = document.createElement('style')
         // 字体已在主文档注册；只复制排版规则，保留字体 URL 原来的解析位置。

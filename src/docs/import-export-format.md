@@ -8,8 +8,13 @@
 
 ### 权限要求
 
-- 以下接口均要求当前用户角色为 `owner` 或 `admin`
-- 未登录或权限不足时，返回认证模块的标准 `401` / `403` JSON 响应
+| 操作 | 允许角色 | 需要近期二次验证 |
+| --- | --- | --- |
+| 导出内容、读取格式说明 | `owner`、`admin` | 否 |
+| 导入内容 | `owner`、`admin` | 是 |
+| 导入或导出设置 | `owner` | 是 |
+
+未登录返回 `401`，角色权限不足返回 `403`。需要二次验证的操作在凭据缺失或过期时返回 `403 REAUTH_REQUIRED`，重新验证密码后可重试。
 
 ### `GET /api/import-export`
 
@@ -23,8 +28,8 @@
 
 #### 返回行为
 
-- `type=settings` 时返回设置数据，下载文件名形如 `blog-settings-2026-04-04-120000.json`
-- 其他情况返回内容数据，下载文件名形如 `blog-content-2026-04-04-120000.json`
+- 文件名前缀取自站点标题，空白字符和不适合用作文件名的字符替换为下划线。标题为空时使用 `publa`。时间戳取 UTC。
+- 例如，站点标题为 `My Blog` 时，设置包文件名形如 `My_Blog-settings-2026-04-04-120000.json`，内容包形如 `My_Blog-content-2026-04-04-120000.json`。
 - `Content-Type` 为 `application/json`
 
 ### `POST /api/import-export`

@@ -24,11 +24,6 @@ const next_configs = {
     '@libsql/client',
     'pg',
   ],
-  experimental: {
-    serverActions: {
-      bodySizeLimit: '50mb',
-    },
-  },
   trailingSlash: false,
   reactStrictMode: true,
   poweredByHeader: false,

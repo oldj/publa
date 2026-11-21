@@ -29,8 +29,7 @@ RUN addgroup -S app && adduser -S app -G app \
   && mkdir -p /app/data \
   && chown app:app /app /app/data
 
-# standalone 自带运行时所需 node_modules（含 nodemailer / resend，
-# 由 next.config.js 的 outputFileTracingIncludes 显式声明）。
+# standalone 构建产物包含通过静态导入追踪到的邮件依赖。
 # 用 --chown 避免后续整层 chown -R 引发的 CoW 复制。
 COPY --from=builder --chown=app:app /app/.next/standalone ./
 COPY --from=builder --chown=app:app /app/.next/static ./.next/static
