@@ -490,6 +490,8 @@ export default function RichTextEditorWrapper({
           if (!onSave) return
           if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.code === 'KeyS') {
             e.preventDefault()
+            // 已在正文的 React portal 内处理，阻止同一个按键冒泡到宿主后再次保存。
+            e.stopPropagation()
             if (!saveLoading) void onSave()
           }
         }}

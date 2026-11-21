@@ -65,11 +65,77 @@ function replaceRem(text: string, unit: string) {
   )
 }
 
+function adaptFonts(styles: CSSStyleDeclaration[], aliases: Map<string, string>) {
+  if (!aliases.size) return
+  const declarations = new Map<string, CSSStyleDeclaration[]>()
+  for (const style of styles) {
+    for (const name of style) {
+      if (!name.startsWith('--')) continue
+      const definitions = declarations.get(name) ?? []
+      definitions.push(style)
+      declarations.set(name, definitions)
+    }
+  }
+
+  const variables = new Set<string>()
+  const fontVariable = (name: string) => '--publa-editor-' + fontSet + name
+  const parser = document.createElement('span').style
+  const renameFamilies = (value: string) =>
+    value.replace(/"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^"'(),]+/g, (part) => {
+      const key = part
+        .trim()
+        .replace(/^["']|["']$/g, '')
+        .toLowerCase()
+      return aliases.get(key) ?? part
+    })
+  const fontValue = (value: string) => {
+    // 只在字体上下文中读取专用变量。主题的条件规则未生效时，仍可读取行内或继承的原值。
+    const closing: string[] = []
+    const referenced = value.replace(
+      /"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\/\*[\s\S]*?\*\/|\bvar\(\s*(--[\w-]+)|[()]/gi,
+      (part, name?: string) => {
+        if (name && declarations.has(name) && !name.startsWith('--publa-editor-')) {
+          variables.add(name)
+          closing.push('))')
+          return 'var(' + fontVariable(name) + ', ' + part
+        }
+        if (name || part === '(') closing.push(')')
+        if (part === ')') return closing.pop() ?? part
+        return part
+      },
+    )
+    // 变量可以保存整个 font 简写。交给浏览器拆出字体族，避免把字重或字号当成字体名。
+    parser.cssText = ''
+    parser.font = referenced
+    if (parser.fontFamily) {
+      const families = renameFamilies(parser.fontFamily)
+      if (families === parser.fontFamily) return referenced
+      parser.fontFamily = families
+      return parser.font
+    }
+    return renameFamilies(referenced)
+  }
+  for (const style of styles) {
+    const name = style.font ? 'font' : 'font-family'
+    const value = style.getPropertyValue(name)
+    if (!value) continue
+    const renamed = fontValue(value)
+    if (renamed !== value) style.setProperty(name, renamed, style.getPropertyPriority(name))
+  }
+  // 包括嵌套 var() 引入的变量；在原规则上写入副本，继承、媒体条件与优先级随原定义生效。
+  for (const name of variables) {
+    for (const style of declarations.get(name)!) {
+      const value = fontValue(style.getPropertyValue(name))
+      style.setProperty(fontVariable(name), value, style.getPropertyPriority(name))
+    }
+  }
+}
+
 export function adaptEditorTheme(sheets: CSSStyleSheet[], fonts: CSSStyleSheet) {
   const rules = sheets.flatMap((sheet) => Array.from(sheetRules(sheet)))
   const aliases = registerFonts(rules, fonts)
-  for (const rule of rules) {
-    if (!(rule instanceof CSSStyleRule)) continue
+  const styleRules = rules.filter((rule) => rule instanceof CSSStyleRule)
+  for (const rule of styleRules) {
     // Shadow DOM 没有自己的 :root，让它匹配编辑区的 html。
     if (rule.selectorText.includes(':root')) {
       rule.selectorText = rule.selectorText.replace(/"[^"]*"|'[^']*'|:root\b/g, (part) =>
@@ -88,20 +154,9 @@ export function adaptEditorTheme(sheets: CSSStyleSheet[], fonts: CSSStyleSheet) 
       const adjustedFont = replaceRem(font, '--publa-editor-font-rem')
       if (adjustedFont !== font) style.setProperty(property, adjustedFont, priority)
     }
-
-    if (!aliases.size) continue
-    for (const name of ['font', ...Array.from(style)]) {
-      if (name !== 'font-family' && name !== 'font' && !name.startsWith('--')) continue
-      const value = style.getPropertyValue(name)
-      // 引号中的逗号属于字体名；括号内还可能有 var() 的回退字体。
-      const renamed = value.replace(/"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^"'(),]+/g, (part) => {
-        const key = part
-          .trim()
-          .replace(/^["']|["']$/g, '')
-          .toLowerCase()
-        return aliases.get(key) ?? part
-      })
-      if (renamed !== value) style.setProperty(name, renamed, style.getPropertyPriority(name))
-    }
   }
+  adaptFonts(
+    styleRules.map((rule) => rule.style),
+    aliases,
+  )
 }

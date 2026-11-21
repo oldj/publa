@@ -29,7 +29,7 @@ test('富文本正文跟随主题和附加 CSS，普通模式占满宽度且工�
     const page = await context.newPage()
     const front = await context.newPage()
     const html =
-      '<p>第一段 iiiWWW</p><h2>章节标题</h2><p>第二段 <span data-type="inline-math" data-latex="x^2"></span></p>'
+      '<p>第一段 iiiWWW</p><h2>章节标题</h2><h3>iiiWWW<em>iiiWWW</em></h3><p>第二段 <span data-type="inline-math" data-latex="x^2"></span></p>'
     const created = await app.request.post('/api/posts', {
       data: {
         title: '排版',
@@ -54,14 +54,18 @@ test('富文本正文跟随主题和附加 CSS，普通模式占满宽度且工�
         name: '排版测试主题',
         css: `
       @font-face {font-family: "Article, Face"; src: url("./KaTeX_Typewriter-Regular.woff2")}
+      @font-face {font-family: red; src: url("./KaTeX_Typewriter-Regular.woff2")}
       @media (max-width: 799px) {
         @font-face {font-family: "Article, Face"; src: url("./KaTeX_Main-Regular.woff2")}
       }
-      :root { --article-font: "Article, Face", serif; --ink: #474133; --paragraph-gap: 1rem; font-size: 1.25rem }
+      :root { --article-font: "Article, Face", serif; --ink: red; --heading-font: 21px red, sans-serif; --paragraph-gap: 1rem; font-size: 1.25rem }
       body[data-role="body"] .basic-layout > .basic-layout-body .post-detail > .rich-content {
         font-size: 1.1rem; color: var(--ink); font-family: var(--article-font); max-width: 420px !important;
       }
       .rich-content h2 { font: 500 1.5rem/1.2 var(--article-font); margin: var(--paragraph-gap) 0 .5rem }
+      .rich-content h3 { font: var(--missing-font, var(--heading-font)) }
+      @media (max-width: 100px) { :root { --inline-font: serif } }
+      .rich-content h3 em { font-family: var(--inline-font, var(--ink)) }
       .rich-content p { line-height: 1.7; margin: 0 0 var(--paragraph-gap) }
       button { color: red !important; font-size: 42px !important }
     `,
@@ -104,6 +108,20 @@ test('富文本正文跟随主题和附加 CSS，普通模式占满宽度且工�
       return Math.abs(editing - published)
     }
     await expect.poll(textWidthDifference).toBeLessThan(0.05)
+    // 同一个变量既可用作颜色也可用作字体族；完整的 font 简写也可通过变量回退取值。
+    const subheading = editor.locator('h3')
+    const publishedSubheading = front.locator('.post-detail-content h3')
+    await expect(subheading).toHaveCSS('color', 'rgb(255, 0, 0)')
+    await expect
+      .poll(async () =>
+        Math.abs((await textWidth(subheading)) - (await textWidth(publishedSubheading))),
+      )
+      .toBeLessThan(0.05)
+    // 媒体条件未命中时仍继承行内定义，并优先于 var() 的字体回退。
+    await page
+      .locator('[data-role="rich-text-editor"]')
+      .evaluate((el) => el.style.setProperty('--inline-font', 'monospace'))
+    await expect(subheading.locator('em')).toHaveCSS('font-family', 'monospace')
     expect(await typography(button)).toEqual(originalButton)
     const outer = await page.locator('[data-role="rich-text-editor"]').boundingBox()
     const inner = await paragraph.boundingBox()
@@ -163,19 +181,19 @@ test('普通编辑区滚动时表格工具栏跟随选区，移出可见区域�
     await cell.click()
     const menu = page.locator('.image-bubble-menu')
     await expect(menu).toBeVisible()
-    // 在同一帧采样两者，避免滚动时分别查询坐标取得不同帧。
+    // 居中时菜单位于表格上方（预留高度 36px，间距 4px）。菜单可见后滚动仍可能尚未稳定。
+    const table = richTextEditor(page).locator('.tableWrapper').first()
     const distance = () =>
-      cell.evaluate((el) => {
+      table.evaluate((el) => {
         const menu = document.querySelector('.image-bubble-menu')
         if (!menu) return null
         return el.getBoundingClientRect().top - menu.getBoundingClientRect().top
       })
-    const before = await distance()
-    expect(before).not.toBeNull()
+    await expect.poll(distance).toBeCloseTo(40, 0)
     await surface.evaluate((el) => {
       el.scrollTop += 90
     })
-    await expect.poll(distance).toBeCloseTo(before!, 0)
+    await expect.poll(distance).toBeCloseTo(40, 0)
     await surface.evaluate((el) => {
       el.scrollTop = el.scrollHeight
     })
@@ -223,5 +241,57 @@ test('空白模板使用发布页的默认排版，切换模板时保留正文',
   } finally {
     await context.close()
     await app.cleanup({ removeArtifacts: true })
+  }
+})
+
+test('编辑器跳过不可读的 CDN 样式并加载允许跨域读取的公式样式', async ({ browser }, testInfo) => {
+  const app = await setupPerTestApp(testInfo)
+  const context = await browser.newContext(app.browserContextOptions)
+  try {
+    const page = await context.newPage()
+    await page.goto(app.adminUrl('/posts'))
+    // 同一个测试服务使用另一主机名，模拟部署在 CDN 上的静态资源。
+    const cdn = new URL(app.baseURL)
+    cdn.hostname = 'localhost'
+    const redirect = await app.request.post('/api/redirect-rules', {
+      data: {
+        pathRegex: '^/uploads/editor-redirect[.]css$',
+        redirectTo: new URL('/themes/light.css', cdn).href,
+        redirectType: '302',
+      },
+    })
+    expect(redirect.ok()).toBe(true)
+    await page.addStyleTag({ url: '/uploads/editor-redirect.css' })
+
+    const mathUrl = new URL('/editor-math.css', cdn).href
+    await page.route(mathUrl, (route) =>
+      route.fulfill({
+        headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'text/css' },
+        body: '@layer publa-editor-math { .ProseMirror { --cdn-math-loaded:yes; } }',
+      }),
+    )
+    await page.evaluate(
+      (url) =>
+        new Promise<void>((resolve, reject) => {
+          const link = document.createElement('link')
+          link.rel = 'stylesheet'
+          link.crossOrigin = 'anonymous'
+          link.href = url
+          link.onload = () => resolve()
+          link.onerror = () => reject(new Error('Failed to load test stylesheet'))
+          document.head.append(link)
+        }),
+      mathUrl,
+    )
+
+    await page.locator('[data-role="admin-posts-new-button"]').click()
+    const editor = richTextEditor(page)
+    await expect(editor).toHaveCSS('--cdn-math-loaded', 'yes')
+    await editor.locator('p').first().click()
+    await page.keyboard.type('cdn')
+    await expect(editor).toHaveText('cdn')
+  } finally {
+    await context.close()
+    await app.cleanup({ removeArtifacts: testInfo.status === 'passed' })
   }
 })
